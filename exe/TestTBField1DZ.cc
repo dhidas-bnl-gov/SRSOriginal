@@ -15,10 +15,22 @@ int TestTBField1DZ (std::string const InFileName)
 {
   TBField1DZ TBF;
   TBF.ReadFile(InFileName);
-  TBF.Add(1.3, 1.321);
+  //TBF.Add(1.3, 1.321);
   TBF.Sort();
 
   TBF.SaveAs("Saved.dat");
+
+
+
+  std::vector<double> A;
+  double FirstZ, LastZ, StepSize;
+
+  TBF.Regularize(A, FirstZ, LastZ, StepSize, 10000);
+
+
+  for (size_t i = 0; i != A.size(); ++i) {
+    std::cout << FirstZ + StepSize * (double) i << "   " << A[i] << "\n";
+  }
 
   return 0;
 }

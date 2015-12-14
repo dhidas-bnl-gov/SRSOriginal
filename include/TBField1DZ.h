@@ -33,6 +33,7 @@ class TBField1DZ
     bool ReadFile (std::string const&);
     bool SaveAs (std::string const&, std::string const& Comment = "");
 
+    bool Regularize (std::vector<double>&, double&, double&, double&, size_t const NPointsPerMeter = 10000);
     static bool CompareBField1DZ (std::array<double, 2> const&, std::array<double, 2> const&);
 
   private:

@@ -69,14 +69,24 @@ bool TBField1DZRegularized::ReadFileRegularized (std::string const& InFileName)
 
   // Loop over all lines in input file.  Skip if the line is blank or begins with # (a comment)
   for (std::string Line; std::getline(f, Line); ) {
-    if (Line == "") {
+
+    // Look for a blank line or comment line and skip if found.  You should never use tab btw.
+    size_t FirstChar = Line.find_first_not_of(" \t");
+    if (FirstChar == std::string::npos || Line[FirstChar] == '#') {
       continue;
     }
+
 
     // Set the streaming line, read it into the doubles
     Iine.clear();
     Iine.str(Line);
     Iine >> Z >> By;
+
+    // Check the stream to see if it is not good
+    if (Iine.fail()) {
+      std::cerr << "ERROR: TBField1DZRegularized::ReadFileRegularized: data format error on this line: " << Line << std::endl;
+      throw;
+    }
 
     // Keep track of the number of points
     ++fZNPoints;
@@ -136,7 +146,7 @@ bool TBField1DZRegularized::SaveAs (std::string const& OutFileName, std::string 
 
   // Write BField
   double Z;
-  for (int i = 0; i != fBField.size(); ++i) {
+  for (size_t i = 0; i != fBField.size(); ++i) {
     Z = fZFirstPoint + fZStepSize * (double) i;
     f << Z << " " << fBField[i] << "\n";
   }

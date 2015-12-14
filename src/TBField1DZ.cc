@@ -105,7 +105,10 @@ bool TBField1DZ::ReadFile (std::string const& InFileName)
 
   // Loop over all lines in input file.  Skip if the line is blank or begins with # (a comment)
   for (std::string Line; std::getline(f, Line); ) {
-    if (Line == "") {
+
+    // Look for a blank line or comment line and skip if found.  You should never use tab btw.
+    size_t FirstChar = Line.find_first_not_of(" \t");
+    if (FirstChar == std::string::npos || Line[FirstChar] == '#') {
       continue;
     }
 
@@ -113,6 +116,12 @@ bool TBField1DZ::ReadFile (std::string const& InFileName)
     Iine.clear();
     Iine.str(Line);
     Iine >> Z >> By;
+
+    // Check the stream to see if it is not good
+    if (Iine.fail()) {
+      std::cerr << "ERROR: TBField1DZ::ReadFile: data format error on this line: " << Line << std::endl;
+      throw;
+    }
 
     // Save in field vector
     fBField.push_back(std::array<double, 2>{ {Z, By} });
@@ -159,6 +168,81 @@ bool TBField1DZ::SaveAs (std::string const& OutFileName, std::string const& Comm
   // If nothing failed return true
   return true;
 }
+
+
+bool TBField1DZ::Regularize (std::vector<double>& oV, double& oFirstZ, double& oLastZ, double& oStepSizeZ, size_t const NPointsPerMeter)
+{
+  // Regularize the data in fBField and save it in oV.  also save the first
+  // and last Z values.  The input for resolution is in points per meter.
+
+
+  // Check to see if we are sorted yet or not and of not, sort
+  if (!this->IsSorted()) {
+    this->Sort();
+  }
+
+  // Check to see there are at least 2 data points
+  if (fBField.size() < 2) {
+    std::cerr << "ERROR: TBField1DZ::Regularize: not enough data points" << std::endl;
+    throw;
+  }
+
+  // Grab the first and last Z
+  double const First = fBField[0][0];
+  double const Last  = fBField[fBField.size() - 1][0];
+
+  // Get the number of points and the step size
+  size_t const NPoints  = (Last - First) * NPointsPerMeter;
+  double const StepSize = (Last - First) / (double) (NPoints - 1);
+  std::cout << "MESSAGE: TBField1DZ::Regularize StepSize: " << StepSize << std::endl;
+
+  // Clear the output vector and allocated space
+  oV.reserve(NPoints);
+
+
+  // Variables to hold the slope between two real points and new By (linear interpolated)
+  double Slope;
+  double NewBy;
+
+  // I only initialize to avoid compile-time warnings.  These are for finding the
+  // adj bins for linear interpolation
+  size_t MinBin    = 0;
+  size_t AfterBin  = 0;
+  size_t BeforeBin = 0;
+
+  // Variable to hold new calculated Z position
+  double ThisZ;
+
+  // For each desired point find the bin before and after the desired Z position
+  for (size_t i = 0; i != NPoints; ++i) {
+    ThisZ = i * StepSize + First;
+    for (size_t j = MinBin + 1; j != fBField.size(); ++j) {
+      if (fBField[j][0] > ThisZ) {
+        AfterBin  = j;
+        BeforeBin = j - 1;
+        MinBin = j - 1;
+        break;
+      }
+    }
+
+
+    // Calculate the By at desired position based on linear interpolation
+    Slope = (fBField[AfterBin][1] - fBField[BeforeBin][1]) /  (fBField[AfterBin][0] - fBField[BeforeBin][0]);
+    NewBy = fBField[BeforeBin][1] + (ThisZ - fBField[BeforeBin][0]) * Slope;
+
+    // Append the new By to the output vector
+    oV.push_back(NewBy);
+
+  }
+
+  // Copy information to output variables
+  oFirstZ    = First;
+  oLastZ     = Last;
+  oStepSizeZ = StepSize;
+
+  return true;
+}
+
 
 
 bool TBField1DZ::CompareBField1DZ (std::array<double, 2> const& A, std::array<double, 2> const& B)

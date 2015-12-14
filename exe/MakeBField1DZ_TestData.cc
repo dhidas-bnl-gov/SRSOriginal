@@ -19,9 +19,9 @@ int MakeBField1DZ_TestData (std::string const OutFileName)
 {
   // Constants to change
   float const MaxBy           = 1.0;
-  int   const NPoints         = 10000000;
+  int   const NPoints         = 1000;
   float const PeriodLength    = 0.021;
-  int   const NPeriods        = 61;
+  int   const NPeriods        = 5;
   float const UndulatorCenter = 0.0;
   float const PI = 3.14159265359;
 

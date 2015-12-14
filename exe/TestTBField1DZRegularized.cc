@@ -14,7 +14,7 @@
 int TestTBField1DZRegularized (std::string const InFileName)
 {
   TBField1DZRegularized TBF;
-  TBF.ReadFile(InFileName);
+  TBF.ReadFileRegularized(InFileName);
   TBF.SaveAs("Saved2.dat");
 
   return 0;

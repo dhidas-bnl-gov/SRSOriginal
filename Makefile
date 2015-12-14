@@ -1,6 +1,6 @@
 CC = g++
 LD = g++
-CFLAGS = -Wall -O3 -pthread -stdlib=libc++ -std=c++11 -m64
+CFLAGS = -Wall -O3 -pthread -std=c++11 -m64
 LIBS = -stdlib=libc++
 INCLUDE = -Iinclude
 OBJS  = $(patsubst src/%.cc,lib/%.o,$(wildcard src/*.cc))
