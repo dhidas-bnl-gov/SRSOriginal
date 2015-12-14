@@ -1,5 +1,5 @@
-#ifndef GUARD_TBField1DZ_h
-#define GUARD_TBField1DZ_h
+#ifndef GUARD_TBField1DZRegularized_h
+#define GUARD_TBField1DZRegularized_h
 ////////////////////////////////////////////////////////////////////
 //
 // Dean Andrew Hidas <dhidas@bnl.gov>
@@ -12,33 +12,35 @@
 #include <array>
 #include <string>
 
-class TBField1DZ
+#include "TBField1DZ.h"
+
+class TBField1DZRegularized
 {
   // This class is designed to be a container for a simple magnetic field.
   // The field array has 2 components, Z and By.  You can add elements and sort as needed.
   // If you add elements by hand you also need to call the Sort function yourself
 
   public:
-    TBField1DZ ();
-    TBField1DZ (std::string const&);
-    ~TBField1DZ ();
-
-    bool Add (double const, double const);
-    bool Sort ();
-    bool IsSorted ();
-
-    double GetFirstZ ();
-    double GetLastZ ();
+    TBField1DZRegularized ();
+    TBField1DZRegularized (std::string const&);
+    TBField1DZRegularized (TBField1DZ&);
+    ~TBField1DZRegularized ();
 
     bool ReadFile (std::string const&);
+    bool ReadFileRegularized (std::string const&);
     bool SaveAs (std::string const&, std::string const& Comment = "");
 
-    static bool CompareBField1DZ (std::array<double, 2> const&, std::array<double, 2> const&);
+    double GetByAtZ (double const&);
 
   private:
-    // BField.  The format is [0] is Z position in Meters, [1] is By in Tesla
-    std::vector< std::array<double, 2> > fBField;
-    bool fIsSorted;
+    // BField.  The vector holds equidistant points.  This is for memory saving and fast lookup.
+    double fZFirstPoint;
+    double fZLastPoint;
+    int    fZNPoints;
+    double fZStepSize;
+    std::vector<double> fBField;
+
+    bool RegularizeField (TBField1DZ const&);
 };
 
 

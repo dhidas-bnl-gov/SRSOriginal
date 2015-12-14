@@ -16,6 +16,9 @@ TBField1DZ::TBField1DZ (std::string const& InFileName)
 {
   // Constructor.  Reads input file
   this->ReadFile(InFileName);
+
+  // Sort array
+  this->Sort();
 }
 
 
@@ -29,7 +32,10 @@ TBField1DZ::~TBField1DZ ()
 
 bool TBField1DZ::Add (double const Z, double const By)
 {
+  // Add an element to the array and mark that it is now not necessairly sorted
   fBField.push_back( std::array<double, 2>{ {Z, By} } );
+  fIsSorted = false;
+
   return true;
 }
 
@@ -37,10 +43,43 @@ bool TBField1DZ::Add (double const Z, double const By)
 
 bool TBField1DZ::Sort()
 {
-  // Sort the field vector by Z
+  // Sort the field vector by Z, and change IsSorted flag to true
   std::sort(fBField.begin(), fBField.end(), this->CompareBField1DZ);
+  fIsSorted = true;
+
   return true;
 }
+
+
+
+bool TBField1DZ::IsSorted ()
+{
+  // Return the state of the IsSorted flag
+  return fIsSorted;
+}
+
+
+
+double TBField1DZ::GetFirstZ ()
+{
+  // Return the first Z value in the fBField vector.  Make sure it is sorted first
+  if (!this->IsSorted()) {
+    throw;
+  }
+  return (*(fBField.begin()))[0];
+}
+
+
+
+double TBField1DZ::GetLastZ ()
+{
+  // Return the last Z value in the fBField vector.  Make sure it is sorted first
+  if (!this->IsSorted()) {
+    throw;
+  }
+  return (*(fBField.end()))[0];
+}
+
 
 
 
@@ -48,7 +87,7 @@ bool TBField1DZ::ReadFile (std::string const& InFileName)
 {
   // Read an input file in the format of:
   //   Z By
-  // where a line beginning with # is a comment
+  // where a line beginning with # is a comment and blank lines are skipped
 
   // Open the input file.  If !f return a false
   std::ifstream f(InFileName.c_str());
@@ -56,6 +95,9 @@ bool TBField1DZ::ReadFile (std::string const& InFileName)
     std::cerr << "ERROR: TBField1DZ::ReadFile cannot open file: " << InFileName << std::endl;
     return false;
   }
+
+  // Because we are reading a file this is not necessairly sorted data
+  fIsSorted = false;
 
   // Stream the line for input.  Variables to be filled in look over lines
   std::istringstream Iine;
@@ -71,7 +113,6 @@ bool TBField1DZ::ReadFile (std::string const& InFileName)
     Iine.clear();
     Iine.str(Line);
     Iine >> Z >> By;
-    std::cout << Z << " " << By << std::endl;
 
     // Save in field vector
     fBField.push_back(std::array<double, 2>{ {Z, By} });
@@ -88,7 +129,7 @@ bool TBField1DZ::ReadFile (std::string const& InFileName)
 
 bool TBField1DZ::SaveAs (std::string const& OutFileName, std::string const& Comment)
 {
-  // Save the magnetic field data as a text file with the name given
+  // Save the magnetic field data as a text file with the name given.
   // A comment can be placed at the top in addition to the format comment
 
   // Print message about saving file

@@ -1,8 +1,8 @@
 CC = pdflatex
 
 
-all:
-	echo 'What do you want to make?'
+all: SRS_CodingConventions.pdf
+	echo 'Party!'
 
 
 
