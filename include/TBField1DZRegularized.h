@@ -23,7 +23,9 @@ class TBField1DZRegularized
   public:
     TBField1DZRegularized ();
     TBField1DZRegularized (std::string const&);
+    TBField1DZRegularized (std::string const&, size_t const);
     TBField1DZRegularized (TBField1DZ&);
+    TBField1DZRegularized (TBField1DZ&, size_t const);
     ~TBField1DZRegularized ();
 
     bool ReadFile (std::string const&);
@@ -31,16 +33,21 @@ class TBField1DZRegularized
     bool SaveAs (std::string const&, std::string const& Comment = "");
 
     double GetByAtZ (double const&);
+    void   SetZNPointsPerMeter (size_t const);
 
   private:
-    // BField.  The vector holds equidistant points.  This is for memory saving and fast lookup.
+    // Parameters to remember in the code.  If fZNPointsPerMeter is zero the grid will default
+    // to the grid default defined in TBField1DZ
     double fZFirstPoint;
     double fZLastPoint;
     int    fZNPoints;
+    int    fZNPointsPerMeter;
     double fZStepSize;
+
+    // BField.  The vector holds equidistant points.  This is for memory saving and fast lookup.
     std::vector<double> fBField;
 
-    bool RegularizeField (TBField1DZ const&);
+    bool RegularizeField (TBField1DZ&);
 };
 
 

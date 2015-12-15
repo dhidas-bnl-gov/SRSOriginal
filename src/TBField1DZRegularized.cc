@@ -8,14 +8,61 @@
 TBField1DZRegularized::TBField1DZRegularized ()
 {
   // Default constructor
+
+  // Set some defaults
+  fZNPointsPerMeter = 0;
 }
 
 
 
 TBField1DZRegularized::TBField1DZRegularized (std::string const& InFileName)
 {
-  // Constructor.  Reads input file
+  // Constructor.
+
+  // Set some defaults
+  fZNPointsPerMeter = 0;
+
+  // Reads input file, constructs regularized data
   this->ReadFile(InFileName);
+}
+
+
+
+TBField1DZRegularized::TBField1DZRegularized (std::string const& InFileName, size_t const N)
+{
+  // Constructor.
+
+  // Set number of points per meter
+  fZNPointsPerMeter = N;
+
+  // Reads input file, constructs regularized data
+  this->ReadFile(InFileName);
+}
+
+
+
+TBField1DZRegularized::TBField1DZRegularized (TBField1DZ& BF)
+{
+  // Constructor.
+
+  // Set number of points per meter
+  fZNPointsPerMeter = 0;
+
+  // Regularize
+  this->RegularizeField(BF);
+}
+
+
+
+TBField1DZRegularized::TBField1DZRegularized (TBField1DZ& BF, size_t const N)
+{
+  // Constructor.
+
+  // Set number of points per meter
+  fZNPointsPerMeter = N;
+
+  // Regularize
+  this->RegularizeField(BF);
 }
 
 
@@ -174,8 +221,23 @@ double TBField1DZRegularized::GetByAtZ (double const& Z)
 
 
 
-
-bool TBField1DZRegularized::RegularizeField (TBField1DZ const& InField)
+void TBField1DZRegularized::SetZNPointsPerMeter (size_t const N)
 {
+  // Set the number of points per meter in z direction
+  fZNPointsPerMeter = N;
+
+  return;
+}
+
+
+
+
+bool TBField1DZRegularized::RegularizeField (TBField1DZ& InField)
+{
+  if (fZNPointsPerMeter != 0) {
+    InField.Regularize(fBField, fZFirstPoint, fZLastPoint, fZStepSize, fZNPointsPerMeter);
+  } else {
+    InField.Regularize(fBField, fZFirstPoint, fZLastPoint, fZStepSize);
+  }
   return true;
 }

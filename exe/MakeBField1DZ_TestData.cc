@@ -29,7 +29,7 @@ int MakeBField1DZ_TestData (std::string const OutFileName)
   // Calculations
   float const UndulatorLength = PeriodLength * (float) NPeriods;
   float const UndulatorStart  = UndulatorCenter - (UndulatorLength / 2.0);
-  float const UndulatorStop   = UndulatorCenter + (UndulatorLength / 2.0);
+  //float const UndulatorStop   = UndulatorCenter + (UndulatorLength / 2.0);
   float const StepSize = UndulatorLength / (float) (NPoints - 1);
 
   // Open output file
