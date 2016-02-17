@@ -9,6 +9,8 @@
 ////////////////////////////////////////////////////////////////////
 
 
+#include <vector>
+#include <array>
 
 class TParticleTrajectory
 {
@@ -16,6 +18,7 @@ class TParticleTrajectory
     TParticleTrajectory ();
     ~TParticleTrajectory ();
 
+    void Add (double const, double const, double const, double const, double const, double const);
 
   private:
     double fZFirstPoint;
@@ -23,6 +26,8 @@ class TParticleTrajectory
     int    fZNPoints;
     int    fZNPointsPerMeter;
     double fZStepSize;
+
+    std::vector< std::array<double, 6> > fPositionVelocity;
 
 };
 

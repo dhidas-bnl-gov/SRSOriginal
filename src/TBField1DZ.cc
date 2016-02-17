@@ -176,6 +176,7 @@ bool TBField1DZ::Regularize (std::vector<double>& oV, double& oFirstZ, double& o
   // and last Z values.  The input for resolution is in points per meter.
 
 
+
   // Check to see if we are sorted yet or not and of not, sort
   if (!this->IsSorted()) {
     this->Sort();
@@ -197,6 +198,7 @@ bool TBField1DZ::Regularize (std::vector<double>& oV, double& oFirstZ, double& o
   std::cout << "MESSAGE: TBField1DZ::Regularize StepSize: " << StepSize << std::endl;
 
   // Clear the output vector and allocated space
+  oV.clear();
   oV.reserve(NPoints);
 
 
@@ -239,6 +241,7 @@ bool TBField1DZ::Regularize (std::vector<double>& oV, double& oFirstZ, double& o
   oFirstZ    = First;
   oLastZ     = Last;
   oStepSizeZ = StepSize;
+
 
   return true;
 }

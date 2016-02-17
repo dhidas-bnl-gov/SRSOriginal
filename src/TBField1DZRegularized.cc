@@ -216,7 +216,11 @@ double TBField1DZRegularized::GetByAtZ (double const& Z)
   double const i =  (Z - fZFirstPoint) / fZStepSize;
   int    const j = (int) i;
 
-  return (fBField[j+1] - fBField[j]) / fZStepSize * (i - (double) j);
+
+  //std::cout << "math : " << i << "  " << j << "  " <<(i - (double) j) << "  " << fBField[j+1] << "  " << fBField[j] <<
+  //  "  " << (i - (double) j) << "  " << (fBField[j+1] - fBField[j])  << std::endl;
+
+  return fBField[j] + ((fBField[j+1] - fBField[j]) * (i - (double) j));
 }
 
 

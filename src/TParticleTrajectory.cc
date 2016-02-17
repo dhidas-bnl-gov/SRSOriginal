@@ -20,3 +20,11 @@ TParticleTrajectory::~TParticleTrajectory ()
   // Destruction!
 }
 
+
+
+void TParticleTrajectory::Add (double const x, double const y, double const z, double const vx, double const vy, double const vz)
+{
+  // Add an element to the stored vector
+  fPositionVelocity.push_back( std::array<double, 6> { {x, y, z, vx, vy, vz} } );
+  return;
+}
