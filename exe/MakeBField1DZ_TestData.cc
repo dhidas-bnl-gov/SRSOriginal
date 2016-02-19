@@ -19,7 +19,7 @@ int MakeBField1DZ_TestData (std::string const OutFileName)
 {
   // Constants to change
   float const MaxBy           = 1.0;
-  int   const NPoints         = 1000;
+  int   const NPoints         = 5000;
   float const PeriodLength    = 0.021;
   int   const NPeriods        = 5;
   float const UndulatorCenter = 0.0;
@@ -41,7 +41,7 @@ int MakeBField1DZ_TestData (std::string const OutFileName)
   for (int i = 0; i != NPoints; ++i) {
     ZFluctuation = 2.5 * StepSize * (static_cast <float> (rand()) / static_cast <float> (RAND_MAX));
     Z  = UndulatorStart + StepSize * (float) i + ZFluctuation;
-    By = MaxBy * sin( 2.0 * PI / PeriodLength * Z );
+    By = MaxBy * cos( 2.0 * PI / PeriodLength * Z );
     f << Z << " " << By << "\n";
   }
 

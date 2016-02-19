@@ -1,6 +1,6 @@
 CC = g++
 LD = g++
-CFLAGS = -Wall -O3 -pthread -std=c++11 `root-config --cflags`
+CFLAGS = -Wall -O3 -pthread -std=c++14 `root-config --cflags`
 LIBS = -stdlib=libc++ `root-config --libs`
 INCLUDE = -Iinclude
 OBJS  = $(patsubst src/%.cc,lib/%.o,$(wildcard src/*.cc))

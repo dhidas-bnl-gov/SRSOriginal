@@ -123,14 +123,12 @@ int RK4Test ()
 
   int const NPoints = 100000;
   float const h = (XStop - XStart) / (BetaZ * kC_SI) / (NPoints - 1);
-  std::cout << h << std::endl;
 
   for (int i = 0; i != NPoints; ++i) {
     float t = h * i;
     derivs(t, x, dxdt);
     rk4(x, dxdt, N, t, h, x, derivs);
     std::cout << "Position: " << XStart + kC_SI * BetaZ * (t+h) << "  " << x[0] << std::endl;
-    std::cout << "dydx: " << i << " " << dxdt[1] << std::endl;
   }
 
 
