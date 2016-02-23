@@ -32,7 +32,9 @@ class TBField3DZRegularized
     bool ReadFileRegularized (std::string const&);
     bool SaveAs (std::string const&, std::string const& Comment = "");
 
+    double GetBxAtZ (double const&);
     double GetByAtZ (double const&);
+    double GetBzAtZ (double const&);
     void   SetZNPointsPerMeter (size_t const);
 
   private:

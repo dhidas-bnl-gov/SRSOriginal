@@ -10,7 +10,10 @@
 #include <iostream>
 #include <cmath>
 
-#include "TBField1DZRegularized.h"
+#include "TBField3DZRegularized.h"
+
+#include "TGraph.h"
+#include "TCanvas.h"
 
 int RK4Test ();
 double By (double const Z, double const LambdaUndulator, double const PeakBy);
@@ -18,7 +21,7 @@ void rk4(float y[], float dydx[], int n, float x, float h, float yout[], void (*
 void derivs(float t, float y[], float dydt[]);
 
 
-TBField1DZRegularized* TBF;
+TBField3DZRegularized* TBF;
 
 
 
@@ -45,6 +48,8 @@ void derivs(float t, float x[], float dxdt[])
 {
   dxdt[0] = x[1];
   dxdt[1] = -(kECharge * BetaZ * kC_SI) / (Gamma * kEMass) * TBF->GetByAtZ(XStart + t * BetaZ * kC_SI);
+  dxdt[2] = x[3];
+  dxdt[3] =  (kECharge * BetaZ * kC_SI) / (Gamma * kEMass) * TBF->GetBxAtZ(XStart + t * BetaZ * kC_SI);
 
  
   return;
@@ -114,24 +119,44 @@ int RK4Test ()
 {
 
 
-  int const N = 2;
-  float x[N] = {0.0, 0.0};
+  int const N = 4;
+  float x[N] = {0.0, 0.0, 0.0, 0.0};
   float dxdt[N];
 
 
   derivs(0, x, dxdt);
 
-  int const NPoints = 100000;
+  int const NPoints = 10000;
   float const h = (XStop - XStart) / (BetaZ * kC_SI) / (NPoints - 1);
+
+  // Graphs for viewing trajectory
+  TGraph gXZ(NPoints);
+  TGraph gYZ(NPoints);
+  TGraph gYX(NPoints);
 
   for (int i = 0; i != NPoints; ++i) {
     float t = h * i;
+    float Z = XStart + kC_SI * BetaZ * (t+h);
     derivs(t, x, dxdt);
     rk4(x, dxdt, N, t, h, x, derivs);
-    std::cout << "Position: " << XStart + kC_SI * BetaZ * (t+h) << "  " << x[0] << std::endl;
+
+    gXZ.SetPoint(i, Z, x[0]);
+    gYZ.SetPoint(i, Z, x[2]);
+    gYX.SetPoint(i, x[0], x[2]);
   }
 
 
+  TCanvas c;
+  c.cd();
+
+  gXZ.Draw("AP");
+  c.SaveAs("gXZ.png");
+
+  gYZ.Draw("AP");
+  c.SaveAs("gYZ.png");
+
+  gYX.Draw("AP");
+  c.SaveAs("gYX.png");
 
   return 0;
 }
@@ -145,7 +170,7 @@ int main (int argc, char* argv[])
   }
 
 
-  TBF = new TBField1DZRegularized(argv[1]);
+  TBF = new TBField3DZRegularized(argv[1]);
   TBF->SaveAs("del2.dat");
 
 

@@ -210,6 +210,27 @@ bool TBField3DZRegularized::SaveAs (std::string const& OutFileName, std::string 
 
 
 
+double TBField3DZRegularized::GetBxAtZ (double const& Z)
+{
+  // Return the estimated Bx at a given Z based on grid and linear interpolation.
+  // If the requested Z position is outside of fZFirstPoint and fZLastPoint zero is
+  // returned.
+
+  // If requested Z is outside of the data assume zero field
+  if (Z < fZFirstPoint or Z > fZLastPoint) {
+    return 0;
+  }
+
+  // Where in the data array is this value
+  double const i =  (Z - fZFirstPoint) / fZStepSize;
+  int    const j = (int) i;
+
+  // Return linear estimate of the field based on the two points on either side
+  return fBField[j][0] + ((fBField[j+1][0] - fBField[j][0]) * (i - (double) j));
+}
+
+
+
 double TBField3DZRegularized::GetByAtZ (double const& Z)
 {
   // Return the estimated By at a given Z based on grid and linear interpolation.
@@ -227,6 +248,27 @@ double TBField3DZRegularized::GetByAtZ (double const& Z)
 
   // Return linear estimate of the field based on the two points on either side
   return fBField[j][1] + ((fBField[j+1][1] - fBField[j][1]) * (i - (double) j));
+}
+
+
+
+double TBField3DZRegularized::GetBzAtZ (double const& Z)
+{
+  // Return the estimated Bz at a given Z based on grid and linear interpolation.
+  // If the requested Z position is outside of fZFirstPoint and fZLastPoint zero is
+  // returned.
+
+  // If requested Z is outside of the data assume zero field
+  if (Z < fZFirstPoint or Z > fZLastPoint) {
+    return 0;
+  }
+
+  // Where in the data array is this value
+  double const i =  (Z - fZFirstPoint) / fZStepSize;
+  int    const j = (int) i;
+
+  // Return linear estimate of the field based on the two points on either side
+  return fBField[j][2] + ((fBField[j+1][2] - fBField[j][2]) * (i - (double) j));
 }
 
 
