@@ -12,9 +12,10 @@
 #include <array>
 #include <string>
 
+#include "TBField.h"
 #include "TBField3DZ.h"
 
-class TBField3DZRegularized
+class TBField3DZRegularized : public TBField
 {
   // This class is designed to be a container for a simple magnetic field.
   // The field array has 4 components, Z and Bx, By, Bz.  You can add elements and sort as needed.
@@ -32,9 +33,14 @@ class TBField3DZRegularized
     bool ReadFileRegularized (std::string const&);
     bool SaveAs (std::string const&, std::string const& Comment = "");
 
-    double GetBxAtZ (double const&);
-    double GetByAtZ (double const&);
-    double GetBzAtZ (double const&);
+
+    double GetBx (double const&, double const&, double const&) const;
+    double GetBy (double const&, double const&, double const&) const;
+    double GetBz (double const&, double const&, double const&) const;
+
+    double GetBxAtZ (double const&) const;
+    double GetByAtZ (double const&) const;
+    double GetBzAtZ (double const&) const;
     void   SetZNPointsPerMeter (size_t const);
 
   private:
