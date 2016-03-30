@@ -100,6 +100,15 @@ TVector3D TParticleTrajectory2::GetAAtTime (double const& Time) const
 
 
 
+double TParticleTrajectory2::GetStartTime () const
+{
+  // Return the start time
+  return fStartTime;
+}
+
+
+
+
 size_t TParticleTrajectory2::GetFirstBinForTime (double const& Time) const
 {
   // Get the time bin index just before the given time

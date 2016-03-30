@@ -30,20 +30,19 @@ class TVector3D
 
     double Mag () const;
     double Mag2 () const;
-    double Dot (TVector3D&) const;
-    TVector3D Cross (TVector3D&) const;
+    double Dot (TVector3D const&) const;
+    TVector3D Cross (TVector3D const&) const;
     TVector3D UnitVector () const;
 
 
     // Operators
     TVector3D  operator  + (TVector3D const&) const;
     TVector3D  operator  - (TVector3D const&) const;
-    TVector3D  operator  * (double const&) const;
     TVector3D  operator  / (double const&) const;
     TVector3D  operator  - ();
     TVector3D& operator  = (TVector3D const&);
-    TVector3D& operator += (double const&);
-    TVector3D& operator -= (double const&);
+    TVector3D& operator += (TVector3D const&);
+    TVector3D& operator -= (TVector3D const&);
     TVector3D& operator *= (double const&);
     TVector3D& operator /= (double const&);
     bool       operator == (TVector3D const&) const;
@@ -55,6 +54,25 @@ class TVector3D
     double fZ;
 
 };
+
+
+
+
+
+
+inline TVector3D operator * (double const& V, TVector3D const& R)
+{
+  // Multiply vector by some scalar
+  return TVector3D(R.GetX() * V, R.GetY() * V, R.GetZ() * V);
+}
+
+inline TVector3D operator * (TVector3D const& L, double const& V)
+{
+  // Multiply vector by some scalar
+  return TVector3D(L.GetX() * V, L.GetY() * V, L.GetZ() * V);
+}
+
+
 
 
 

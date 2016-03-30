@@ -125,7 +125,7 @@ double TVector3D::Mag2() const
 
 
 
-double TVector3D::Dot(TVector3D& V) const
+double TVector3D::Dot(TVector3D const& V) const
 {
   // Get the dot product of this dot V
   return fX * V.GetX() + fY * V.GetY() + fZ * V.GetZ();
@@ -134,7 +134,7 @@ double TVector3D::Dot(TVector3D& V) const
 
 
 
-TVector3D TVector3D::Cross (TVector3D& V) const
+TVector3D TVector3D::Cross (TVector3D const& V) const
 {
   // Get the cross product of this cross V using the right hand convention
   return TVector3D(fY * V.GetZ() - V.GetY() * fZ, fZ * V.GetX() - V.GetZ() * fX, fX * V.GetY() - V.GetX() * fY);
@@ -175,15 +175,6 @@ TVector3D TVector3D::operator - (TVector3D const& V) const
 
 
 
-TVector3D TVector3D::operator * (double const& V) const
-{
-  // Multiply vector by some scalar
-  return TVector3D(fX * V, fY * V, fZ * V);
-}
-
-
-
-
 TVector3D TVector3D::operator / (double const& V) const
 {
   // Divide vector by some scalar
@@ -214,24 +205,24 @@ TVector3D TVector3D::operator - ()
 
 
 
-TVector3D& TVector3D::operator += (double const& V)
+TVector3D& TVector3D::operator += (TVector3D const& V)
 {
   // Add a vector to this vector by components
-  fX += V;
-  fY += V;
-  fZ += V;
+  fX += V.GetX();
+  fY += V.GetY();
+  fZ += V.GetZ();
   return *this;
 }
 
 
 
 
-TVector3D& TVector3D::operator -= (double const& V)
+TVector3D& TVector3D::operator -= (TVector3D const& V)
 {
   // Subtract a vector from this vector by components
-  fX -= V;
-  fY -= V;
-  fZ -= V;
+  fX -= V.GetX();
+  fY -= V.GetY();
+  fZ -= V.GetZ();
   return *this;
 }
 

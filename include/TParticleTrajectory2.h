@@ -26,6 +26,8 @@ class TParticleTrajectory2
     TVector3D GetVAtTime(double const&) const;
     TVector3D GetAAtTime(double const&) const;
 
+    double GetStartTime () const;
+
   private:
     double fStartTime;
     double fDeltaTime;
