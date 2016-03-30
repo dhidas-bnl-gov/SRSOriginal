@@ -64,6 +64,7 @@ double const Gamma = 1.0 / sqrt(1.0 - Beta*Beta);
 double const kEMass = 9.10938356E-31;
 double const kECharge = -1.60217662E-19;
 double const kEpsilon0 = 8.854187817E-12;
+double const kMu0      = 1.2566370614E-6;
 
 double const BetaX = 0;
 double const BetaY = 0;
@@ -380,13 +381,13 @@ int RK4Test ()
     for (int iy = 0; iy != 100; ++iy) {
       O += YStep;
       double Sum = 0.0;
-      int count = 0;
+      int Count = 0;
       for (double t = h*NPointsBack*0.9; t < (NPointsForward-1)*h ; t += h) {
         TVector3D const Ele = ElectricField(O, X, V, A, t, StartTime, h);
         Sum += pow(Ele.GetX(), 2) + pow(Ele.GetY(), 2);
         ++Count;
       }
-      printf("%20.15E %20.15E    %40.30E\n", O.GetX(), O.GetY(), 2.0 * Sum / ((double) Count));
+      printf("%20.15E %20.15E    %40.30E\n", O.GetX(), O.GetY(),  Sum / (kMu0 / h));
     }
   }
 
