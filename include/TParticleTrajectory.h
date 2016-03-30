@@ -1,5 +1,5 @@
-#ifndef GUARD_TParticleTrajectory2_h
-#define GUARD_TParticleTrajectory2_h
+#ifndef GUARD_TParticleTrajectory_h
+#define GUARD_TParticleTrajectory_h
 ////////////////////////////////////////////////////////////////////
 //
 // Dean Andrew Hidas <dhidas@bnl.gov>
@@ -13,12 +13,12 @@
 #include <vector>
 
 
-class TParticleTrajectory2
+class TParticleTrajectory
 {
   public:
-    TParticleTrajectory2 ();
-    TParticleTrajectory2 (double const&, double const&);
-    ~TParticleTrajectory2 ();
+    TParticleTrajectory ();
+    TParticleTrajectory (double const&, double const&);
+    ~TParticleTrajectory ();
 
     void AddPoint(double const&, double const&, double const&, double const&, double const&, double const&, double const&, double const&, double const&);
 

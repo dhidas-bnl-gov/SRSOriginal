@@ -6,11 +6,11 @@
 //
 ////////////////////////////////////////////////////////////////////
 
-#include "TParticleTrajectory2.h"
+#include "TParticleTrajectory.h"
 
 
 
-TParticleTrajectory2::TParticleTrajectory2 ()
+TParticleTrajectory::TParticleTrajectory ()
 {
   // Default constructor
   // If you use this you need to set the following variables by hand.. I advise against it.
@@ -22,7 +22,7 @@ TParticleTrajectory2::TParticleTrajectory2 ()
 
 
 
-TParticleTrajectory2::TParticleTrajectory2 (double const& StartTime, double const& DeltaTime)
+TParticleTrajectory::TParticleTrajectory (double const& StartTime, double const& DeltaTime)
 {
   // This is the contstrctur you should use.  Without these variables set the calculations
   // won't work
@@ -34,7 +34,7 @@ TParticleTrajectory2::TParticleTrajectory2 (double const& StartTime, double cons
 
 
 
-TParticleTrajectory2::~TParticleTrajectory2 ()
+TParticleTrajectory::~TParticleTrajectory ()
 {
   // Destructor
   // This object owns the memory of fX, fY, and fZ and they must be deleted.
@@ -53,7 +53,7 @@ TParticleTrajectory2::~TParticleTrajectory2 ()
 
 
 
-void TParticleTrajectory2::AddPoint(double const& X, double const& Y, double const& Z, double const& Vx, double const& Vy, double const& Vz, double const& Ax, double const& Ay, double const& Az)
+void TParticleTrajectory::AddPoint(double const& X, double const& Y, double const& Z, double const& Vx, double const& Vy, double const& Vz, double const& Ax, double const& Ay, double const& Az)
 {
   // Add a point in the forward time direction.  This assumes the fDeltaTime time step
 
@@ -67,7 +67,7 @@ void TParticleTrajectory2::AddPoint(double const& X, double const& Y, double con
 
 
 
-TVector3D TParticleTrajectory2::GetXAtTime (double const& Time) const
+TVector3D TParticleTrajectory::GetXAtTime (double const& Time) const
 {
   // Get the position TVector3D at any time (within the allowed time range)
 
@@ -78,7 +78,7 @@ TVector3D TParticleTrajectory2::GetXAtTime (double const& Time) const
 
 
 
-TVector3D TParticleTrajectory2::GetVAtTime (double const& Time) const
+TVector3D TParticleTrajectory::GetVAtTime (double const& Time) const
 {
   // Get the velocity TVector3D at any time (within the allowed time range)
 
@@ -89,7 +89,7 @@ TVector3D TParticleTrajectory2::GetVAtTime (double const& Time) const
 
 
 
-TVector3D TParticleTrajectory2::GetAAtTime (double const& Time) const
+TVector3D TParticleTrajectory::GetAAtTime (double const& Time) const
 {
   // Get the acceleration TVector3D at any time (within the allowed time range)
 
@@ -100,7 +100,7 @@ TVector3D TParticleTrajectory2::GetAAtTime (double const& Time) const
 
 
 
-double TParticleTrajectory2::GetStartTime () const
+double TParticleTrajectory::GetStartTime () const
 {
   // Return the start time
   return fStartTime;
@@ -109,7 +109,7 @@ double TParticleTrajectory2::GetStartTime () const
 
 
 
-size_t TParticleTrajectory2::GetFirstBinForTime (double const& Time) const
+size_t TParticleTrajectory::GetFirstBinForTime (double const& Time) const
 {
   // Get the time bin index just before the given time
 
