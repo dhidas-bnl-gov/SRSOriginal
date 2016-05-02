@@ -6,6 +6,10 @@
 //
 // Created on: Fri Mar 25 10:24:13 EDT 2016
 //
+// This class is a basic 3-dimensional vector with some simple
+// operators defined to make the math more transparent.  This is
+// largly modeled after the TVector3 class of ROOT.
+//
 ////////////////////////////////////////////////////////////////////
 
 
@@ -31,6 +35,7 @@ class TVector3D
     double Mag () const;
     double Mag2 () const;
     double Dot (TVector3D const&) const;
+    double Perp2 (TVector3D const&) const;
     TVector3D Cross (TVector3D const&) const;
     TVector3D UnitVector () const;
 

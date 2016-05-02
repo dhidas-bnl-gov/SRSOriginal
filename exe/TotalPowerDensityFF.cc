@@ -141,6 +141,25 @@ TVector3D ElectricField (TVector3D const& Observer, std::vector<TVector3D> const
 
 
 
+double PowerDensityIntegrand (TVector3D const& X, TVector3D const& V, TVector3D const& A, TVector3D const& O, TVector3D const& U)
+{
+  TVector3D const N = (O - X).UnitVector();
+
+  double const Numerator = N.Cross( ( (N - (V / kC_SI)).Cross((A / kC_SI)) ) ).Dot(U);
+  double const Denominator = pow(1 - (V / kC_SI).Dot(N), 5);
+
+
+  return Numerator*Numerator / Denominator / (O - X).Mag2();
+}
+
+
+
+
+
+
+
+
+
 
 void derivs(double t, double x[], double dxdt[])
 {
@@ -220,7 +239,7 @@ int RK4Test ()
   double dxdt[N];
 
 
-  int const NPointsForward = 45001;
+  int const NPointsForward = 50001;
   int const NPointsBack = 0; //0.5 / ((XStop - XStart) / (NPointsForward - 1));
   double const h = (XStop - XStart) / (BetaZ * kC_SI) / (NPointsForward - 1);
 
@@ -368,126 +387,190 @@ int RK4Test ()
 
 
 
-  TVector3D O(0.0005, 0.0000, 30);
-
-  if (true) {
-    TBField3DZ EleField;
-
-    FILE* of1 = fopen("out1.dat", "w");
-    //of1 << std::scientific;
-
-    //for (double t = -NPointsBack * h; t < (NPointsForward-1)*h ; t += h) {
-    for (double t = 0; t < (NPointsForward-1)*h ; t += h) {
-
-      TVector3D const Ele = ElectricField(O, X, V, A, t, StartTime, h);
-      EleField.Add(t + (O - GetValueAtTime(X, t, StartTime, h)).Mag() / kC_SI, Ele.GetX(), Ele.GetY(), Ele.GetZ());
-      //printf("%40.30E    %40.30E\n", t + (O - GetValueAtTime(X, t, StartTime, h)).Mag() / kC_SI , pow(Ele.GetX(), 2) + pow(Ele.GetY(), 2));
-    }
-
-    TBField3DZRegularized EleFieldReg(EleField);
+  TVector3D O(0.0000, 0.0000, 30);
 
 
 
-    //fprintf(of1, "%40.30E    %40.30E\n", t + (O - GetValueAtTime(X, t, StartTime, h)).Mag() / kC_SI , Ele.GetZ());
-    fclose(of1);
-  }
-
-
-
-
+  // Beam current in Amps
+  double const Current = 0.500;
 
   if (false) {
     std::ofstream of2("out2.dat");
     of2 << std::scientific;
 
     int const npx = 40;
-    double const xstart = -0.02;
-    double const xstop = 0.02;
-    double const xstep = (xstop-xstart) / npx;
+    double const xstart = -0.03;
+    double const xstop  =  0.03;
+    double const xstep  = (xstop-xstart) / (npx - 1);
     TVector3D const XStep(xstep, 0, 0);
 
     O.SetXYZ(xstart, 0, 30);
 
-    double const tp0 = (O - GetValueAtTime(X, 0, StartTime, h)).Mag() / kC_SI;
-    double const tp1 = (NPointsForward-1)*h + (O - GetValueAtTime(X, (NPointsForward-1)*h, StartTime, h)).Mag() / kC_SI;
-    printf("%40.30E\n", tp1 - tp0);
     for (int ix = 0; ix != npx; ++ix) {
-      O += XStep;
+      //TVector3D const U = (O - TVector3D(0, 0, 0)).UnitVector();
+      TVector3D const U = TVector3D(1, 0, 0);
 
       double Sum = 0.0;
-      int Count = 0;
-      for (double t = 0; t < (NPointsForward-1)*h ; t += h) {
-        TVector3D const Ele = ElectricField(O, X, V, A, t, StartTime, h);
-        TVector3D const Particle = GetValueAtTime(X, t, StartTime, h);
-        Sum += PoyntingVector(Ele, Particle, O).GetZ(); // Same as Mag() but faster in this case
-        ++Count;
+      for (int i = 0; i != NPointsForward ; ++i) {
+        Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, U);
       }
-      double const hp = (tp1 - tp0) / (double) Count;
-      Sum *= hp;  // Gives time average in lab (assuming burst is < 1s)
-      //Sum *= h;  // Gives time average (assuming burst is < 1s)
-      Sum *= (0.5 / -kECharge); // from single electron per second to 500 mA
-      Sum *= 1e-6; // from W/m^2 to W/mm^2
-      //Sum /= (kMu0 * kC_SI);
-      of2 << O.GetX() << " " << Sum << "\n";
+      // Put into SI units
+      Sum *= fabs(kECharge * Current) / (16 * kPI * kPI * kEpsilon0 * kC_SI) * h;
+
+      Sum *= 1e3; // W to mW
+      Sum /= 1e6; // m^2 to mm^2
+
+      of2 << O.GetX() << "  " << Sum << std::endl;
+      O += XStep;
     }
+
     of2.close();
   }
 
 
-  if (false) {
+
+
+
+  double TotalPower = 0;
+  for (int i = 0; i != NPointsForward; ++i) {
+    TotalPower += ( (A[i] / kC_SI).Mag2() - ( (V[i] / kC_SI).Cross(A[i] / kC_SI)).Mag2() ) * h;
+  }
+  TotalPower *= fabs(kECharge * Current) * pow(Gamma, 6) / (6 * kPI * kEpsilon0 * kC_SI);
+
+  std::cout << "Total Power: " << TotalPower << std::endl;
+
+
+
+
+
+
+  if (true) {
     std::ofstream of3("out3.dat");
     of3 << std::scientific;
 
-    int const npx = 40;
-    double const xstart = -0.03;
-    double const xstop = 0.03;
-    double const xstep = (xstop-xstart) / npx;
+    int const npx = 101;
+    double const xstart = -0.02;
+    double const xstop  =  0.02;
+    double const xstep  = (xstop-xstart) / (npx - 1);
     TVector3D const XStep(xstep, 0, 0);
 
-    int const npy = 1;
-    double const ystart = 0;
-    double const ystop = 0.03;
-    double const ystep = (ystop-ystart) / npy;
+    int const npy = 101;
+    double const ystart = -0.004;
+    double const ystop  =  0.004;
+    double const ystep  = (ystop-ystart) / (npy - 1);
     TVector3D const YStep(0, ystep, 0);
-    O.SetXYZ(xstart, ystart, 30);
+    O.SetXYZ(xstart, ystart, 6);
 
     double TotalSum = 0.0;
 
-    double const tp0 = (O - GetValueAtTime(X, 0, StartTime, h)).Mag() / kC_SI;
-    double const tp1 = (NPointsForward-1)*h + (O - GetValueAtTime(X, (NPointsForward-1)*h, StartTime, h)).Mag() / kC_SI;
+    TVector3D const UX = TVector3D(1, 0, 0);
+    TVector3D const UY = TVector3D(0, 1, 0);
     for (int ix = 0; ix != npx; ++ix) {
-      O += XStep;
 
       O.SetY(ystart);
       for (int iy = 0; iy != npy; ++iy) {
-        O += YStep;
 
-        double Sum = 0.0;
-        int Count = 0;
-        for (double t = 0; t < (NPointsForward-1)*h ; t += h) {
-          TVector3D const Ele = ElectricField(O, X, V, A, t, StartTime, h);
-          TVector3D const Particle = GetValueAtTime(X, t, StartTime, h);
-          Sum += PoyntingVector(Ele, Particle, O).GetZ();
-          ++Count;
+        double Sum = 0;
+
+        for (int i = 0; i != NPointsForward ; ++i) {
+          TVector3D const N1 = (O - X[i]).UnitVector();
+          TVector3D const N2 = N1.Cross(TVector3D(1, 0, 0)).UnitVector();
+          TVector3D const N3 = N1.Cross(N2).UnitVector();
+
+          Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, N2);
+          Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, N3);
+          //Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, UX);
+          //Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, UY);
         }
-        double const hp = (tp1 - tp0) / (double) Count;
-        Sum *= hp;  // Gives time average in lab (assuming burst is < 1s)
-        //Sum *= h;  // Gives time average (assuming burst is < 1s)
-        Sum *= (0.5 / -kECharge); // from single electron per second to 500 mA
-        Sum *= 1e-6; // from W/m^2 to W/mm^2
+
+        // Put into SI units
+        Sum *= fabs(kECharge * Current) / (16 * kPI * kPI * kEpsilon0 * kC_SI) * h;
+
+        //Sum *= 1e3; // W to mW
+        Sum /= 1e6; // m^2 to mm^2
+
+
+
         of3 << O.GetX() << " " << O.GetY() << " " << Sum << "\n";
 
         TotalSum += Sum;
+        O += YStep;
       }
+      O += XStep;
     }
     of3.close();
 
-    std::cout << "Power: " << TotalSum * 1e6 * xstep * ystep << std::endl;
+    std::cout << "Power: " << TotalSum * xstep * ystep * 1e6 << std::endl;
+  }
+
+
+  if (true) {
+    std::ofstream of4("out4.dat");
+    of4 << std::scientific;
+
+    int const npx = 101;
+    double const xstart = -0.020;
+    double const xstop  =  0.020;
+    double const xstep  = (xstop-xstart) / (npx - 1);
+    TVector3D const XStep(xstep, 0, 0);
+
+    int const npz = 101;
+    double const zstart =  4.000;
+    double const zstop  =  6.000;
+    double const zstep  = (zstop-zstart) / (npz - 1);
+    TVector3D const ZStep(0, 0, zstep);
+    O.SetXYZ(xstart, -0.004, zstart);
+
+    double TotalSum = 0.0;
+
+    TVector3D const UX = TVector3D(1, 0, 0);
+    TVector3D const UY = TVector3D(0, 1, 0);
+    for (int ix = 0; ix != npx; ++ix) {
+
+      O.SetZ(zstart);
+      for (int iz = 0; iz != npz; ++iz) {
+
+        double Sum = 0;
+
+
+        for (int i = 0; i != NPointsForward ; ++i) {
+          TVector3D const N1 = (O - X[i]).UnitVector();
+          TVector3D const N2 = N1.Cross(TVector3D(1, 0, 0)).UnitVector();
+          TVector3D const N3 = N1.Cross(N2).UnitVector();
+
+          Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, N2) * N1.Dot(TVector3D(0, -1, 0));
+          Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, N3) * N1.Dot(TVector3D(0, -1, 0));
+          //Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, UX);
+          //Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, UY);
+        }
+
+        // Put into SI units
+        Sum *= fabs(kECharge * Current) / (16 * kPI * kPI * kEpsilon0 * kC_SI) * h;
+
+        //Sum *= 1e3; // W to mW
+        Sum /= 1e6; // m^2 to mm^2
+
+
+
+        of4 << O.GetX() << " " << O.GetZ() << " " << Sum << "\n";
+
+        TotalSum += Sum;
+        O += ZStep;
+      }
+      O += XStep;
+    }
+    of4.close();
+
+    std::cout << "Power: " << TotalSum * xstep * zstep * 1e6 << std::endl;
   }
 
 
   return 0;
 }
+
+
+
+
 
 
 
@@ -499,9 +582,9 @@ int main (int argc, char* argv[])
   }
 
 
-  //TBF =(TBField*) new TBField3DZRegularized(argv[1]);
+  TBF =(TBField*) new TBField3DZRegularized(argv[1]);
   //TBF =(TBField*) new TBFieldSquareWave(0.200, 11, 0, 1.0);
-  TBF =(TBField*) new TBFieldIdeal1D(0.057, 22, 0, 0.836);
+  //TBF =(TBField*) new TBFieldIdeal1D(0.400, 2, 0, 1.000);
   //TBF =(TBField*) new TBFieldUniformB(0, 0, 0);
 
 

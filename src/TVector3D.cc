@@ -10,6 +10,8 @@
 
 #include <cmath>
 
+
+
 TVector3D::TVector3D ()
 {
   // Default constructor
@@ -134,6 +136,18 @@ double TVector3D::Dot(TVector3D const& V) const
 
 
 
+double TVector3D::Perp2(const TVector3D const& p)  const {
+  double const tot = p.Mag2();
+  double const ss  = Dot(p);
+  double per = Mag2();
+  if (tot > 0.0) per -= ss*ss/tot;
+  if (per < 0)   per = 0;
+  return per;
+}
+
+
+
+
 TVector3D TVector3D::Cross (TVector3D const& V) const
 {
   // Get the cross product of this cross V using the right hand convention
@@ -146,7 +160,7 @@ TVector3D TVector3D::Cross (TVector3D const& V) const
 TVector3D TVector3D::UnitVector () const
 {
   // Get a unit vector in the direction of this
-  return TVector3D(fX / Mag(), fY / Mag(), fZ / Mag());
+  return TVector3D(*this / Mag());
 }
 
 
