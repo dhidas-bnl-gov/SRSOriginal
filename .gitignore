@@ -3,4 +3,8 @@
 # Except this file
 !.gitignore
 # Except foldersa
-!*/
+!/exe
+!/src
+!/include
+!/python
+!/doc
