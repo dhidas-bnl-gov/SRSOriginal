@@ -23,17 +23,17 @@ class TSurfacePoint
     TSurfacePoint (double const&, double const&, double const&, double const&, double const&, double const&);
     ~TSurfacePoint ();
 
-    TVector3D const& GetPoint ();
-    double GetX ();
-    double GetY ();
-    double GetZ ();
+    TVector3D const& GetPoint () const;
+    double GetX () const;
+    double GetY () const;
+    double GetZ () const;
     void SetXYZ (TVector3D const&);
     void SetXYZ (double const&, double const&, double const&);
 
-    TVector3D const& GetNormal ();
-    double GetNormalX ();
-    double GetNormalY ();
-    double GetNormalZ ();
+    TVector3D const& GetNormal () const;
+    double GetNormalX () const;
+    double GetNormalY () const;
+    double GetNormalZ () const;
     void SetNormalXYZ (TVector3D const&);
     void SetNormalXYZ (double const&, double const&, double const&);
 

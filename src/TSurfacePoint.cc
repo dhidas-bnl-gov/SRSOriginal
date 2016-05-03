@@ -35,28 +35,28 @@ TSurfacePoint::~TSurfacePoint ()
 
 
 
-TVector3D const& TSurfacePoint::GetPoint ()
+TVector3D const& TSurfacePoint::GetPoint () const
 {
   return fX;
 }
 
 
 
-double TSurfacePoint::GetX ()
+double TSurfacePoint::GetX () const
 {
   return fX.GetX();
 }
 
 
 
-double TSurfacePoint::GetY ()
+double TSurfacePoint::GetY () const
 {
   return fX.GetY();
 }
 
 
 
-double TSurfacePoint::GetZ ()
+double TSurfacePoint::GetZ () const
 {
   return fX.GetZ();
 }
@@ -83,28 +83,28 @@ void TSurfacePoint::SetXYZ (double const& x, double const& y, double const& z)
 
 
 
-TVector3D const& TSurfacePoint::GetNormal ()
+TVector3D const& TSurfacePoint::GetNormal () const
 {
   return fN;
 }
 
 
 
-double TSurfacePoint::GetNormalX ()
+double TSurfacePoint::GetNormalX () const
 {
   return fN.GetX();
 }
 
 
 
-double TSurfacePoint::GetNormalY ()
+double TSurfacePoint::GetNormalY () const
 {
   return fN.GetY();
 }
 
 
 
-double TSurfacePoint::GetNormalZ ()
+double TSurfacePoint::GetNormalZ () const
 {
   return fN.GetZ();
 }
