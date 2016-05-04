@@ -13,7 +13,7 @@
 ////////////////////////////////////////////////////////////////////
 
 
-
+#include <iostream>
 
 
 class TVector3D
@@ -53,6 +53,8 @@ class TVector3D
     bool       operator == (TVector3D const&) const;
     bool       operator != (TVector3D const&) const;
 
+
+
   private:
     double fX;
     double fY;
@@ -61,6 +63,12 @@ class TVector3D
 };
 
 
+
+inline std::ostream& operator << (std::ostream& os, TVector3D const& o)
+{
+  os << "(" << o.GetX() << ", " << o.GetY() << ", " << o.GetZ() << ")";
+  return os;
+}
 
 
 
@@ -76,7 +84,6 @@ inline TVector3D operator * (TVector3D const& L, double const& V)
   // Multiply vector by some scalar
   return TVector3D(L.GetX() * V, L.GetY() * V, L.GetZ() * V);
 }
-
 
 
 

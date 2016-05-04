@@ -10,12 +10,15 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <complex>
 
+#include "TSurfacePoints_RectangleSimple.h"
 #include "TBFieldUniformB.h"
 #include "TBField3DZRegularized.h"
 #include "TBFieldSquareWave.h"
 #include "TBFieldIdeal1D.h"
 #include "TVector3D.h"
+#include "TVector3DC.h"
 
 #include "TGraph.h"
 #include "TGraph2D.h"
@@ -41,16 +44,18 @@ double const kEMass = 9.10938356E-31;
 double const kECharge = -1.60217662E-19;
 double const kEpsilon0 = 8.854187817E-12;
 double const kMu0      = 1.2566370614E-6;
+double const kh = 6.62607004e-34;
 
 double const BetaX = 0;
 double const BetaY = 0;
 
 
 
+
 double const kC_SI = 299792458.;
 //double const XStart = -1.8076921081543;
-double const XStart = -2.5;
-double const XStop  =  2.5;
+double const XStart = -1.5;
+double const XStop  =  1.5;
 
 
 
@@ -239,7 +244,7 @@ int RK4Test ()
   double dxdt[N];
 
 
-  int const NPointsForward = 50001;
+  int const NPointsForward = 20000;
   int const NPointsBack = 0; //0.5 / ((XStop - XStart) / (NPointsForward - 1));
   double const h = (XStop - XStart) / (BetaZ * kC_SI) / (NPointsForward - 1);
 
@@ -387,16 +392,135 @@ int RK4Test ()
 
 
 
-  TVector3D O(0.0000, 0.0000, 30);
 
 
 
   // Beam current in Amps
   double const Current = 0.500;
 
+
+
+  std::ofstream ofSpec("out_spec.dat");
+  ofSpec << std::scientific;
+
+  TVector3D Obs(0, 0.000, 300);
+
+  double const ConvmRad = pow(Obs.GetZ() * 0.001, 2);
+
+  std::vector<TVector3DC> Ew;
+  std::vector<TVector3DC> Bw;
+
+  double const C0 = kECharge / (4 * kPI * kC_SI * kEpsilon0);
+  std::complex<double> const I(0, 1);
+
+  for (double iw = 1e15; iw <= 5.75e18; iw += 5e15) {
+    std::complex<double> const C1(0, C0 * iw);
+
+
+
+    std::complex<double> SumX(0, 0);
+    std::complex<double> SumY(0, 0);
+    std::complex<double> SumZ(0, 0);
+
+    TVector3DC SumE(0, 0, 0);
+    TVector3DC SumB(0, 0, 0);
+
+    for (int i = 0; i != NPointsForward; ++i) {
+      TVector3D const R = Obs - X[i];
+      TVector3D const N = R.UnitVector();
+      double const D = R.Mag();
+      std::complex<double> Exponent(0, iw * (h * i + D / kC_SI));
+
+      TVector3DC const ThisEw = (TVector3DC(V[i]) / kC_SI - TVector3DC(N) * ( std::complex<double>(1, 0) + (I * kC_SI / (iw * D)))) / D * std::exp(Exponent) * h;
+
+      SumE += ThisEw;
+      SumB += TVector3DC(N).Cross(ThisEw) / kC_SI;
+
+
+
+    }
+
+
+    SumE *= C1;
+    SumB *= C1;
+
+    //ofSpec << iw << "  " <<  8 * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * kECharge) * SumE.Cross(SumB.CC()).Dot( TVector3DC(0, 0, 1) ).real() << std::endl;;
+    //ofSpec << iw * 4.1357e-15 / k2PI << "  " <<  -8 * kPI * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * kECharge) * SumE.Cross(SumB.CC()).GetZ().real() * 1e-6<< std::endl;;
+    ofSpec << iw * 4.1357e-15 / k2PI << "  " <<  -8 * kPI * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * kECharge) * SumE.Cross(SumB.CC()).Dot( TVector3DC(0, 0, 1) ).real() * 1e-6 * ConvmRad << std::endl;;
+
+
+    //ofSpec << iw * 4.1357e-15 / k2PI<< "  " << SumX.real()*SumX.real() + SumX.imag()*SumX.imag() << "\n";
+
+
+    Ew.push_back(SumE);
+    Bw.push_back(SumB);
+
+  }
+
+  ofSpec.close();
+
+  exit(0);
+
+
+
+
+
+
+
+
+  // Calculate total power out
+  double TotalPower = 0;
+  for (int i = 0; i != NPointsForward; ++i) {
+    TotalPower += ( (A[i] / kC_SI).Mag2() - ( (V[i] / kC_SI).Cross(A[i] / kC_SI)).Mag2() ) * h;
+  }
+  TotalPower *= fabs(kECharge * Current) * pow(Gamma, 6) / (6 * kPI * kEpsilon0 * kC_SI);
+
+  std::cout << "Total Power: " << TotalPower << std::endl;
+
+
+  double TotalSum = 0;
+  //TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.04, 0.008, 0, 0, 6, 1);
+  //TSurfacePoints_RectangleSimple Surface("XZ", 101, 101, 0.04, 2*1.195, 0, 0.004, 0, 1);
+  TSurfacePoints_RectangleSimple Surface("YZ", 101, 101, 0.008, 6, 0.02, 0, 3, 1);
+  std::ofstream ofS("out.dat");
+  ofS << std::scientific;
+  for (size_t i = 0; i != Surface.GetNPoints(); ++i) {
+
+    TVector3D Obs = Surface.GetPoint(i).GetPoint();
+    TVector3D Normal = Surface.GetPoint(i).GetNormal();
+
+    double Sum = 0;
+
+    for (int i = 0; i != NPointsForward ; ++i) {
+      TVector3D const N1 = (Obs - X[i]).UnitVector();
+      TVector3D const N2 = N1.Cross(TVector3D(1, 0, 0)).UnitVector();
+      TVector3D const N3 = N1.Cross(N2).UnitVector();
+
+      Sum += PowerDensityIntegrand(X[i], V[i], A[i], Obs, N2) * N1.Dot(Normal);
+      Sum += PowerDensityIntegrand(X[i], V[i], A[i], Obs, N3) * N1.Dot(Normal);
+    }
+
+    // Put into SI units
+    Sum *= fabs(kECharge * Current) / (16 * kPI * kPI * kEpsilon0 * kC_SI) * h;
+
+    //Sum *= 1e3; // W to mW
+    Sum /= 1e6; // m^2 to mm^2
+
+
+    ofS << Obs.GetY() << " " << Obs.GetZ() << " " << Sum << "\n";
+
+    TotalSum += Sum;
+
+  }
+  std::cout << "Power: " << TotalSum * Surface.GetElementArea() * 1e6 << std::endl;
+  ofS.close();
+  exit(0);
+
   if (false) {
     std::ofstream of2("out2.dat");
     of2 << std::scientific;
+
+    TVector3D O(0.0000, 0.0000, 30);
 
     int const npx = 40;
     double const xstart = -0.03;
@@ -428,25 +552,11 @@ int RK4Test ()
   }
 
 
-
-
-
-  double TotalPower = 0;
-  for (int i = 0; i != NPointsForward; ++i) {
-    TotalPower += ( (A[i] / kC_SI).Mag2() - ( (V[i] / kC_SI).Cross(A[i] / kC_SI)).Mag2() ) * h;
-  }
-  TotalPower *= fabs(kECharge * Current) * pow(Gamma, 6) / (6 * kPI * kEpsilon0 * kC_SI);
-
-  std::cout << "Total Power: " << TotalPower << std::endl;
-
-
-
-
-
-
-  if (true) {
-    std::ofstream of3("out3.dat");
+  if (false) {
+    std::ofstream of3("out_plusZ.dat");
     of3 << std::scientific;
+
+    TVector3D O(0.0000, 0.0000, 30);
 
     int const npx = 101;
     double const xstart = -0.02;
@@ -477,8 +587,8 @@ int RK4Test ()
           TVector3D const N2 = N1.Cross(TVector3D(1, 0, 0)).UnitVector();
           TVector3D const N3 = N1.Cross(N2).UnitVector();
 
-          Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, N2);
-          Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, N3);
+          Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, N2) * N1.Dot(TVector3D(0, 0, 1));
+          Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, N3) * N1.Dot(TVector3D(0, 0, 1));
           //Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, UX);
           //Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, UY);
         }
@@ -504,65 +614,14 @@ int RK4Test ()
   }
 
 
-  if (true) {
-    std::ofstream of4("out4.dat");
-    of4 << std::scientific;
-
-    int const npx = 101;
-    double const xstart = -0.020;
-    double const xstop  =  0.020;
-    double const xstep  = (xstop-xstart) / (npx - 1);
-    TVector3D const XStep(xstep, 0, 0);
-
-    int const npz = 101;
-    double const zstart =  4.000;
-    double const zstop  =  6.000;
-    double const zstep  = (zstop-zstart) / (npz - 1);
-    TVector3D const ZStep(0, 0, zstep);
-    O.SetXYZ(xstart, -0.004, zstart);
-
-    double TotalSum = 0.0;
-
-    TVector3D const UX = TVector3D(1, 0, 0);
-    TVector3D const UY = TVector3D(0, 1, 0);
-    for (int ix = 0; ix != npx; ++ix) {
-
-      O.SetZ(zstart);
-      for (int iz = 0; iz != npz; ++iz) {
-
-        double Sum = 0;
-
-
-        for (int i = 0; i != NPointsForward ; ++i) {
-          TVector3D const N1 = (O - X[i]).UnitVector();
-          TVector3D const N2 = N1.Cross(TVector3D(1, 0, 0)).UnitVector();
-          TVector3D const N3 = N1.Cross(N2).UnitVector();
-
-          Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, N2) * N1.Dot(TVector3D(0, -1, 0));
-          Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, N3) * N1.Dot(TVector3D(0, -1, 0));
-          //Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, UX);
-          //Sum += PowerDensityIntegrand(X[i], V[i], A[i], O, UY);
-        }
-
-        // Put into SI units
-        Sum *= fabs(kECharge * Current) / (16 * kPI * kPI * kEpsilon0 * kC_SI) * h;
-
-        //Sum *= 1e3; // W to mW
-        Sum /= 1e6; // m^2 to mm^2
 
 
 
-        of4 << O.GetX() << " " << O.GetZ() << " " << Sum << "\n";
 
-        TotalSum += Sum;
-        O += ZStep;
-      }
-      O += XStep;
-    }
-    of4.close();
 
-    std::cout << "Power: " << TotalSum * xstep * zstep * 1e6 << std::endl;
-  }
+
+
+
 
 
   return 0;

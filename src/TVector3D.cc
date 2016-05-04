@@ -136,7 +136,7 @@ double TVector3D::Dot(TVector3D const& V) const
 
 
 
-double TVector3D::Perp2(const TVector3D const& p)  const {
+double TVector3D::Perp2(TVector3D const& p)  const {
   double const tot = p.Mag2();
   double const ss  = Dot(p);
   double per = Mag2();
@@ -281,9 +281,6 @@ bool TVector3D::operator != (TVector3D const& V) const
   // Is any component of this vector not equal to the equivalent component of V
   return fX != V.GetX() || fY != V.GetY() || fZ != V.GetZ();
 }
-
-
-
 
 
 
