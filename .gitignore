@@ -1,10 +1,7 @@
 # Ignore everything in this directory
-*
+*.*
+bin
 # Except this file
 !.gitignore
 # Except foldersa
-!/exe/*
-!/src/*
-!/include/*
-!/python/*
-!/doc/*
+
