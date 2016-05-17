@@ -11,8 +11,8 @@ TBFieldIdeal1D::TBFieldIdeal1D (double const& PeriodLength, double const& NPerio
   fCenterZ = CenterZ;
   fMaxBy = MaxBy;
 
-  fZMin = fCenterZ - (fNPeriods - 1) * (fPeriodLength / 2.);
-  fZMax = fCenterZ + (fNPeriods - 1) * (fPeriodLength / 2.);
+  fZMin = fCenterZ - (fNPeriods + 1) * (fPeriodLength / 2.);
+  fZMax = fCenterZ + (fNPeriods + 1) * (fPeriodLength / 2.);
 
 }
 

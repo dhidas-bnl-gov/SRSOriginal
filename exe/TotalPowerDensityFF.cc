@@ -13,6 +13,7 @@
 #include <complex>
 
 #include "TSurfacePoints_RectangleSimple.h"
+#include "TSurfacePoints_BBoxSimple.h"
 #include "TBFieldUniformB.h"
 #include "TBField3DZRegularized.h"
 #include "TBFieldSquareWave.h"
@@ -54,8 +55,8 @@ double const BetaY = 0;
 
 double const kC_SI = 299792458.;
 //double const XStart = -1.8076921081543;
-double const XStart = -0.7;
-double const XStop  =  0.7;
+double const XStart = -1.5;
+double const XStop  =  1.5;
 
 
 
@@ -244,7 +245,7 @@ int RK4Test ()
   double dxdt[N];
 
 
-  int const NPointsForward = 1200000;
+  int const NPointsForward = 20001;
   int const NPointsBack = 0; //0.5 / ((XStop - XStart) / (NPointsForward - 1));
   double const h = (XStop - XStart) / (BetaZ * kC_SI) / (NPointsForward - 1);
 
@@ -399,6 +400,16 @@ int RK4Test ()
   double const Current = 0.500;
 
 
+  if (false) {
+    std::ofstream oB("out_ZBy.dat");
+    oB << std::scientific;
+    for (double z = XStart; z <= XStop; z += 0.0001) {
+      //oB << 0 << "\t" << TBF->GetBy(0, 0, z) << "\t" << 0 << std::endl;
+      oB << z << "\t" << TBF->GetBy(0, 0, z) << std::endl;
+    }
+    oB.close();
+    exit(0);
+  }
 
 
 
@@ -406,12 +417,12 @@ int RK4Test ()
 
 
 
-  if (true) {
+  if (false) {
     std::ofstream ofFlux("out_flux.dat");
     ofFlux << std::scientific;
 
     TVector3D Obs(0, 0.000, 300);
-    TSurfacePoints_RectangleSimple Surface("XY", 21, 21, 160e-3, 30e-3, 0, 0, 30, 1);
+    TSurfacePoints_RectangleSimple Surface("XY", 51, 51, 160e-3, 30e-3, 0, 0, 30, 1);
 
 
     double const C0 = kECharge / (4 * kPI * kC_SI * kEpsilon0);
@@ -452,7 +463,7 @@ int RK4Test ()
       SumE *= C1;
       SumB *= C1;
 
-      ofFlux << Obs.GetX() << " " << Obs.GetY() << " " <<  8 * kPI * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * fabs(kECharge)) * SumE.Cross(SumB.CC()).Dot( Normal ).real() * 1e-6 << std::endl;;
+      ofFlux << Obs.GetX() << " " << Obs.GetY() << " " <<  8 * kPI * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * fabs(kECharge)) * SumE.Cross(SumB.CC()).Dot( Normal ).real() * 1e-6 << std::endl; // fux per m,^2
     }
 
     ofFlux.close();
@@ -471,6 +482,61 @@ int RK4Test ()
 
 
 
+  if (true) {
+    // Spec according to Hoffman
+    std::ofstream ofSpec("out_spec.dat");
+    ofSpec << std::scientific;
+
+    TVector3D Obs(0, 0.000, 190);
+
+
+
+    double const C0 = kECharge / (4 * kPI * kC_SI * kEpsilon0 * sqrt(k2PI));
+    std::complex<double> const I(0, 1);
+
+    int const NEPoints = 1000;
+    double const EStart = 100;
+    double const EStop  = 2000;
+
+    double const wStart = EStart * k2PI / 4.1357e-15;
+    double const wStop  = EStop * k2PI / 4.1357e-15;
+
+    double const wStepSize = (wStop - wStart) / (NEPoints - 1);
+
+    for (double iw = wStart; iw <= wStop; iw += wStepSize) {
+
+
+
+      std::complex<double> SumX(0, 0);
+      std::complex<double> SumY(0, 0);
+      std::complex<double> SumZ(0, 0);
+
+      TVector3DC SumE(0, 0, 0);
+
+      for (int i = 0; i != NPointsForward; ++i) {
+        TVector3D const R = Obs - X[i];
+        TVector3D const N = R.UnitVector();
+        double const D = R.Mag();
+        std::complex<double> Exponent(0, -iw * (h * i + D / kC_SI));
+
+        TVector3DC const ThisEw = ( N.Cross( (N - V[i] / kC_SI).Cross(A[i] / kC_SI) ) ) / ( D * pow(1 - N.Dot(V[i] / kC_SI), 2) ) * std::exp(Exponent) * h;
+
+        SumE += ThisEw;
+
+      }
+
+
+      SumE *= C0;
+
+      //ofSpec << iw * 4.1357e-15 / k2PI << "  " <<  2 * k2PI * Current / (kh * fabs(kECharge) * kMu0 * kC_SI) *  SumE.Dot( SumE.CC() ).real() * pow(Obs.GetZ(), 2) << std::endl;
+      ofSpec << iw * 4.1357e-15 / k2PI << "  " <<  2 * k2PI * Current / (kh * fabs(kECharge) * kMu0 * kC_SI) *  SumE.Dot( SumE.CC() ).real()  * 1e-6  * 0.001 << std::endl;
+
+    }
+
+    ofSpec.close();
+
+    exit(0);
+  }
 
 
 
@@ -482,81 +548,140 @@ int RK4Test ()
 
 
 
-  std::ofstream ofSpec("out_spec.dat");
-  ofSpec << std::scientific;
-
-  TVector3D Obs(0, 0.000, 30);
-
-  double const ConvmRad = pow(Obs.GetZ() * 0.001, 2);
-
-  std::vector<TVector3DC> Ew;
-  std::vector<TVector3DC> Bw;
-
-  double const C0 = kECharge / (4 * kPI * kC_SI * kEpsilon0);
-  std::complex<double> const I(0, 1);
-
-  int const NEPoints = 1000;
-  double const EStart = 1;
-  double const EStop  = 20000;
-
-  double const wStart = EStart * k2PI / 4.1357e-15;
-  double const wStop  = EStop * k2PI / 4.1357e-15;
-
-  double const wStepSize = (wStop - wStart) / (NEPoints - 1);
-
-  for (double iw = wStart; iw <= wStop; iw += wStepSize) {
-    std::complex<double> const C1(0, C0 * iw);
 
 
 
-    std::complex<double> SumX(0, 0);
-    std::complex<double> SumY(0, 0);
-    std::complex<double> SumZ(0, 0);
 
-    TVector3DC SumE(0, 0, 0);
-    TVector3DC SumB(0, 0, 0);
 
-    for (int i = 0; i != NPointsForward; ++i) {
-      TVector3D const R = Obs - X[i];
-      TVector3D const N = R.UnitVector();
-      double const D = R.Mag();
-      std::complex<double> Exponent(0, iw * (h * i + D / kC_SI));
 
-      TVector3DC const ThisEw = (TVector3DC(V[i]) / kC_SI - TVector3DC(N) * ( std::complex<double>(1, 0) + (I * kC_SI / (iw * D)))) / D * std::exp(Exponent) * h;
-      TVector3DC const ThisBw = ((TVector3DC(V[i]) / kC_SI).Cross( TVector3DC(N) * ( std::complex<double>(1, 0) + (I * kC_SI / (iw * D)))) / D * std::exp(Exponent) * h );
 
-      SumE += ThisEw;
-      SumB -= ThisBw / kC_SI;
-      //SumB += TVector3DC(N).Cross(ThisEw) / kC_SI;
+
+
+
+
+  if (false) {
+    // Spec according to Und, Wigg, and Apps
+    std::ofstream ofSpec("out_spec.dat");
+    ofSpec << std::scientific;
+
+    TVector3D Obs(0, 0.000, 30);
+
+
+
+    double const C0 = kECharge / (4 * kPI * kC_SI * kEpsilon0);
+    std::complex<double> const I(0, 1);
+
+    int const NEPoints = 1000;
+    double const EStart = 100;
+    double const EStop  = 2000;
+
+    double const wStart = EStart * k2PI / 4.1357e-15;
+    double const wStop  = EStop * k2PI / 4.1357e-15;
+
+    double const wStepSize = (wStop - wStart) / (NEPoints - 1);
+
+    for (double iw = wStart; iw <= wStop; iw += wStepSize) {
+      std::complex<double> const C1(0, C0 * iw);
+
+
+
+      std::complex<double> SumX(0, 0);
+      std::complex<double> SumY(0, 0);
+      std::complex<double> SumZ(0, 0);
+
+      TVector3DC SumE(0, 0, 0);
+      TVector3DC SumB(0, 0, 0);
+
+      for (int i = 0; i != NPointsForward; ++i) {
+        TVector3D const R = Obs - X[i];
+        TVector3D const N = R.UnitVector();
+        double const D = R.Mag();
+        std::complex<double> Exponent(0, iw * (h * i + D / kC_SI));
+
+        TVector3DC const ThisEw = (TVector3DC(V[i]) / kC_SI - (TVector3DC(N) * ( std::complex<double>(1, 0) + (I * kC_SI / (iw * D))))) / D * std::exp(Exponent) * h;
+        TVector3DC const ThisBw = ((TVector3DC(V[i]) / kC_SI).Cross( TVector3DC(N) * ( std::complex<double>(1, 0) + (I * kC_SI / (iw * D)))) / D * std::exp(Exponent) * h );
+
+        SumE += ThisEw;
+        SumB += ThisBw;
+
+      }
+
+
+      SumE *= C1;
+      SumB *= -C1 / kC_SI;
+
+      ofSpec << iw * 4.1357e-15 / k2PI << "  " <<  8 * kPI * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * fabs(kECharge)) * ( SumE.Cross(SumB.CC()).Dot( TVector3DC(0, 0, 1) ) ).real() * 1e-6 << std::endl;
+
 
 
 
     }
 
+    ofSpec.close();
 
-    SumE *= C1;
-    SumB *= C1;
-
-    //ofSpec << iw << "  " <<  8 * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * kECharge) * SumE.Cross(SumB.CC()).Dot( TVector3DC(0, 0, 1) ).real() << std::endl;;
-    //ofSpec << iw * 4.1357e-15 / k2PI << "  " <<  -8 * kPI * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * kECharge) * SumE.Cross(SumB.CC()).GetZ().real() * 1e-6<< std::endl;;
-    ofSpec << iw * 4.1357e-15 / k2PI << "  " <<  8 * kPI * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * fabs(kECharge)) * SumE.Cross(SumB.CC()).Dot( TVector3DC(0, 0, 1) ).real() * 1e-6 << std::endl;;
-
-
-    //ofSpec << iw * 4.1357e-15 / k2PI<< "  " << SumX.real()*SumX.real() + SumX.imag()*SumX.imag() << "\n";
-
-
-    Ew.push_back(SumE);
-    Bw.push_back(SumB);
-
+    exit(0);
   }
 
-  ofSpec.close();
-
-  exit(0);
 
 
+  if (false) {
+
+    TVector3D Obs(0, 0.000, 30);
+
+    double const ConvmRad = pow(Obs.GetZ() * 0.001, 2);
 
 
+    double const C0 = kECharge / (4 * kPI * kC_SI * kEpsilon0);
+    std::complex<double> const I(0, 1);
+
+    int const NEPoints = 10000;
+    double const EStart = 1;
+    double const EStop  = 50000;
+
+    double const wStart = EStart * k2PI / 4.1357e-15;
+    double const wStop  = EStop * k2PI / 4.1357e-15;
+
+    double const wStepSize = (wStop - wStart) / (NEPoints - 1);
+
+    double TotalPD = 0;
+
+    for (double iw = wStart; iw <= wStop; iw += wStepSize) {
+      std::complex<double> const C1(0, C0 * iw);
+
+
+
+      TVector3DC SumE(0, 0, 0);
+      TVector3DC SumB(0, 0, 0);
+
+      for (int i = 0; i != NPointsForward; ++i) {
+        TVector3D const R = Obs - X[i];
+        TVector3D const N = R.UnitVector();
+        double const D = R.Mag();
+        std::complex<double> Exponent(0, iw * (h * i + D / kC_SI));
+
+
+        TVector3DC const ThisEw = (TVector3DC(V[i]) / kC_SI - TVector3DC(N) * ( std::complex<double>(1, 0) + (I * kC_SI / (iw * D)))) / D * std::exp(Exponent) * h;
+        TVector3DC const ThisBw = ((TVector3DC(V[i]) / kC_SI).Cross( TVector3DC(N) * ( std::complex<double>(1, 0) + (I * kC_SI / (iw * D)))) / D * std::exp(Exponent) * h );
+
+        SumE += ThisEw;
+        SumB -= ThisBw / kC_SI;
+      }
+
+
+      SumE *= C1;
+      SumB *= C1;
+
+      TotalPD +=   4 * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (fabs(kECharge)) * SumE.Cross(SumB.CC()).Dot( TVector3DC(0, 0, 1) ).real() * 1e-6 * wStepSize;
+
+
+
+    }
+
+    std::cout << "PD: " << TotalPD << std::endl;
+
+
+    exit(0);
+  }
 
 
 
@@ -567,20 +692,78 @@ int RK4Test ()
     TotalPower += ( (A[i] / kC_SI).Mag2() - ( (V[i] / kC_SI).Cross(A[i] / kC_SI)).Mag2() ) * h;
   }
   TotalPower *= fabs(kECharge * Current) * pow(Gamma, 6) / (6 * kPI * kEpsilon0 * kC_SI);
+  std::cout << "Total Power: " << TotalPower << std::endl;
 
+  TotalPower = 0;
+  for (int i = 0; i != NPointsForward; ++i) {
+    TotalPower += ( (A[i] / kC_SI).Mag2() - ( (V[i] / kC_SI).Cross(A[i] / kC_SI)).Mag2() ) * h;
+  }
+  TotalPower *= fabs(kECharge * Current) * pow(Gamma, 6) / (6 * kPI * kEpsilon0 * kC_SI);
   std::cout << "Total Power: " << TotalPower << std::endl;
 
 
+
+
+
+
+  if (false) {
+    std::vector<std::ofstream> of(6);
+    of[0].open("BBoxSimple_PXY.dat");
+    of[1].open("BBoxSimple_MXY.dat");
+    of[2].open("BBoxSimple_PXZ.dat");
+    of[3].open("BBoxSimple_MXZ.dat");
+    of[4].open("BBoxSimple_PYZ.dat");
+    of[5].open("BBoxSimple_MYZ.dat");
+    for (int i = 0; i != 6; ++i) {
+      of[i] << std::scientific;
+    }
+    TSurfacePoints_BBoxSimple Surface(0, 0, 0, 0.060, 0.060, 60, 50, 50, 1);
+
+    for (size_t io = 0; io < Surface.GetNPoints(); ++io) {
+      TVector3D Obs = Surface.GetPoint(io).GetPoint();
+      TVector3D Normal = Surface.GetPoint(io).GetNormal();
+
+      double Sum = 0;
+
+      for (int i = 0; i != NPointsForward ; ++i) {
+        TVector3D const N1 = (Obs - X[i]).UnitVector();
+        TVector3D const N2 = N1.Cross(TVector3D(1, 0, 0)).UnitVector();
+        TVector3D const N3 = N1.Cross(N2).UnitVector();
+
+        Sum += PowerDensityIntegrand(X[i], V[i], A[i], Obs, N2) * N1.Dot(Normal);
+        Sum += PowerDensityIntegrand(X[i], V[i], A[i], Obs, N3) * N1.Dot(Normal);
+      }
+
+      // Put into SI units
+      Sum *= fabs(kECharge * Current) / (16 * kPI * kPI * kEpsilon0 * kC_SI) * h;
+
+      Sum /= 1e6; // m^2 to mm^2
+
+
+      of[Surface.GetSurfaceNumber(io)] << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
+
+    }
+
+    for (std::vector<std::ofstream>::iterator it = of.begin(); it != of.end(); ++it) {
+      it->close();
+    }
+    of.clear();
+    exit(0);
+  }
+
+
+
+
   double TotalSum = 0;
-  //TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.04, 0.008, 0, 0, 6, 1);
-  //TSurfacePoints_RectangleSimple Surface("XZ", 101, 101, 0.04, 2*1.195, 0, 0.004, 0, 1);
-  TSurfacePoints_RectangleSimple Surface("YZ", 101, 101, 0.008, 6, 0.02, 0, 3, 1);
+  //TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.16, 0.026, 0, 0, 30, 1);
+  TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.06, 0.06, 0, 0, 30, 1);
+  //TSurfacePoints_RectangleSimple Surface("XZ", 51, 51, 0.04, 3, 0, 0.004, 0, 1);
   std::ofstream ofS("out.dat");
   ofS << std::scientific;
-  for (size_t i = 0; i != Surface.GetNPoints(); ++i) {
+  for (size_t io = 0; io != Surface.GetNPoints(); ++io) {
 
-    TVector3D Obs = Surface.GetPoint(i).GetPoint();
-    TVector3D Normal = Surface.GetPoint(i).GetNormal();
+    TVector3D Obs = Surface.GetPoint(io).GetPoint();
+    TVector3D Normal = Surface.GetPoint(io).GetNormal();
 
     double Sum = 0;
 
@@ -596,11 +779,10 @@ int RK4Test ()
     // Put into SI units
     Sum *= fabs(kECharge * Current) / (16 * kPI * kPI * kEpsilon0 * kC_SI) * h;
 
-    //Sum *= 1e3; // W to mW
     Sum /= 1e6; // m^2 to mm^2
 
 
-    ofS << Obs.GetY() << " " << Obs.GetZ() << " " << Sum << "\n";
+    ofS << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
 
     TotalSum += Sum;
 
@@ -734,9 +916,9 @@ int main (int argc, char* argv[])
   }
 
 
-  TBF =(TBField*) new TBField3DZRegularized(argv[1]);
+  //TBF =(TBField*) new TBField3DZRegularized(argv[1]);
   //TBF =(TBField*) new TBFieldSquareWave(0.200, 11, 0, 1.0);
-  //TBF =(TBField*) new TBFieldIdeal1D(0.400, 2, 0, 1.000);
+  TBF =(TBField*) new TBFieldIdeal1D(0.03, 33, 0, 1.000);
   //TBF =(TBField*) new TBFieldUniformB(0, 0, 0);
 
 

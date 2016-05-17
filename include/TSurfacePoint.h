@@ -50,6 +50,13 @@ class TSurfacePoint
 
 
 
+inline std::ostream& operator << (std::ostream& os, TSurfacePoint const& o)
+{
+  os << "(" << o.GetPoint() << ", " << o.GetNormal() <<  ")";
+  return os;
+}
+
+
 
 
 

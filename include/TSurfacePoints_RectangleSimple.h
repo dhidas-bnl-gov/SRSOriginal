@@ -17,11 +17,16 @@
 class TSurfacePoints_RectangleSimple : public TSurfacePoints
 {
   public:
+    TSurfacePoints_RectangleSimple ();
     TSurfacePoints_RectangleSimple (std::string const&, int const&, int const&, double const&, double const&, double const&, double const&, double const&, int const&);
     ~TSurfacePoints_RectangleSimple ();
 
+    void Init(std::string const&, int const&, int const&, double const&, double const&, double const&, double const&, double const&, int const&);
     TSurfacePoint const GetPoint (size_t const) const;
     size_t GetNPoints () const;
+
+    double GetX1 (size_t const) const;
+    double GetX2 (size_t const) const;
 
     double GetElementArea () const;
 
