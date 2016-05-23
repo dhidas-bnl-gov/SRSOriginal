@@ -12,6 +12,8 @@
 #include <cmath>
 #include <complex>
 
+#include "TSRS.h"
+#include "TParticleTrajectoryPoints.h"
 #include "TSurfacePoints_RectangleSimple.h"
 #include "TSurfacePoints_BBoxSimple.h"
 #include "TBFieldUniformB.h"
@@ -20,6 +22,7 @@
 #include "TBFieldIdeal1D.h"
 #include "TVector3D.h"
 #include "TVector3DC.h"
+#include "TSpectrumContainer.h"
 
 #include "TGraph.h"
 #include "TGraph2D.h"
@@ -64,11 +67,7 @@ double const XStop  =  1.5;
 int RK4Test ();
 void rk4(double y[], double dydx[], int n, double x, double h, double yout[], void (*derivs)(double, double [], double []));
 void derivs(double t, double y[], double dydt[]);
-TVector3D GetValueAtTime (std::vector<TVector3D> const&, double const, double const, double const);
-double RetardedTime (TVector3D const&, TVector3D const&, double const);
-TVector3D ElectricField (TVector3D const& Observer, std::vector<TVector3D> const& X, std::vector<TVector3D> const& V, std::vector<TVector3D> const& A,  double const Time);
 
-TVector3D PoyntingVector(TVector3D const&, TVector3D const&, TVector3D const&);
 
 
 TBField* TBF;
@@ -77,70 +76,205 @@ TBField* TBF;
 
 
 
-TVector3D PoyntingVector(TVector3D const& El, TVector3D const& Particle, TVector3D const& Observer)
+
+
+
+
+
+
+
+
+void CalculateSpectrumAtPoint (TParticleTrajectoryPoints const& T, TVector3D const& ObservationPoint, double const Current, TSpectrumContainer& S)
 {
-  TVector3D const N = (Observer - Particle).UnitVector();
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // T - Trajectory of particle
+  // ObservationPoint - Observation Point
+  // Current - beam current
+  // S - TSpectrumContainer object which will be used to decide what energies to look at and save results to
 
-  return 1. / (kMu0 * kC_SI) * (El.Mag2() * N - ( (El.Dot(N) * El) ));
-}
+  double const DeltaT = T.GetDeltaT();
+
+  // Spec according to Hoffman
+
+  size_t const NTPoints = T.GetNPoints();
+
+  double const C0 = TSRS::Qe() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
+
+  std::complex<double> const I(0, 1);
+
+  size_t const NEPoints = S.GetNPoints();
+
+
+  for (size_t i = 0; i != NEPoints; ++i) {
+    double const Omega = S.GetAngularFrequency(i);
+
+    TVector3DC SumE(0, 0, 0);
+
+    for (int iT = 0; iT != NTPoints; ++iT) {
+      TVector3D const& X = T.GetX(iT);
+      TVector3D const& B = T.GetB(iT);
+      TVector3D const& AoverC = T.GetAoverC(iT);
+
+      TVector3D const R = ObservationPoint - X;
+      TVector3D const N = R.UnitVector();
+      double const D = R.Mag();
 
 
 
+      std::complex<double> Exponent(0, -Omega * (DeltaT * iT + D / TSRS::C()));
+
+      // This is in the far field calculation only
+      // SumE = ( N.Cross( (N - B).Cross(AoverC) ) ) / ( D * pow(1 - N.Dot(B), 2) ) * std::exp(Exponent);
+
+      // This is the full near + far field
+      SumE += ( ( (1 - B.Mag2()) * (N - B) ) / ( D * D * (pow(1 - N.Dot(B), 2)) )
+            + ( N.Cross( (N - B).Cross(AoverC) ) ) / ( D * pow(1 - N.Dot(B), 2) ) ) * std::exp(Exponent); // NF + FF
+
+    }
 
 
-TVector3D GetValueAtTime (std::vector<TVector3D> const& V, double const T, double const T0, double const TStep)
-{
-  double const TD = T - T0;
-  int const FirstBin = TD / TStep;
+    SumE *= C0 * DeltaT;
 
-  if (FirstBin - 1 > (int) V.size()) {
-    std::cout << "shit" << std::endl;
-    throw;
+    S.SetFlux(i, TSRS::FourPi() * Current / (TSRS::H() * fabs(TSRS::Qe()) * TSRS::Mu0() * TSRS::C()) *  SumE.Dot( SumE.CC() ).real()  * 1e-6  * 0.001);
+
   }
 
-  TVector3D const A = (V[FirstBin + 1] - V[FirstBin]);
-
-  double const Frac = (TD / TStep - ((int) (TD / TStep)));
-
-  return V[FirstBin] + (A * Frac);
+  return;
 }
 
 
 
-double RetardedTime (TVector3D const& Object, TVector3D const& Observer, double const Time)
+void CalculateSpectrumAtPoint2 (TParticleTrajectoryPoints const& T, TVector3D const& ObservationPoint, double const Current, TSpectrumContainer& S)
 {
-  return Time - (Object - Observer).Mag() / kC_SI;
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // T - Trajectory of particle
+  // ObservationPoint - Observation Point
+  // Current - beam current
+  // S - TSpectrumContainer object which will be used to decide what energies to look at and save results to
+
+  double const DeltaT = T.GetDeltaT();
+
+  // Spec according to Hoffman
+
+  size_t const NTPoints = T.GetNPoints();
+
+  double const C0 = TSRS::Qe() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0());
+
+  std::complex<double> const I(0, 1);
+
+  size_t const NEPoints = S.GetNPoints();
+
+  for (size_t i = 0; i != NEPoints; ++i) {
+    double const Omega = S.GetAngularFrequency(i);
+    std::complex<double> const C1(0, C0 * Omega);
+
+    TVector3DC SumE(0, 0, 0);
+    TVector3DC SumB(0, 0, 0);
+
+    for (int iT = 0; iT != NTPoints; ++iT) {
+      TVector3D const& X = T.GetX(iT);
+      TVector3D const& B = T.GetB(iT);
+
+      TVector3D const R = ObservationPoint - X;
+      TVector3D const N = R.UnitVector();
+      double const D = R.Mag();
+
+
+      std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TSRS::C()));
+
+      TVector3DC const ThisEw = (TVector3DC(B) - (N * ( std::complex<double>(1, 0) + (I * TSRS::C() / (Omega * D))))) / D * std::exp(Exponent) * DeltaT;
+      //TVector3DC const ThisBw = ((TVector3DC(B).Cross( TVector3DC(N)) * ( std::complex<double>(1, 0) + (I * TSRS::C() / (Omega * D)))) / D * std::exp(Exponent) * DeltaT );
+      TVector3DC const ThisBw = ThisEw.Cross(N);
+
+
+      SumE += ThisEw;
+      SumB += ThisBw;
+
+    }
+
+    SumE *= C1;
+    SumB *= -C1 / kC_SI;
+
+    S.SetFlux(i, 8 * TSRS::Pi() * TSRS::Pi() * TSRS::Epsilon0() * TSRS::C() * TSRS::C() *  Current / (TSRS::H() * fabs(TSRS::Qe()) ) * ( SumE.Cross(SumB.CC()).Dot( TVector3DC(0, 0, 1) ) ).real() * 1e-6 * 0.001 );
+
+  }
+
+  return;
 }
 
 
 
 
 
-double FutureTime (TVector3D const& Object, TVector3D const& Observer, double const RetardedTime)
+
+void CalculatePowerDensitySurface (TParticleTrajectoryPoints const& T, TSurfacePoints const& Surface, double const Current)
 {
-  return RetardedTime + (Object - Observer).Mag() / kC_SI;
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // T - Trajectory of particle
+  // Surface - Observation Point
+  // Current - beam current
+
+  size_t const NTPoints = T.GetNPoints();
+  double const DeltaT = T.GetDeltaT();
+
+  TVector3D Numerator;
+  double Denominator;
+
+  std::ofstream of("out_pow.dat");
+  of << std::scientific;
+
+  for (size_t io = 0; io < Surface.GetNPoints(); ++io) {
+    TVector3D Obs = Surface.GetPoint(io).GetPoint();
+    TVector3D Normal = Surface.GetPoint(io).GetNormal();
+
+    double Sum = 0;
+
+    for (int iT = 0; iT != NTPoints ; ++iT) {
+      TVector3D const& X = T.GetX(iT);
+      TVector3D const& B = T.GetB(iT);
+      TVector3D const& AoverC = T.GetAoverC(iT);
+
+
+      TVector3D const N1 = (Obs - X).UnitVector();
+      TVector3D const N2 = N1.Cross(TVector3D(1, 0, 0)).UnitVector();
+      TVector3D const N3 = N1.Cross(N2).UnitVector();
+
+      double const N1DotNormal = N1.Dot(Normal);
+
+      Numerator = N1.Cross( ( (N1 - B).Cross((AoverC)) ) );
+      Denominator = pow(1 - (B).Dot(N1), 5);
+
+      Sum += pow(Numerator.Dot(N2), 2) / Denominator / (Obs - X).Mag2() * N1DotNormal;
+      Sum += pow(Numerator.Dot(N3), 2) / Denominator / (Obs - X).Mag2() * N1DotNormal;
+      //Sum += PowerDensityIntegrand(X[i], V[i], A[i], Obs, N2) * N1DotNormal;
+      //Sum += PowerDensityIntegrand(X[i], V[i], A[i], Obs, N3) * N1DotNormal;
+    }
+
+    // Put into SI units
+    Sum *= fabs(TSRS::Qe() * Current) / (16 * TSRS::Pi() * TSRS::Pi() * TSRS::Epsilon0() * TSRS::C()) * DeltaT;
+
+    Sum /= 1e6; // m^2 to mm^2
+
+
+    of << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
+
+  }
+  of.close();
+  exit(0);
+
+
+  return;
 }
 
 
 
 
-TVector3D ElectricField (TVector3D const& Observer, std::vector<TVector3D> const& X, std::vector<TVector3D> const& V, std::vector<TVector3D> const& A,  double const RTime, double const RT0, double const RTStep)
-{
-  TVector3D const XP = GetValueAtTime(X, RTime, RT0, RTStep);
-  TVector3D const VP = GetValueAtTime(V, RTime, RT0, RTStep);
-  TVector3D const AP = GetValueAtTime(A, RTime, RT0, RTStep);
-
-
-  TVector3D const N = (Observer - XP).UnitVector();
-
-  double    const      Mult = kECharge / (4.0 * kPI * kEpsilon0) * pow(1.0 / (1.0 - N.Dot(VP) / kC_SI), 3);
-  //TVector3D const NearField = ((1.0 - VP.Mag2() / (kC_SI * kC_SI)) * (N - VP / kC_SI)) / (Observer - XP).Mag2();
-
-  TVector3D const  FarField = (1.0 / kC_SI) * (N.Cross(  (N - VP/kC_SI).Cross(AP / kC_SI))  ) / (Observer - XP).Mag();
-
-  //return TVector3D(Mult * (NearField + FarField));
-  return TVector3D(Mult * FarField);
-}
 
 
 
@@ -172,11 +306,12 @@ void derivs(double t, double x[], double dxdt[])
   //double b = sqrt(x[1]*x[1] + x[3]*x[3] + x[5]*x[5])/kC_SI;
   //double g = 1./sqrt(1-b);
   dxdt[0] = x[1];
-  dxdt[1] = -(kECharge * x[5]) / (Gamma * kEMass) * TBF->GetBy(x[0], x[2], x[4]) + (kECharge * x[3]) / (Gamma * kEMass) * TBF->GetBz(x[0], x[2], x[4]);
+  //dxdt[1] = -(kECharge * x[5]) / (Gamma * kEMass) * TBF->GetBy(x[0], x[2], x[4]) + (kECharge * x[3]) / (Gamma * kEMass) * TBF->GetBz(x[0], x[2], x[4]);
+  dxdt[1] = TSRS::QeOverMe() / Gamma * (-x[5] * TBF->GetBy(x[0], x[2], x[4]) + x[3] * TBF->GetBz(x[0], x[2], x[4]));
   dxdt[2] = x[3];                                                                                                                            
-  dxdt[3] =  (kECharge * x[5]) / (Gamma * kEMass) * TBF->GetBx(x[0], x[2], x[4]) - (kECharge * x[1]) / (Gamma * kEMass) * TBF->GetBz(x[0], x[2], x[4]);
+  dxdt[3] = TSRS::QeOverMe() / Gamma * ( x[5] * TBF->GetBx(x[0], x[2], x[4]) - x[1] * TBF->GetBz(x[0], x[2], x[4]));
   dxdt[4] = x[5];                                                                                                                            
-  dxdt[5] =  (kECharge * x[1]) / (Gamma * kEMass) * TBF->GetBy(x[0], x[2], x[4]) - (kECharge * x[3]) / (Gamma * kEMass) * TBF->GetBx(x[0], x[2], x[4]);
+  dxdt[5] = TSRS::QeOverMe() / Gamma * ( x[1] * TBF->GetBy(x[0], x[2], x[4]) - x[3] * TBF->GetBx(x[0], x[2], x[4]));
 
   return;
 }
@@ -245,7 +380,7 @@ int RK4Test ()
   double dxdt[N];
 
 
-  int const NPointsForward = 20001;
+  int const NPointsForward = 5001;
   int const NPointsBack = 0; //0.5 / ((XStop - XStart) / (NPointsForward - 1));
   double const h = (XStop - XStart) / (BetaZ * kC_SI) / (NPointsForward - 1);
 
@@ -253,61 +388,47 @@ int RK4Test ()
 
 
   std::vector<TVector3D> X, V, A;
+  TParticleTrajectoryPoints ParticleTrajectory(h);
 
 
   for (int i = 0; i != NPointsForward; ++i) {
-    if (i % 1000000 == 0) {
-      std::cout << "Step: " << i << std::endl;
-    }
     double t = h * i;
 
     derivs(0, x, dxdt);
 
-    X.push_back(TVector3D(x[0], x[2], x[4]));
-    V.push_back(TVector3D(x[1], x[3], x[5]));
-    A.push_back(TVector3D(dxdt[1], dxdt[3], dxdt[5]));
-
-
-    //g2D.SetPoint(i, x[0], x[2], x[4]);
+    ParticleTrajectory.AddPoint(x[0], x[2], x[4], x[1] / TSRS::C(), x[3] / TSRS::C(), x[5] / TSRS::C(), dxdt[1] / TSRS::C(), dxdt[3] / TSRS::C(), dxdt[5] / TSRS::C());
 
     rk4(x, dxdt, N, t, h, x, derivs);
   }
 
+  if (NPointsBack > 0) {
 
+    // Reverse direction and prop back
+    x[0] = 0.0;
+    x[1] = 0.0;
+    x[2] = 0.0;
+    x[3] = 0.0;
+    x[4] = XStart;
+    x[5] = -BetaZ * kC_SI;
 
+    ParticleTrajectory.ReverseArrays();
 
+    for (int i = 0; i != NPointsBack; ++i) {
+      if (i % 1000 == 0) {
+        std::cout << "StepBack: " << i << std::endl;
+      }
+      double t = h * i;
 
-  x[0] = 0.0;
-  x[1] = 0.0;
-  x[2] = 0.0;
-  x[3] = 0.0;
-  x[4] = XStart;
-  x[5] = -BetaZ * kC_SI;
+      derivs(0, x, dxdt);
 
-  std::reverse(X.begin(), X.end());
-  std::reverse(V.begin(), V.end());
-  std::reverse(A.begin(), A.end());
+      ParticleTrajectory.AddPoint(x[0], x[2], x[4], -x[1] / TSRS::C(), -x[3] / TSRS::C(), -x[5] / TSRS::C(), -dxdt[1] / TSRS::C(), -dxdt[3] / TSRS::C(), -dxdt[5] / TSRS::C());
 
-
-  for (int i = 0; i != NPointsBack; ++i) {
-    if (i % 1000 == 0) {
-      std::cout << "StepBack: " << i << std::endl;
+      rk4(x, dxdt, N, t, h, x, derivs);
     }
-    double t = h * i;
 
-    derivs(0, x, dxdt);
+    ParticleTrajectory.ReverseArrays();
 
-    X.push_back(TVector3D(x[0], x[2], x[4]));
-    V.push_back(TVector3D(-x[1], -x[3], -x[5]));
-    A.push_back(TVector3D(-dxdt[1], -dxdt[3], -dxdt[5]));
-
-
-    rk4(x, dxdt, N, t, h, x, derivs);
   }
-
-  std::reverse(X.begin(), X.end());
-  std::reverse(V.begin(), V.end());
-  std::reverse(A.begin(), A.end());
 
 
 
@@ -341,21 +462,28 @@ int RK4Test ()
   std::cout << "EndTime:   " << h * ((double) (NPointsForward)) << std::endl;
 
 
-  for (size_t i = 0; i != X.size(); ++i) {
+  for (size_t i = 0; i != ParticleTrajectory.GetNPoints(); ++i) {
     double const t = h * ((double) ((int) i - NPointsBack));
-    gXZ.SetPoint(i, X[i].GetZ(), X[i].GetX());
-    gYZ.SetPoint(i, X[i].GetZ(), X[i].GetY());
-    gYX.SetPoint(i, X[i].GetX(), X[i].GetY());
 
-    gVX.SetPoint(i, kC_SI * t, V[i].GetX() / kC_SI);
-    gVY.SetPoint(i, kC_SI * t, V[i].GetY() / kC_SI);
-    gVZ.SetPoint(i, kC_SI * t, V[i].GetZ() / kC_SI);
-    gAX.SetPoint(i, kC_SI * t, A[i].GetX());
-    gAY.SetPoint(i, kC_SI * t, A[i].GetY());
-    gAZ.SetPoint(i, kC_SI * t, A[i].GetZ());
+    TVector3D X = ParticleTrajectory.GetX(i);
+    TVector3D B = ParticleTrajectory.GetB(i);
+    TVector3D A = ParticleTrajectory.GetA(i);
 
-    g2D.SetPoint(i, X[i].GetX(), X[i].GetY(), X[i].GetZ());
+
+    gXZ.SetPoint(i, X.GetZ(), X.GetX());
+    gYZ.SetPoint(i, X.GetZ(), X.GetY());
+    gYX.SetPoint(i, X.GetX(), X.GetY());
+
+    gVX.SetPoint(i, kC_SI * t, B.GetX());
+    gVY.SetPoint(i, kC_SI * t, B.GetY());
+    gVZ.SetPoint(i, kC_SI * t, B.GetZ());
+    gAX.SetPoint(i, kC_SI * t, A.GetX());
+    gAY.SetPoint(i, kC_SI * t, A.GetY());
+    gAZ.SetPoint(i, kC_SI * t, A.GetZ());
+
+    g2D.SetPoint(i, X.GetX(), X.GetY(), X.GetZ());
   }
+
 
   TCanvas c;
   c.cd();
@@ -391,6 +519,30 @@ int RK4Test ()
   c.SaveAs("g2D.png");
 
 
+
+
+
+
+
+  TVector3D Obs(0.000, 0.000, 30);
+  //TSpectrumContainer Spectrum(2000, 100, 2000);
+  //CalculateSpectrumAtPoint2(ParticleTrajectory, Obs, 0.500, Spectrum);
+  //CalculateSpectrumAtPoint(ParticleTrajectory, Obs, 0.500, Spectrum);
+  //Spectrum.SaveToFile("out_spec.dat", "");
+
+  // Calculate Power density on a surface
+  TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.06, 0.06, 0, 0, 30, 1);
+  CalculatePowerDensitySurface(ParticleTrajectory, Surface, 0.500);
+
+
+  // CalculateTotalPower()
+  // CalculatePowerDensity()
+  // CalculatePowerDensity() with gaussian convolution
+
+  // CalculateFlux input SurfacePoint or whole Surface?
+  //  How to keep data correlated...
+
+  exit(0);
 
 
 
@@ -745,42 +897,44 @@ int RK4Test ()
 
 
 
-  double TotalSum = 0;
-  //TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.16, 0.026, 0, 0, 30, 1);
-  TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.06, 0.06, 0, 0, 30, 1);
-  //TSurfacePoints_RectangleSimple Surface("XZ", 51, 51, 0.04, 3, 0, 0.004, 0, 1);
-  std::ofstream ofS("out.dat");
-  ofS << std::scientific;
-  for (size_t io = 0; io != Surface.GetNPoints(); ++io) {
+  if (false) {
+    double TotalSum = 0;
+    //TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.16, 0.026, 0, 0, 30, 1);
+    TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.06, 0.06, 0, 0, 30, 1);
+    //TSurfacePoints_RectangleSimple Surface("XZ", 51, 51, 0.04, 3, 0, 0.004, 0, 1);
+    std::ofstream ofS("out.dat");
+    ofS << std::scientific;
+    for (size_t io = 0; io != Surface.GetNPoints(); ++io) {
 
-    TVector3D Obs = Surface.GetPoint(io).GetPoint();
-    TVector3D Normal = Surface.GetPoint(io).GetNormal();
+      TVector3D Obs = Surface.GetPoint(io).GetPoint();
+      TVector3D Normal = Surface.GetPoint(io).GetNormal();
 
-    double Sum = 0;
+      double Sum = 0;
 
-    for (int i = 0; i != NPointsForward ; ++i) {
-      TVector3D const N1 = (Obs - X[i]).UnitVector();
-      TVector3D const N2 = N1.Cross(TVector3D(1, 0, 0)).UnitVector();
-      TVector3D const N3 = N1.Cross(N2).UnitVector();
+      for (int i = 0; i != NPointsForward ; ++i) {
+        TVector3D const N1 = (Obs - X[i]).UnitVector();
+        TVector3D const N2 = N1.Cross(TVector3D(1, 0, 0)).UnitVector();
+        TVector3D const N3 = N1.Cross(N2).UnitVector();
 
-      Sum += PowerDensityIntegrand(X[i], V[i], A[i], Obs, N2) * N1.Dot(Normal);
-      Sum += PowerDensityIntegrand(X[i], V[i], A[i], Obs, N3) * N1.Dot(Normal);
+        Sum += PowerDensityIntegrand(X[i], V[i], A[i], Obs, N2) * N1.Dot(Normal);
+        Sum += PowerDensityIntegrand(X[i], V[i], A[i], Obs, N3) * N1.Dot(Normal);
+      }
+
+      // Put into SI units
+      Sum *= fabs(kECharge * Current) / (16 * kPI * kPI * kEpsilon0 * kC_SI) * h;
+
+      Sum /= 1e6; // m^2 to mm^2
+
+
+      ofS << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
+
+      TotalSum += Sum;
+
     }
-
-    // Put into SI units
-    Sum *= fabs(kECharge * Current) / (16 * kPI * kPI * kEpsilon0 * kC_SI) * h;
-
-    Sum /= 1e6; // m^2 to mm^2
-
-
-    ofS << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
-
-    TotalSum += Sum;
-
+    std::cout << "Power: " << TotalSum * Surface.GetElementArea() * 1e6 << std::endl;
+    ofS.close();
+    exit(0);
   }
-  std::cout << "Power: " << TotalSum * Surface.GetElementArea() * 1e6 << std::endl;
-  ofS.close();
-  exit(0);
 
   if (false) {
     std::ofstream of2("out2.dat");

@@ -102,6 +102,23 @@ inline TVector3DC operator * (TVector3DC const& L, std::complex<double> const& V
 }
 
 
+inline TVector3DC operator + (TVector3DC const& L, TVector3D& R)
+{
+  // Multiply vector with and without complex
+  return TVector3DC(L.GetX() + R.GetX(), L.GetY() + R.GetY(), L.GetZ() + R.GetZ());
+}
+
+
+inline TVector3DC operator + (TVector3D const& L, TVector3DC& R)
+{
+  // Multiply vector with and without complex
+  return TVector3DC(L.GetX() + R.GetX(), L.GetY() + R.GetY(), L.GetZ() + R.GetZ());
+}
+
+
+
+
+
 
 
 
