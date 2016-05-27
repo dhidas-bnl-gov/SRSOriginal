@@ -20,9 +20,9 @@ class TBField3D : public TBField
     TBField3D ();
     ~TBField3D ();
 
-    double GetBx (double const&, double const&, double const&) const;
-    double GetBy (double const&, double const&, double const&) const;
-    double GetBz (double const&, double const&, double const&) const;
+    double GetBx (double const, double const, double const) const;
+    double GetBy (double const, double const, double const) const;
+    double GetBz (double const, double const, double const) const;
 
     void ReadFile (std::string const&, bool const, bool const, bool const, bool const, bool const, bool const);
 

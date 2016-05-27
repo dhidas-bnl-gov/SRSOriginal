@@ -20,7 +20,7 @@ TVector3D::TVector3D ()
 
 
 
-TVector3D::TVector3D (double const& X, double const& Y, double const& Z)
+TVector3D::TVector3D (double const X, double const Y, double const Z)
 {
   // Probably most used and useful constructor
   fX = X;
@@ -39,34 +39,7 @@ TVector3D::~TVector3D ()
 
 
 
-double TVector3D::GetX () const
-{
-  // Return the X-component
-  return fX;
-}
-
-
-
-
-double TVector3D::GetY () const
-{
-  // Return the Y-component
-  return fY;
-}
-
-
-
-
-double TVector3D::GetZ () const
-{
-  // Return the Z-component
-  return fZ;
-}
-
-
-
-
-void TVector3D::SetX (double const& X)
+void TVector3D::SetX (double const X)
 {
   // Set the X component
   fX = X;
@@ -76,7 +49,7 @@ void TVector3D::SetX (double const& X)
 
 
 
-void TVector3D::SetY (double const& Y)
+void TVector3D::SetY (double const Y)
 {
   // Set the Y component
   fY = Y;
@@ -86,7 +59,7 @@ void TVector3D::SetY (double const& Y)
 
 
 
-void TVector3D::SetZ (double const& Z)
+void TVector3D::SetZ (double const Z)
 {
   // Set the Z component
   fZ = Z;
@@ -96,7 +69,7 @@ void TVector3D::SetZ (double const& Z)
 
 
 
-void TVector3D::SetXYZ (double const& X, double const& Y, double const& Z)
+void TVector3D::SetXYZ (double const X, double const Y, double const Z)
 {
   // Set the X, Y, and Z components
   fX = X;
@@ -169,8 +142,6 @@ TVector3D TVector3D::UnitVector () const
 
 
 
-
-
 TVector3D TVector3D::operator + (TVector3D const& V) const
 {
   // Vector addition, add components and return a vector
@@ -189,7 +160,7 @@ TVector3D TVector3D::operator - (TVector3D const& V) const
 
 
 
-TVector3D TVector3D::operator / (double const& V) const
+TVector3D TVector3D::operator / (double const V) const
 {
   // Divide vector by some scalar
   return TVector3D(fX / V, fY / V, fZ / V);
@@ -243,7 +214,7 @@ TVector3D& TVector3D::operator -= (TVector3D const& V)
 
 
 
-TVector3D& TVector3D::operator *= (double const& V)
+TVector3D& TVector3D::operator *= (double const V)
 {
   // Multiply this vector by a scalar
   fX *= V;
@@ -255,7 +226,7 @@ TVector3D& TVector3D::operator *= (double const& V)
 
 
 
-TVector3D& TVector3D::operator /= (double const& V)
+TVector3D& TVector3D::operator /= (double const V)
 {
   // Divide this vector by a scalar
   fX /= V;

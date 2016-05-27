@@ -209,14 +209,14 @@ bool TBField3DZRegularized::SaveAs (std::string const& OutFileName, std::string 
 
 
 
-double TBField3DZRegularized::GetBx (double const& X, double const& Y, double const& Z) const
+double TBField3DZRegularized::GetBx (double const X, double const Y, double const Z) const
 {
   return this->GetBxAtZ(Z);
 }
 
 
 
-double TBField3DZRegularized::GetBy (double const& X, double const& Y, double const& Z) const
+double TBField3DZRegularized::GetBy (double const X, double const Y, double const Z) const
 {
   return this->GetByAtZ(Z);
 }
@@ -224,12 +224,27 @@ double TBField3DZRegularized::GetBy (double const& X, double const& Y, double co
 
 
 
-double TBField3DZRegularized::GetBz (double const& X, double const& Y, double const& Z) const
+double TBField3DZRegularized::GetBz (double const X, double const Y, double const Z) const
 {
   return this->GetBzAtZ(Z);
 }
 
-double TBField3DZRegularized::GetBxAtZ (double const& Z) const
+
+
+
+TVector3D TBField3DZRegularized::GetB (double const X, double const Y, double const Z) const
+{
+  return TVector3D(this->GetBxAtZ(Z), this->GetByAtZ(Z), this->GetBzAtZ(Z));
+}
+
+
+
+
+
+
+
+
+double TBField3DZRegularized::GetBxAtZ (double const Z) const
 {
   // Return the estimated Bx at a given Z based on grid and linear interpolation.
   // If the requested Z position is outside of fZFirstPoint and fZLastPoint zero is
@@ -250,7 +265,7 @@ double TBField3DZRegularized::GetBxAtZ (double const& Z) const
 
 
 
-double TBField3DZRegularized::GetByAtZ (double const& Z) const
+double TBField3DZRegularized::GetByAtZ (double const Z) const
 {
   // Return the estimated By at a given Z based on grid and linear interpolation.
   // If the requested Z position is outside of fZFirstPoint and fZLastPoint zero is
@@ -271,7 +286,7 @@ double TBField3DZRegularized::GetByAtZ (double const& Z) const
 
 
 
-double TBField3DZRegularized::GetBzAtZ (double const& Z) const
+double TBField3DZRegularized::GetBzAtZ (double const Z) const
 {
   // Return the estimated Bz at a given Z based on grid and linear interpolation.
   // If the requested Z position is outside of fZFirstPoint and fZLastPoint zero is

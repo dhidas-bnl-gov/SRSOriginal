@@ -209,7 +209,7 @@ bool TBField1DZRegularized::SaveAs (std::string const& OutFileName, std::string 
 
 
 
-double TBField1DZRegularized::GetByAtZ (double const& Z)
+double TBField1DZRegularized::GetByAtZ (double const Z)
 {
   // Return the estimated By at a given Z based on grid and linear interpolation.
   // If the requested Z position is outside of fZFirstPoint and fZLastPoint zero is

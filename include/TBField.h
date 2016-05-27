@@ -8,19 +8,19 @@
 //
 ////////////////////////////////////////////////////////////////////
 
+#include "TVector3D.h"
 
 class TBField
 {
   // This class is designed to be a base class for a magnetic field object.
 
   public:
-    //virtual ~TBField () = 0;
+    virtual double    GetBx (double const, double const, double const) const = 0;
+    virtual double    GetBy (double const, double const, double const) const = 0;
+    virtual double    GetBz (double const, double const, double const) const = 0;
+    virtual TVector3D GetB  (double const, double const, double const) const = 0;
 
-    virtual double GetBx (double const&, double const&, double const&) const = 0;
-    virtual double GetBy (double const&, double const&, double const&) const = 0;
-    virtual double GetBz (double const&, double const&, double const&) const = 0;
-
-    bool IsWithinRange (double const&, double const&, double const&) const;
+    bool IsWithinRange (double const, double const, double const) const;
 
   private:
     double fXMin;

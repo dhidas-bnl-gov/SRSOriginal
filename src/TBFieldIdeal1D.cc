@@ -4,7 +4,7 @@
 #include <iostream>
 
 
-TBFieldIdeal1D::TBFieldIdeal1D (double const& PeriodLength, double const& NPeriods, double const& CenterZ, double const& MaxBy)
+TBFieldIdeal1D::TBFieldIdeal1D (double const PeriodLength, double const NPeriods, double const CenterZ, double const MaxBy)
 {
   fPeriodLength = PeriodLength;
   fNPeriods = NPeriods;
@@ -27,7 +27,7 @@ TBFieldIdeal1D::~TBFieldIdeal1D ()
 
 
 
-double TBFieldIdeal1D::GetBx (double const& X, double const& Y, double const& Z) const
+double TBFieldIdeal1D::GetBx (double const X, double const Y, double const Z) const
 {
   return 0;
 }
@@ -35,7 +35,7 @@ double TBFieldIdeal1D::GetBx (double const& X, double const& Y, double const& Z)
 
 
 
-double TBFieldIdeal1D::GetBy (double const& X, double const& Y, double const& Z) const
+double TBFieldIdeal1D::GetBy (double const X, double const Y, double const Z) const
 {
   if (Z < fZMin || Z > fZMax) {
     return 0;
@@ -57,7 +57,15 @@ double TBFieldIdeal1D::GetBy (double const& X, double const& Y, double const& Z)
 
 
 
-double TBFieldIdeal1D::GetBz (double const& X, double const& Y, double const& Z) const
+double TBFieldIdeal1D::GetBz (double const X, double const Y, double const Z) const
 {
   return 0;
+}
+
+
+
+
+TVector3D TBFieldIdeal1D::GetB (double const X, double const Y, double const Z) const
+{
+  return TVector3D(0, this->GetBy(X, Y, Z), 0);
 }

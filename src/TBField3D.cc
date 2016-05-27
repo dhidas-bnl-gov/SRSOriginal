@@ -25,7 +25,7 @@ TBField3D::~TBField3D ()
 
 
 
-double TBField3D::GetBx(double const& X, double const& Y, double const& Z) const
+double TBField3D::GetBx(double const X, double const Y, double const Z) const
 {
   return 0.0;
 }
@@ -33,7 +33,7 @@ double TBField3D::GetBx(double const& X, double const& Y, double const& Z) const
 
 
 
-double TBField3D::GetBy(double const& X, double const& Y, double const& Z) const
+double TBField3D::GetBy(double const X, double const Y, double const Z) const
 {
   return 0.0;
 }
@@ -41,7 +41,7 @@ double TBField3D::GetBy(double const& X, double const& Y, double const& Z) const
 
 
 
-double TBField3D::GetBz(double const& X, double const& Y, double const& Z) const
+double TBField3D::GetBz(double const X, double const Y, double const Z) const
 {
   return 0.0;
 }

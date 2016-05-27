@@ -15,12 +15,12 @@
 class TBFieldSquareWave : public TBField
 {
   public:
-    TBFieldSquareWave (double const&, double const&, double const&, double const&);
+    TBFieldSquareWave (double const, double const, double const, double const);
     ~TBFieldSquareWave ();
 
-    double GetBx (double const&, double const&, double const&) const;
-    double GetBy (double const&, double const&, double const&) const;
-    double GetBz (double const&, double const&, double const&) const;
+    double GetBx (double const, double const, double const) const;
+    double GetBy (double const, double const, double const) const;
+    double GetBz (double const, double const, double const) const;
 
 
   private:

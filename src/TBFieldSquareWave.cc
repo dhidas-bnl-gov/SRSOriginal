@@ -4,7 +4,7 @@
 #include <iostream>
 
 
-TBFieldSquareWave::TBFieldSquareWave (double const& PeriodLength, double const& NPeriods, double const& CenterZ, double const& MaxBy)
+TBFieldSquareWave::TBFieldSquareWave (double const PeriodLength, double const NPeriods, double const CenterZ, double const MaxBy)
 {
   fPeriodLength = PeriodLength;
   fNPeriods = NPeriods;
@@ -27,7 +27,7 @@ TBFieldSquareWave::~TBFieldSquareWave ()
 
 
 
-double TBFieldSquareWave::GetBx (double const& X, double const& Y, double const& Z) const
+double TBFieldSquareWave::GetBx (double const X, double const Y, double const Z) const
 {
   return 0;
 }
@@ -35,7 +35,7 @@ double TBFieldSquareWave::GetBx (double const& X, double const& Y, double const&
 
 
 
-double TBFieldSquareWave::GetBy (double const& X, double const& Y, double const& Z) const
+double TBFieldSquareWave::GetBy (double const X, double const Y, double const Z) const
 {
   if (Z < fZMin || Z > fZMax) {
     return 0;
@@ -54,7 +54,7 @@ double TBFieldSquareWave::GetBy (double const& X, double const& Y, double const&
 
 
 
-double TBFieldSquareWave::GetBz (double const& X, double const& Y, double const& Z) const
+double TBFieldSquareWave::GetBz (double const X, double const Y, double const Z) const
 {
   return 0;
 }

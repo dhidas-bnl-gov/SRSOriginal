@@ -15,12 +15,14 @@
 class TBFieldIdeal1D : public TBField
 {
   public:
-    TBFieldIdeal1D (double const&, double const&, double const&, double const&);
+    TBFieldIdeal1D (double const, double const, double const, double const);
     ~TBFieldIdeal1D ();
 
-    double GetBx (double const&, double const&, double const&) const;
-    double GetBy (double const&, double const&, double const&) const;
-    double GetBz (double const&, double const&, double const&) const;
+    double    GetBx (double const, double const, double const) const;
+    double    GetBy (double const, double const, double const) const;
+    double    GetBz (double const, double const, double const) const;
+
+    TVector3D GetB (double const, double const, double const) const;
 
 
   private:

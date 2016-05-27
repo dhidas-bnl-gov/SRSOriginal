@@ -20,6 +20,7 @@
 #include "TBFieldIdeal1D.h"
 #include "TVector3D.h"
 #include "TVector3DC.h"
+#include "TSRS.h"
 
 #include "TGraph.h"
 #include "TGraph2D.h"
@@ -427,7 +428,7 @@ int RK4Test ()
     std::complex<double> const I(0, 1);
 
     double const Energy_eV = 5000;//188;//135;//188; //565;//188;
-    double const iw = Energy_eV * k2PI / 4.1357e-15;
+    double const iw = TSRS::EvToFrequency(Energy_eV);
 
     std::complex<double> const C1(0, C0 * iw);
 
@@ -457,7 +458,6 @@ int RK4Test ()
 
       SumE *= C0;
 
-      //ofFlux << iw * 4.1357e-15 / k2PI << "  " <<  2 * k2PI * Current / (kh * fabs(kECharge) * kMu0 * kC_SI) *  SumE.Dot( SumE.CC() ).real()  * 1e-6  * 0.001 * Obs.Mag2() << std::endl;
       ofFlux << Surface.GetX1(ip) << "  " << Surface.GetX2(ip) << "  " <<  2 * k2PI * Current / (kh * fabs(kECharge) * kMu0 * kC_SI) *  SumE.Dot( SumE.CC() ).real()  * 1e-6  * 0.001 << std::endl;
     }
 
@@ -493,8 +493,8 @@ int RK4Test ()
     double const EStart = 1000;
     double const EStop  = 10000;
 
-    double const wStart = EStart * k2PI / 4.1357e-15;
-    double const wStop  = EStop * k2PI / 4.1357e-15;
+    double const wStart = TSRS::EvToFrequency(EStart);
+    double const wStop  = TSRS::EvToFrequency(EStop);
 
     double const wStepSize = (wStop - wStart) / (NEPoints - 1);
 
@@ -522,8 +522,7 @@ int RK4Test ()
 
       SumE *= C0;
 
-      ofSpec << iw * 4.1357e-15 / k2PI << "  " <<  2 * k2PI * Current / (kh * fabs(kECharge) * kMu0 * kC_SI) *  SumE.Dot( SumE.CC() ).real()  * 1e-6  * 0.001 << std::endl;
-      //ofSpec << iw * 4.1357e-15 / k2PI << "  " <<  2 * k2PI * Current / (kh * fabs(kECharge) * kMu0 * kC_SI) *  SumE.Dot( SumE.CC() ).real()  * 1e-6  * 0.001 * Obs.Mag2() << std::endl;
+      ofSpec << TSRS::AngularFrequencyToEv(iw)<< "  " <<  2 * k2PI * Current / (kh * fabs(kECharge) * kMu0 * kC_SI) *  SumE.Dot( SumE.CC() ).real()  * 1e-6  * 0.001 << std::endl;
 
     }
 
@@ -569,8 +568,8 @@ int RK4Test ()
     double const EStart = 100;
     double const EStop  = 2000;
 
-    double const wStart = EStart * k2PI / 4.1357e-15;
-    double const wStop  = EStop * k2PI / 4.1357e-15;
+    double const wStart = TSRS::EvToAngularFrequency(EStart);
+    double const wStop  = TSRS::EvToAngularFrequency(EStop);
 
     double const wStepSize = (wStop - wStart) / (NEPoints - 1);
 
@@ -604,7 +603,7 @@ int RK4Test ()
       SumE *= C1;
       SumB *= -C1 / kC_SI;
 
-      ofSpec << iw * 4.1357e-15 / k2PI << "  " <<  8 * kPI * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * fabs(kECharge)) * ( SumE.Cross(SumB.CC()).Dot( TVector3DC(0, 0, 1) ) ).real() * 1e-6 * 0.001 * pow(Obs.GetZ(), 2) << std::endl;
+      ofSpec << TSRS::AngularFrequencyToEv(iw) << "  " <<  8 * kPI * kPI * kEpsilon0 * kC_SI * kC_SI * Current / (kh * fabs(kECharge)) * ( SumE.Cross(SumB.CC()).Dot( TVector3DC(0, 0, 1) ) ).real() * 1e-6 * 0.001 * pow(Obs.GetZ(), 2) << std::endl;
 
     }
 
@@ -629,8 +628,8 @@ int RK4Test ()
     double const EStart = 1;
     double const EStop  = 50000;
 
-    double const wStart = EStart * k2PI / 4.1357e-15;
-    double const wStop  = EStop * k2PI / 4.1357e-15;
+    double const wStart = TSRS::EvToAngularFrequency(EStart);
+    double const wStop  = TSRS::EvToAngularFrequency(EStop);
 
     double const wStepSize = (wStop - wStart) / (NEPoints - 1);
 

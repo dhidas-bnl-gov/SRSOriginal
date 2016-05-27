@@ -9,7 +9,7 @@
 #include "TBFieldUniformB.h"
 
 
-TBFieldUniformB::TBFieldUniformB (double const& X, double const& Y, double const& Z)
+TBFieldUniformB::TBFieldUniformB (double const X, double const Y, double const Z)
 {
   // Constructor
   fBx = X;
@@ -28,7 +28,7 @@ TBFieldUniformB::~TBFieldUniformB ()
 
 
 
-double TBFieldUniformB::GetBx (double const& X, double const& Y, double const& Z) const
+double TBFieldUniformB::GetBx (double const X, double const Y, double const Z) const
 {
   // Get the X component of the field
   return fBx;
@@ -37,7 +37,7 @@ double TBFieldUniformB::GetBx (double const& X, double const& Y, double const& Z
 
 
 
-double TBFieldUniformB::GetBy (double const& X, double const& Y, double const& Z) const
+double TBFieldUniformB::GetBy (double const X, double const Y, double const Z) const
 {
   // Get the Y component of the field
   return fBy;
@@ -46,8 +46,17 @@ double TBFieldUniformB::GetBy (double const& X, double const& Y, double const& Z
 
 
 
-double TBFieldUniformB::GetBz (double const& X, double const& Y, double const& Z) const
+double TBFieldUniformB::GetBz (double const X, double const Y, double const Z) const
 {
   // Get the Z component of the field
   return fBz;
+}
+
+
+
+
+TVector3D TBFieldUniformB::GetB (double const X, double const Y, double const Z) const
+{
+  // Get the Z component of the field
+  return TVector3D(fBx, fBy, fBz);
 }

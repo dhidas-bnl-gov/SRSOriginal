@@ -23,6 +23,7 @@
 #include "TVector3D.h"
 #include "TVector3DC.h"
 #include "TSpectrumContainer.h"
+#include "TBFieldContainer.h"
 
 #include "TGraph.h"
 #include "TGraph2D.h"
@@ -156,51 +157,73 @@ void CalculateSpectrumAtPoint2 (TParticleTrajectoryPoints const& T, TVector3D co
   // Current - beam current
   // S - TSpectrumContainer object which will be used to decide what energies to look at and save results to
 
+
+  // Time step.  Expecting it to be constant throughout calculation
   double const DeltaT = T.GetDeltaT();
 
-  // Spec according to Hoffman
 
+  // Number of points in the trajectory
   size_t const NTPoints = T.GetNPoints();
 
-  double const C0 = TSRS::Qe() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0());
-
-  std::complex<double> const I(0, 1);
-
+  // Number of points in the spectrum container
   size_t const NEPoints = S.GetNPoints();
 
+  // Constant C0 for calculation
+  double const C0 = TSRS::Qe() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
+
+  // Constant for flux calculation at the end
+  double const C2 = TSRS::FourPi() * Current / (TSRS::H() * fabs(TSRS::Qe()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
+
+  // Imaginary "i" and complxe 1+0i
+  std::complex<double> const I(0, 1);
+  std::complex<double> const One(1, 0);
+
+
+  // Loop over all points in the spectrum container
   for (size_t i = 0; i != NEPoints; ++i) {
+
+    // Angular frequency
     double const Omega = S.GetAngularFrequency(i);
+
+    // Constant for field calculation
+    std::complex<double> ICoverOmega = I * TSRS::C() / Omega;
+
+    // Constant for calculation
     std::complex<double> const C1(0, C0 * Omega);
 
+    // Electric field summation in frequency space
     TVector3DC SumE(0, 0, 0);
-    TVector3DC SumB(0, 0, 0);
 
+    // Loop over all points in trajectory
     for (int iT = 0; iT != NTPoints; ++iT) {
+
+      // Particle position
       TVector3D const& X = T.GetX(iT);
+
+      // Particle "Beta" (velocity over speed of light)
       TVector3D const& B = T.GetB(iT);
 
+      // vector pointing from particle to observer
       TVector3D const R = ObservationPoint - X;
+
+      // Unit vector pointing from particl to observer
       TVector3D const N = R.UnitVector();
+
+      // Distance from particle to observer
       double const D = R.Mag();
 
-
+      // Exponent for fourier transformed field
       std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TSRS::C()));
 
-      TVector3DC const ThisEw = (TVector3DC(B) - (N * ( std::complex<double>(1, 0) + (I * TSRS::C() / (Omega * D))))) / D * std::exp(Exponent) * DeltaT;
-      //TVector3DC const ThisBw = ((TVector3DC(B).Cross( TVector3DC(N)) * ( std::complex<double>(1, 0) + (I * TSRS::C() / (Omega * D)))) / D * std::exp(Exponent) * DeltaT );
-      TVector3DC const ThisBw = ThisEw.Cross(N);
-
-
-      SumE += ThisEw;
-      SumB += ThisBw;
-
+      // Sum in fourier transformed field (integral)
+      SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
     }
 
-    SumE *= C1;
-    SumB *= -C1 / kC_SI;
+    // Multiply field by Constant C1 and time step
+    SumE *= C1 * DeltaT;
 
-    S.SetFlux(i, 8 * TSRS::Pi() * TSRS::Pi() * TSRS::Epsilon0() * TSRS::C() * TSRS::C() *  Current / (TSRS::H() * fabs(TSRS::Qe()) ) * ( SumE.Cross(SumB.CC()).Dot( TVector3DC(0, 0, 1) ) ).real() * 1e-6 * 0.001 );
-
+    // Set the flux for this frequency / energy point
+    S.SetFlux(i, C2 *  SumE.Dot( SumE.CC() ).real());
   }
 
   return;
@@ -278,6 +301,79 @@ void CalculatePowerDensitySurface (TParticleTrajectoryPoints const& T, TSurfaceP
 
 
 
+void CalculateFluxSurface (TParticleTrajectoryPoints const& T, TSurfacePoints const& Surface, double const Current, double const Energy_eV)
+{
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // T - Trajectory of particle
+  // Surface - Surface of Observation Points
+  // Current - beam current
+  // Energy - beam energy in eV
+
+  // Number of points in trajectory
+  size_t const NTPoints = T.GetNPoints();
+
+  // Time step size
+  double const DeltaT = T.GetDeltaT();
+
+  double const C0 = TSRS::Qe() / (4 * TSRS::Pi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
+
+
+  // Constant for flux calculation at the end
+  double const C2 = TSRS::FourPi() * Current / (TSRS::H() * fabs(TSRS::Qe()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
+
+  std::complex<double> const I(0, 1);
+
+  double const Omega = Energy_eV * TSRS::TwoPi() / 4.1357e-15;
+
+  std::complex<double> const C1(0, C0 * Omega);
+
+  std::ofstream of("out_flux.dat");
+  of << std::scientific;
+
+  for (size_t ip = 0; ip != Surface.GetNPoints(); ++ip) {
+    if (ip % 100 == 0) {
+      std::cout << ( (int) ((double) ip / (double) Surface.GetNPoints() * 100.) ) << " \% done" << std::endl;
+    }
+
+    TVector3D Obs = Surface.GetPoint(ip).GetPoint();
+
+    TVector3DC SumE(0, 0, 0);
+
+    for (int iT = 0; iT != NTPoints; ++iT) {
+      TVector3D const& X = T.GetX(iT);
+      TVector3D const& B = T.GetB(iT);
+      TVector3D const& AoverC = T.GetAoverC(iT);
+
+      TVector3D const R = Obs - X;
+      TVector3D const N = R.UnitVector();
+      double const D = R.Mag();
+      std::complex<double> Exponent(0, -Omega * (DeltaT * iT + D / TSRS::C()));
+
+      // TVector3DC const ThisEw = ( N.Cross( (N - B).Cross(AoverC) ) ) / ( D * pow(1 - N.Dot(B), 2) ) * std::exp(Exponent) * DeltaT; // FF only
+      TVector3DC const ThisEw = ( ( (1 - (B).Mag2()) * (N - B) ) / ( D * D * (pow(1 - N.Dot(B), 2)) )
+          + ( N.Cross( (N - B).Cross(AoverC) ) ) / ( D * pow(1 - N.Dot(B), 2) ) ) * std::exp(Exponent) * DeltaT; // NF + FF
+
+      SumE += ThisEw;
+
+    }
+
+
+    SumE *= C0;
+
+    of << Surface.GetX1(ip) << "  " << Surface.GetX2(ip) << "  " <<  C2 * SumE.Dot( SumE.CC() ).real() << std::endl;
+  }
+
+  of.close();
+  exit(0);
+
+
+  return;
+}
+
+
+
 
 
 
@@ -303,10 +399,7 @@ double PowerDensityIntegrand (TVector3D const& X, TVector3D const& V, TVector3D 
 
 void derivs(double t, double x[], double dxdt[])
 {
-  //double b = sqrt(x[1]*x[1] + x[3]*x[3] + x[5]*x[5])/kC_SI;
-  //double g = 1./sqrt(1-b);
   dxdt[0] = x[1];
-  //dxdt[1] = -(kECharge * x[5]) / (Gamma * kEMass) * TBF->GetBy(x[0], x[2], x[4]) + (kECharge * x[3]) / (Gamma * kEMass) * TBF->GetBz(x[0], x[2], x[4]);
   dxdt[1] = TSRS::QeOverMe() / Gamma * (-x[5] * TBF->GetBy(x[0], x[2], x[4]) + x[3] * TBF->GetBz(x[0], x[2], x[4]));
   dxdt[2] = x[3];                                                                                                                            
   dxdt[3] = TSRS::QeOverMe() / Gamma * ( x[5] * TBF->GetBx(x[0], x[2], x[4]) - x[1] * TBF->GetBz(x[0], x[2], x[4]));
@@ -380,7 +473,7 @@ int RK4Test ()
   double dxdt[N];
 
 
-  int const NPointsForward = 5001;
+  int const NPointsForward = 8001;
   int const NPointsBack = 0; //0.5 / ((XStop - XStart) / (NPointsForward - 1));
   double const h = (XStop - XStart) / (BetaZ * kC_SI) / (NPointsForward - 1);
 
@@ -525,14 +618,20 @@ int RK4Test ()
 
 
   TVector3D Obs(0.000, 0.000, 30);
+
+  double Current = 0.500;
+
   //TSpectrumContainer Spectrum(2000, 100, 2000);
   //CalculateSpectrumAtPoint2(ParticleTrajectory, Obs, 0.500, Spectrum);
   //CalculateSpectrumAtPoint(ParticleTrajectory, Obs, 0.500, Spectrum);
   //Spectrum.SaveToFile("out_spec.dat", "");
 
   // Calculate Power density on a surface
-  TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.06, 0.06, 0, 0, 30, 1);
-  CalculatePowerDensitySurface(ParticleTrajectory, Surface, 0.500);
+  TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.006, 0.006, 0, 0, 30, 1);
+  //CalculatePowerDensitySurface(ParticleTrajectory, Surface, 0.500);
+
+  double const Energy = 575;
+  CalculateFluxSurface(ParticleTrajectory, Surface, Current, Energy);
 
 
   // CalculateTotalPower()
@@ -542,14 +641,10 @@ int RK4Test ()
   // CalculateFlux input SurfacePoint or whole Surface?
   //  How to keep data correlated...
 
-  exit(0);
 
 
 
 
-
-  // Beam current in Amps
-  double const Current = 0.500;
 
 
   if (false) {
@@ -573,12 +668,12 @@ int RK4Test ()
     std::ofstream ofFlux("out_flux.dat");
     ofFlux << std::scientific;
 
-    TSurfacePoints_RectangleSimple Surface("XY", 401, 401, 160e-3, 30e-3, 0, 0, 30, 1);
+    TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.006, 0.006, 0, 0, 30, 1);
 
     double const C0 = kECharge / (4 * kPI * kC_SI * kEpsilon0 * sqrt(k2PI));
     std::complex<double> const I(0, 1);
 
-    double const Energy_eV = 5000;//188;//135;//188; //565;//188;
+    double const Energy_eV = 575;//188;//135;//188; //565;//188;
     double const iw = Energy_eV * k2PI / 4.1357e-15;
 
     std::complex<double> const C1(0, C0 * iw);
@@ -593,14 +688,20 @@ int RK4Test ()
       TVector3DC SumE(0, 0, 0);
 
       for (int i = 0; i != NPointsForward; ++i) {
-        TVector3D const R = Obs - X[i];
+
+        TVector3D const& X = ParticleTrajectory.GetX(i);
+        TVector3D const& B = ParticleTrajectory.GetB(i);
+        TVector3D const& AoverC = ParticleTrajectory.GetAoverC(i);
+
+
+        TVector3D const R = Obs - X;
         TVector3D const N = R.UnitVector();
         double const D = R.Mag();
         std::complex<double> Exponent(0, -iw * (h * i + D / kC_SI));
 
         // TVector3DC const ThisEw = ( N.Cross( (N - V[i] / kC_SI).Cross(A[i] / kC_SI) ) ) / ( D * pow(1 - N.Dot(V[i] / kC_SI), 2) ) * std::exp(Exponent) * h; // FF only
-        TVector3DC const ThisEw = ( ( (1 - (V[i] / kC_SI).Mag2()) * (N - (V[i] / kC_SI)) ) / ( D * D * (pow(1 - N.Dot(V[i] / kC_SI), 2)) )
-            + ( N.Cross( (N - V[i] / kC_SI).Cross(A[i] / kC_SI) ) ) / ( D * pow(1 - N.Dot(V[i] / kC_SI), 2) ) ) * std::exp(Exponent) * h; // NF + FF
+        TVector3DC const ThisEw = ( ( (1 - (B).Mag2()) * (N - (B)) ) / ( D * D * (pow(1 - N.Dot(B), 2)) )
+            + ( N.Cross( (N - B).Cross(AoverC) ) ) / ( D * pow(1 - N.Dot(B), 2) ) ) * std::exp(Exponent) * h; // NF + FF
 
         SumE += ThisEw;
 
@@ -1061,9 +1162,9 @@ int main (int argc, char* argv[])
   }
 
 
-  TBF =(TBField*) new TBField3DZRegularized(argv[1]);
+  //TBF =(TBField*) new TBField3DZRegularized(argv[1]);
   //TBF =(TBField*) new TBFieldSquareWave(0.200, 11, 0, 1.0);
-  //TBF =(TBField*) new TBFieldIdeal1D(0.03, 33, 0, 1.000);
+  TBF =(TBField*) new TBFieldIdeal1D(0.03, 33, 0, 1.000);
   //TBF =(TBField*) new TBFieldUniformB(0, 0, 0);
 
 
