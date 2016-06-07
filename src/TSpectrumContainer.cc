@@ -45,6 +45,7 @@ TSpectrumContainer::TSpectrumContainer (size_t const N, double const EFirst, dou
 
   fSpectrumPoints = new std::vector<std::pair<double, double> >(N, std::make_pair(0.0, 0.0));
 
+
   if (N < 1) {
     throw;
   }
@@ -54,7 +55,7 @@ TSpectrumContainer::TSpectrumContainer (size_t const N, double const EFirst, dou
   }
 
   for (size_t i = 0; i != fSpectrumPoints->size(); ++i) {
-    (*fSpectrumPoints)[i].first = (ELast - EFirst) / (N - 1) * (double) (i + 1);
+    (*fSpectrumPoints)[i].first = EFirst + (ELast - EFirst) / (N - 1) * (double) (i + 1);
   }
 
 }

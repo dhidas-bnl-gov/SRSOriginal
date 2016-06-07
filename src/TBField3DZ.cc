@@ -240,8 +240,7 @@ bool TBField3DZ::Regularize (std::vector<std::array<double, 3> >& oV, double& oF
     NewBy = fBField[BeforeBin][2] + (ThisZ - fBField[BeforeBin][0]) * SlopeY;
     NewBz = fBField[BeforeBin][3] + (ThisZ - fBField[BeforeBin][0]) * SlopeZ;
 
-    // Append the new By to the output vector
-    //oV.push_back(NewBy);
+    // Append the new BxByBz to the output vector
     oV.push_back(std::array<double, 3>{ {NewBx, NewBy, NewBz} });
 
   }

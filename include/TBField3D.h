@@ -26,6 +26,8 @@ class TBField3D : public TBField
 
     void ReadFile (std::string const&, bool const, bool const, bool const, bool const, bool const, bool const);
 
+    // Regularize
+
     //bool operator < (std::vector<double>&, std::vector<double>&);
 
   private:
