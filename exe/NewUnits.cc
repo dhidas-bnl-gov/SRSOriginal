@@ -36,23 +36,12 @@
 
 
 double const EEnergy = 3.0;
-double const EMass   = 0.000511;
-double const EGamma  = EEnergy / EMass;
+double const EGamma  = EEnergy / TSRS::kgToGeV(TSRS::Me());
 double const EBeta   = sqrt(1.0 - 1.0/(EGamma*EGamma));
 
-double const kPI = 3.14159265359;
-double const k2PI = 2 * 3.14159265359;
 double const BetaZ = EBeta;
-double const Beta = BetaZ;
 double const Gamma = EGamma;  //1.0 / sqrt(1.0 - Beta*Beta);
-double const kEMass = 9.10938356E-31;
-double const kECharge = -1.60217662E-19;
-double const kEpsilon0 = 8.854187817E-12;
-double const kMu0      = 1.2566370614E-6;
-double const kh = 6.62607004e-34;
 
-double const BetaX = 0;
-double const BetaY = 0;
 
 
 
@@ -512,7 +501,11 @@ int RK4Test ()
   }
 
 
-  ParticleTrajectory.WriteToFile("del.txt");
+  //ParticleTrajectory.WriteToFile("del.txt");
+  //ParticleTrajectory.WriteToFileBinary("del.dat");
+  //ParticleTrajectory.Clear();
+  //ParticleTrajectory.ReadFromFile("del.txt");
+  //ParticleTrajectory.ReadFromFileBinary("del.dat");
 
 
 
@@ -659,14 +652,14 @@ int RK4Test ()
   for (int i = 0; i != NPointsForward; ++i) {
     TotalPower += ( (A[i] / TSRS::C()).Mag2() - ( (V[i] / TSRS::C()).Cross(A[i] / TSRS::C())).Mag2() ) * h;
   }
-  TotalPower *= fabs(kECharge * Current) * pow(Gamma, 6) / (6 * kPI * kEpsilon0 * TSRS::C());
+  TotalPower *= fabs(TSRS::Qe() * Current) * pow(Gamma, 6) / (6 * TSRS::Pi() * TSRS::Epsilon0() * TSRS::C());
   std::cout << "Total Power: " << TotalPower << std::endl;
 
   TotalPower = 0;
   for (int i = 0; i != NPointsForward; ++i) {
     TotalPower += ( (A[i] / TSRS::C()).Mag2() - ( (V[i] / TSRS::C()).Cross(A[i] / TSRS::C())).Mag2() ) * h;
   }
-  TotalPower *= fabs(kECharge * Current) * pow(Gamma, 6) / (6 * kPI * kEpsilon0 * TSRS::C());
+  TotalPower *= fabs(TSRS::Qe() * Current) * pow(Gamma, 6) / (6 * TSRS::Pi() * TSRS::Epsilon0() * TSRS::C());
   std::cout << "Total Power: " << TotalPower << std::endl;
 
 

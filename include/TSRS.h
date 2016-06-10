@@ -17,22 +17,40 @@
 #include <string>
 
 #include "TBFieldContainer.h"
+#include "TParticleBeamContainer.h"
 
 
 class SRS
 {
+  // This class is meant to be the main interface to the simulation,
+  // also, from all extensions
+
   public:
     SRS ();
     ~SRS ();
 
-    void AddMagneticField (std::string const, std::string const, double const X0 = 0, double const Y0 = 0, double const Z0 = 0);
 
+    // Functions related to the magnetic field
+    void AddMagneticField (std::string const, std::string const, double const X0 = 0, double const Y0 = 0, double const Z0 = 0);
     double GetBx (double const, double const, double const) const;
     double GetBy (double const, double const, double const) const;
     double GetBz (double const, double const, double const) const;
 
+
+    // Functions related to the particle beam(s)
+    void AddParticleBeam (std::string const&, std::string const&, double const, double const, double const, double const, double const, double const, double const, double const, double const, double const);
+    TParticleBeam& GetParticleBeam (std::string const&);
+    TParticleA GetNewParticle ();
+
+
+    // Functions related to Trajectory
+    void CalculateTrajectory (TParticleA&);
+    TParticleTrajectoryPoints const& GetTrajectory (TParticleA const&) const;
+
   private:
     TBFieldContainer fBFieldContainer;
+
+    TParticleBeamContainer fParticleBeamContainer;
 
 
 
@@ -97,6 +115,7 @@ namespace TSRS {
    inline double AngularFrequencyToEv  (double const w) { return w * Hbar() / Qe(); } // eV
    inline double EvToAngularFrequency  (double const e) { return e * Qe() / Hbar(); } // rad s^-1
    inline double EvToFrequency         (double const e) { return e * Qe() / H();    } // s^-1
+   inline double kgToGeV               (double const m) { return 1e-9 * m * C() * C() / Qe(); } // GeV 
 
 }
 
