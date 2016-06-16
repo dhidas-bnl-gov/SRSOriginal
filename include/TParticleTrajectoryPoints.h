@@ -25,8 +25,8 @@ class TParticleTrajectoryPoints
     TVector3D const& GetAoverC (size_t const) const;
     TVector3D        GetA      (size_t const) const;
 
-    void   SetDeltaT (double const);
     double GetDeltaT () const;
+    void   SetDeltaT (double const);
     size_t GetNPoints () const;
 
     void AddPoint (TVector3D const&, TVector3D const&, TVector3D const&, double const T = 0);

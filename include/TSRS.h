@@ -18,6 +18,7 @@
 
 #include "TBFieldContainer.h"
 #include "TParticleBeamContainer.h"
+#include "TSurfacePoints.h"
 
 
 class SRS
@@ -47,10 +48,41 @@ class SRS
     void CalculateTrajectory (TParticleA&);
     TParticleTrajectoryPoints const& GetTrajectory (TParticleA const&) const;
 
+    void SetNPointsTrajectory (size_t const);
+    void SetCTStart (double const);
+    void SetCTStop  (double const);
+
+    size_t GetNPointsTrajectory () const;
+    double GetCTStart () const;
+    double GetCTStop  () const;
+
+    void CalculateSpectrum (TParticleA&, TVector3D const&, double const, double const, size_t const);
+
+    // Power Density calculation
+    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&);
+
+    // Flux Calculations
+    void CalculateFlux (TParticleA&, TSurfacePoints const&, double const);
+
   private:
     TBFieldContainer fBFieldContainer;
 
     TParticleBeamContainer fParticleBeamContainer;
+
+    void Derivatives (double t, double x[], double dxdt[], TParticleA const&);
+    void RK4 (double y[], double dydx[], int n, double x, double h, double yout[], TParticleA const&);
+
+
+    double fCTStart;
+    double fCTStop;
+    size_t fNPointsTrajectory;
+
+
+    // Current particle for calculations and rel parameters
+    TParticleA fParticle;
+    double fCurrent;
+    // 
+
 
 
 
@@ -69,6 +101,7 @@ namespace TSRS {
    /* ************************* */
 
    inline double Pi()       { return 3.14159265358979323846; }
+   inline double Pi2()      { return Pi() * Pi(); }
    inline double TwoPi()    { return 2.0 * Pi(); }
    inline double FourPi()   { return 4.0 * Pi(); }
    inline double PiOver2()  { return Pi() / 2.0; }

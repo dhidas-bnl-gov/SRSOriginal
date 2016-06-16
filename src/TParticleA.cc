@@ -57,6 +57,7 @@ void TParticleA::SetParticleType (std::string const& Type)
   // So some stuff
 
   // Leptons first
+  // UPDATE: values
   if (type == "electron" || type == "anti-positron") {
     this->SetQM( -TSRS::Qe(), TSRS::Me() );
   } else if (type == "positron" || type == "anti-electron") {

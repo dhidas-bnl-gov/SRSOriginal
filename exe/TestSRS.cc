@@ -12,6 +12,9 @@
 
 #include "TSRS.h"
 
+#include "TVector3D.h"
+#include "TSurfacePoints_RectangleSimple.h"
+
 
 int TestSRS ()
 {
@@ -21,21 +24,34 @@ int TestSRS ()
   //S.AddMagneticField("BField_1.5m.dat", "ZBxByBz");
 
 
-  std::ofstream of("out_By.dat");
-  of << std::scientific;
 
-  for (double z = -2.0; z <= 2.0; z += 0.0001) {
-    of << z << " " << S.GetBy(0, 0, z) << std::endl;
-  }
-
-  of.close();
-
-  S.AddParticleBeam("electron", "Beam_01", 0, 0, -2, 0, 0, 1, 9, 0, 0.500, 1);
+  S.AddParticleBeam("electron", "Beam_01", 0, 0, -1.5, 0, 0, 1, 3, 0, 0.500, 1);
   //S.AddParticleBeam("positron", "Beam_02", 0, 0, -2, 0, 0, 1, 6, 0, 0.500, 1);
   std::cout << S.GetParticleBeam("Beam_01") << std::endl;
-  //std::cout << S.GetParticleBeam("Beam_02") << std::endl;
 
-  std::cout << S.GetNewParticle() << std::endl;
+
+  TParticleA P = S.GetNewParticle();
+  std::cout << P << std::endl;
+
+
+  // Setup for particle
+  S.SetCTStart(0.0);
+  S.SetCTStop (3.0);
+  S.SetNPointsTrajectory(1901);
+
+  // Calculate the trajectory
+  S.CalculateTrajectory(P);
+  P.GetTrajectory().WriteToFile("del_Trajectory.txt");
+
+  // Calculate the spectrum at a given point
+  //S.CalculateSpectrum(P, TVector3D(0, 0, 30), 100, 2000, 2000);
+
+  TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.040, 0.040, 0, 0, 30, 1);
+  S.CalculatePowerDensity(P, Surface);
+  //S.CalculateFlux(P, Surface, 135);
+
+
+
 
   return 0;
 }

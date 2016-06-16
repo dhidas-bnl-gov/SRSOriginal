@@ -96,6 +96,15 @@ double TParticleTrajectoryPoints::GetDeltaT () const
 
 
 
+void TParticleTrajectoryPoints::SetDeltaT (double const DT)
+{
+  fDeltaT = DT;
+  return;
+}
+
+
+
+
 size_t TParticleTrajectoryPoints::GetNPoints () const
 {
   return fX.size();

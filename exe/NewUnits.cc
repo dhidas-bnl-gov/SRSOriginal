@@ -376,12 +376,13 @@ void CalculateFluxSurface (TParticleTrajectoryPoints const& T, TSurfacePoints co
 
 void derivs(double t, double x[], double dxdt[])
 {
+  printf("%35.20E\n", x[5]); exit(0);
   dxdt[0] = x[1];
-  dxdt[1] = TSRS::QeOverMe() / Gamma * (-x[5] * TBF->GetBy(x[0], x[2], x[4]) + x[3] * TBF->GetBz(x[0], x[2], x[4]));
+  dxdt[1] = -TSRS::QeOverMe() / Gamma * (-x[5] * TBF->GetBy(x[0], x[2], x[4]) + x[3] * TBF->GetBz(x[0], x[2], x[4]));
   dxdt[2] = x[3];                                                                                                                            
-  dxdt[3] = TSRS::QeOverMe() / Gamma * ( x[5] * TBF->GetBx(x[0], x[2], x[4]) - x[1] * TBF->GetBz(x[0], x[2], x[4]));
+  dxdt[3] = -TSRS::QeOverMe() / Gamma * ( x[5] * TBF->GetBx(x[0], x[2], x[4]) - x[1] * TBF->GetBz(x[0], x[2], x[4]));
   dxdt[4] = x[5];                                                                                                                            
-  dxdt[5] = TSRS::QeOverMe() / Gamma * ( x[1] * TBF->GetBy(x[0], x[2], x[4]) - x[3] * TBF->GetBx(x[0], x[2], x[4]));
+  dxdt[5] = -TSRS::QeOverMe() / Gamma * ( x[1] * TBF->GetBy(x[0], x[2], x[4]) - x[3] * TBF->GetBx(x[0], x[2], x[4]));
 
   return;
 }
@@ -450,9 +451,10 @@ int RK4Test ()
   double dxdt[N];
 
 
-  int const NPointsForward = 20001;
+  int const NPointsForward = 2001;
   int const NPointsBack = 0; //0.5 / ((XStop - XStart) / (NPointsForward - 1));
-  double const h = (XStop - XStart) / (BetaZ * TSRS::C()) / (NPointsForward - 1);
+  //double const h = (XStop - XStart) / (BetaZ * TSRS::C()) / (NPointsForward - 1);
+  double const h = (XStop - XStart) / (TSRS::C()) / (NPointsForward - 1); // mod for test  
 
   int const NPointsTotal = NPointsForward + NPointsBack;
 
@@ -501,7 +503,7 @@ int RK4Test ()
   }
 
 
-  //ParticleTrajectory.WriteToFile("del.txt");
+  ParticleTrajectory.WriteToFile("del.txt");
   //ParticleTrajectory.WriteToFileBinary("del.dat");
   //ParticleTrajectory.Clear();
   //ParticleTrajectory.ReadFromFile("del.txt");
@@ -594,21 +596,21 @@ int RK4Test ()
   c.SaveAs("g2D.png");
 
 
-  exit(0);
 
 
 
 
 
   //TVector3D Obs(0.000, 0.000, 50.7 + 0.6);
-  TVector3D Obs(0.000, 0.000, 50.7 + 1.82);
+  TVector3D Obs(0.000, 0.000, 30.0);
 
   double Current = 0.500;
 
-  TSpectrumContainer Spectrum(5000, 11500, 11900);
+  TSpectrumContainer Spectrum(2000, 100, 2000);
   CalculateSpectrumAtPoint2(ParticleTrajectory, Obs, 0.500, Spectrum);
   //CalculateSpectrumAtPoint(ParticleTrajectory, Obs, 0.500, Spectrum);
   Spectrum.SaveToFile("out_spec.dat", "");
+  exit(0);
 
   // Calculate Power density on a surface
   TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.006, 0.006, 0, 0, 30, 1);
