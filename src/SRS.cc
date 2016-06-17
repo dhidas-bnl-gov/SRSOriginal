@@ -72,6 +72,15 @@ double SRS::GetBz (double const X, double const Y, double const Z) const
 
 
 
+TVector3D SRS::GetB (double const X, double const Y, double const Z) const
+{
+  // Return summed Bx from container
+  return this->fBFieldContainer.GetB(X, Y, Z);
+}
+
+
+
+
 void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, double const X0, double const Y0, double const Z0, double const DX0, double const DY0, double const DZ0, double const Energy, double const T0, double const Current, double const Weight)
 {
   // Add a particle beam
@@ -137,6 +146,17 @@ void SRS::SetCTStop (double const X)
 {
   // Set the stop time in units of m (where v = c)
   fCTStop = X;
+  return;
+}
+
+
+
+
+void SRS::SetCTStartStop (double const Start, double const Stop)
+{
+  // Set the start and stop time in units of m (where v = c)
+  this->SetCTStart(Start);
+  this->SetCTStop(Stop);
   return;
 }
 

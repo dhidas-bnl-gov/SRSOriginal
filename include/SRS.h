@@ -33,9 +33,11 @@ class SRS
 
     // Functions related to the magnetic field
     void AddMagneticField (std::string const, std::string const, double const X0 = 0, double const Y0 = 0, double const Z0 = 0);
-    double GetBx (double const, double const, double const) const;
-    double GetBy (double const, double const, double const) const;
-    double GetBz (double const, double const, double const) const;
+
+    double    GetBx (double const, double const, double const) const;
+    double    GetBy (double const, double const, double const) const;
+    double    GetBz (double const, double const, double const) const;
+    TVector3D GetB  (double const, double const, double const) const;
 
 
     // Functions related to the particle beam(s)
@@ -51,6 +53,7 @@ class SRS
     void SetNPointsTrajectory (size_t const);
     void SetCTStart (double const);
     void SetCTStop  (double const);
+    void SetCTStartStop (double const, double const);
 
     size_t GetNPointsTrajectory () const;
     double GetCTStart () const;
