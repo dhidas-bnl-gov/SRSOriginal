@@ -6,7 +6,7 @@
 //
 ////////////////////////////////////////////////////////////////////
 
-#include "TSRS.h"
+#include "SRS.h"
 
 #include <cmath>
 #include <complex>
@@ -45,6 +45,7 @@ void SRS::AddMagneticField (std::string const FileName, std::string const Format
 
 double SRS::GetBx (double const X, double const Y, double const Z) const
 {
+  // Return summed Bx from container
   return this->fBFieldContainer.GetBx(X, Y, Z);
 }
 
@@ -54,6 +55,7 @@ double SRS::GetBx (double const X, double const Y, double const Z) const
 
 double SRS::GetBy (double const X, double const Y, double const Z) const
 {
+  // Return summed By from container
   return this->fBFieldContainer.GetBy(X, Y, Z);
 }
 
@@ -63,6 +65,7 @@ double SRS::GetBy (double const X, double const Y, double const Z) const
 
 double SRS::GetBz (double const X, double const Y, double const Z) const
 {
+  // Return summed Bx from container
   return this->fBFieldContainer.GetBz(X, Y, Z);
 }
 
@@ -71,6 +74,20 @@ double SRS::GetBz (double const X, double const Y, double const Z) const
 
 void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, double const X0, double const Y0, double const Z0, double const DX0, double const DY0, double const DZ0, double const Energy, double const T0, double const Current, double const Weight)
 {
+  // Add a particle beam
+  // Type    - The name of the particle type that you want to use
+  // Name    - A user specified 'name' for this beam
+  // X0      - Initial position in X
+  // Y0      - Initial position in Y
+  // Z0      - Initial position in Z
+  // DX0     - X-component of 'direction' (just a vector pointing in the direction of the velocity of arbitrary magnitude)
+  // DY0     - Y-component of 'direction'
+  // DZ0     - Z-component of 'direction'
+  // Energy  - Energy of particle beam in GeV
+  // T0      - Time of initial conditions, specified in units of m (for v = c)
+  // Current - Beam current in Amperes
+  // Weight  - Relative weight to give this beam when randomly sampling
+
   fParticleBeamContainer.AddNewParticleBeam(Type, Name, TVector3D(X0, Y0, Z0), TVector3D(DX0, DY0, DZ0), Energy, T0, Current, Weight);
   return;
 }
@@ -80,6 +97,7 @@ void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, dou
 
 TParticleBeam& SRS::GetParticleBeam (std::string const& Name)
 {
+  // Return a reference to the particle beam by a given name
   return fParticleBeamContainer.GetParticleBeam(Name);
 }
 
@@ -88,6 +106,7 @@ TParticleBeam& SRS::GetParticleBeam (std::string const& Name)
 
 TParticleA SRS::GetNewParticle ()
 {
+  // Get a new particle.  Randomly sampled according to input beam parameters and beam weights
   return fParticleBeamContainer.GetNewParticle();
 }
 
@@ -96,6 +115,7 @@ TParticleA SRS::GetNewParticle ()
 
 void SRS::SetNPointsTrajectory (size_t const N)
 {
+  // Set this number of points for any trajectory calculations
   fNPointsTrajectory = N;
   return;
 }
@@ -105,6 +125,7 @@ void SRS::SetNPointsTrajectory (size_t const N)
 
 void SRS::SetCTStart (double const X)
 {
+  // Set the start time in units of m (where v = c)
   fCTStart = X;
   return;
 }
@@ -114,6 +135,7 @@ void SRS::SetCTStart (double const X)
 
 void SRS::SetCTStop (double const X)
 {
+  // Set the stop time in units of m (where v = c)
   fCTStop = X;
   return;
 }
@@ -123,6 +145,7 @@ void SRS::SetCTStop (double const X)
 
 size_t SRS::GetNPointsTrajectory () const
 {
+  // Return the number of points being used for trajectory calculations
   return fNPointsTrajectory;
 }
 
@@ -131,6 +154,7 @@ size_t SRS::GetNPointsTrajectory () const
 
 double SRS::GetCTStart () const
 {
+  // Return the start time in units of m (where v = c)
   return fCTStart;
 }
 
@@ -139,6 +163,7 @@ double SRS::GetCTStart () const
 
 double SRS::GetCTStop () const
 {
+  // Return the stop time in units of m (where v = c)
   return fCTStop;
 }
 
@@ -163,6 +188,7 @@ void SRS::CalculateTrajectory (TParticleA& P)
 
 
   // The number of points in the forward and backward direction
+  // UPDATE: Check the details of these numbers
   size_t NPointsForward  = 1 + (this->GetCTStop() - P.GetT0()) / TSRS::C() / DeltaT;
   size_t NPointsBackward = (P.GetT0() - this->GetCTStart()) / TSRS::C() / DeltaT;
 
@@ -326,7 +352,7 @@ void SRS::RK4 (double y[], double dydx[], int n, double x, double h, double yout
 
 
 
-void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, double const EStart, double const EStop, size_t const N)
+void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, double const EStart, double const EStop, size_t const N, std::string const& OutFilename)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -335,7 +361,7 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
   // ObservationPoint - Observation Point
 
   // A spectrum object for return values
-  TSpectrumContainer S(N, EStart, EStop);
+  fSpectrum.Init(N, EStart, EStop);
 
   // UPDATE: delete this once Current is sorted out
   fCurrent = 0.500;
@@ -355,7 +381,7 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
   size_t const NTPoints = T.GetNPoints();
 
   // Number of points in the spectrum container
-  size_t const NEPoints = S.GetNPoints();
+  size_t const NEPoints = fSpectrum.GetNPoints();
 
   // Constant C0 for calculation
   double const C0 = TSRS::Qe() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
@@ -372,7 +398,7 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
   for (size_t i = 0; i != NEPoints; ++i) {
 
     // Angular frequency
-    double const Omega = S.GetAngularFrequency(i);
+    double const Omega = fSpectrum.GetAngularFrequency(i);
 
     // Constant for field calculation
     std::complex<double> ICoverOmega = I * TSRS::C() / Omega;
@@ -412,11 +438,11 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
     SumE *= C1 * DeltaT;
 
     // Set the flux for this frequency / energy point
-    S.SetFlux(i, C2 *  SumE.Dot( SumE.CC() ).real());
+    fSpectrum.SetFlux(i, C2 *  SumE.Dot( SumE.CC() ).real());
   }
 
 
-  S.SaveToFile("del_spec.dat");
+  fSpectrum.SaveToFile("del_spec.dat");
 
   return;
 }

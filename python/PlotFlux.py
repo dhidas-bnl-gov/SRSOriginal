@@ -36,6 +36,9 @@ def PlotFlux (fileName) :
   plt.ylabel('Axis 2 [$m$]')
   plt.title('Flux ' +'[$\gamma / mm^2 / 0.1bw / s$]')
 
+  #plt.axes().set_aspect('equal', 'datalim')
+  #plt.set_cmap('gray') # 'hot' is also nice
+
   plt.show()
 
 

@@ -36,6 +36,9 @@ def PlotPow (fileName) :
   plt.ylabel('Axis 2 [$m$]')
   plt.title('Power Density ' +'[$W / mm^2$]')
 
+  #plt.axes().set_aspect('equal', 'datalim')
+  #plt.set_cmap('gray') # 'hot' is also nice
+
   plt.show()
 
 

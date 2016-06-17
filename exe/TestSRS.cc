@@ -10,7 +10,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "TSRS.h"
+#include "SRS.h"
 
 #include "TVector3D.h"
 #include "TSurfacePoints_RectangleSimple.h"
@@ -40,14 +40,14 @@ int TestSRS ()
   S.SetNPointsTrajectory(1901);
 
   // Calculate the trajectory
-  S.CalculateTrajectory(P);
-  P.GetTrajectory().WriteToFile("del_Trajectory.txt");
+  //S.CalculateTrajectory(P);
+  //P.GetTrajectory().WriteToFile("del_Trajectory.txt");
 
   // Calculate the spectrum at a given point
-  //S.CalculateSpectrum(P, TVector3D(0, 0, 30), 100, 2000, 2000);
+  S.CalculateSpectrum(P, TVector3D(0, 0, 30), 100, 2000, 2000);
 
-  TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.040, 0.040, 0, 0, 30, 1);
-  S.CalculatePowerDensity(P, Surface);
+  TSurfacePoints_RectangleSimple Surface("XY", 101, 101, 0.080, 0.040, 0, 0, 30, 1);
+  //S.CalculatePowerDensity(P, Surface);
   //S.CalculateFlux(P, Surface, 135);
 
 

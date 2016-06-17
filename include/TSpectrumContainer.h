@@ -19,6 +19,9 @@ class TSpectrumContainer
     TSpectrumContainer (size_t const, double const, double const);
     ~TSpectrumContainer ();
 
+    void Init (size_t const, double const, double const);
+    void Init (std::vector<double> const&);
+
     void   SetFlux   (size_t const, double const);
     void   SetPoint  (size_t const, double const, double const);
     void   AddPoint  (double const);
@@ -28,11 +31,12 @@ class TSpectrumContainer
     size_t GetNPoints () const;
 
     void SaveToFile (std::string const, std::string const Header = "") const;
+    void SaveToFileBinary (std::string const, std::string const Header = "") const;
 
 
   private:
 
-    std::vector< std::pair<double, double> >* fSpectrumPoints;
+    std::vector< std::pair<double, double> > fSpectrumPoints;
 
 
 };

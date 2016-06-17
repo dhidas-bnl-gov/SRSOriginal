@@ -1,14 +1,24 @@
 CC = g++
 LD = g++
-CFLAGS = -Wall -ansi -pedantic -O3 -pthread -std=c++17 `root-config --cflags`
-LIBS = -stdlib=libc++ `root-config --libs`
-INCLUDE = -Iinclude
+
+PYVERSION = 2.7
+PYPATH = /System/Library/Frameworks/Python.framework/Versions/$(PYVERSION)
+
+CFLAGS = -Wall -ansi -pedantic -O3 -pthread -std=c++17 `root-config --cflags` -fPIC
+LIBS = -stdlib=libc++ `root-config --libs` -L$(PYPATH)/lib/python$(PYVERSION) -lpython
+INCLUDE = -Iinclude -I$(PYPATH)/include/python$(PYVERSION)
+
 OBJS  = $(patsubst src/%.cc,lib/%.o,$(wildcard src/*.cc))
 EXECS = $(patsubst exe/%.cc,bin/%,$(wildcard exe/*.cc))
 EXEOBJS  = $(patsubst exe/%.cc,lib/%.o,$(wildcard exe/*.cc))
 
+SOLIB =  lib/SRSP.so
 
-all: $(OBJS) $(EXEOBJS) $(EXECS)
+all: $(OBJS) $(EXEOBJS) $(EXECS) $(SOLIB)
+
+
+lib/SRSP.so : lib/SRSP.o lib/SRS.o
+	$(LD) -Wall -shared $(LIBS) $(OBJS) -o $@
 
 lib/%.o : src/%.cc
 	$(CC) -Wall $(CFLAGS) $(INCLUDE) -c $< -o $@

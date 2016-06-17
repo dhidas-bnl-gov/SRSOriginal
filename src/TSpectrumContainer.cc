@@ -18,46 +18,27 @@
 TSpectrumContainer::TSpectrumContainer ()
 {
   // I guess you'll build it yourself by using AddPoint()
-
-  fSpectrumPoints = new std::vector<std::pair<double, double> >();
 }
 
 
 
 
-TSpectrumContainer::TSpectrumContainer (std::vector<double> const& v)
+TSpectrumContainer::TSpectrumContainer (std::vector<double> const& V)
 {
-  // I guess you'll build it yourself by using AddPoint()
-
-  fSpectrumPoints = new std::vector<std::pair<double, double> >();
-  fSpectrumPoints->reserve(v.size());
-
-  for (size_t i = 0; i != v.size(); ++i) {
-    fSpectrumPoints->push_back( std::make_pair(v[i], 0.0) );
-  }
-
+  // Constructor for an arbitrary list of points
+  // V - vector of energy points in [eV]
+  this->Init(V);
 }
 
 
 TSpectrumContainer::TSpectrumContainer (size_t const N, double const EFirst, double const ELast)
 {
-  // If you call this with N==1 it will only use EFirst
+  // Constructor for evenly spaced points in a given energy range.
+  // N - Number of points
+  // EFirst - First energy point [eV]
+  // ELast  - Last energy point [eV]
 
-  fSpectrumPoints = new std::vector<std::pair<double, double> >(N, std::make_pair(0.0, 0.0));
-
-
-  if (N < 1) {
-    throw;
-  }
-
-  if (N == 1) {
-    (*fSpectrumPoints)[0].first = EFirst;
-  }
-
-  for (size_t i = 0; i != fSpectrumPoints->size(); ++i) {
-    (*fSpectrumPoints)[i].first = EFirst + (ELast - EFirst) / (N - 1) * (double) (i + 1);
-  }
-
+  this->Init(N, EFirst, ELast);
 }
 
 
@@ -65,20 +46,75 @@ TSpectrumContainer::TSpectrumContainer (size_t const N, double const EFirst, dou
 
 TSpectrumContainer::~TSpectrumContainer ()
 {
-  delete fSpectrumPoints;
+  // Destruction!
+}
+
+
+
+
+void TSpectrumContainer::Init (size_t const N, double const EFirst, double const ELast)
+{
+  // If you call this with N==1 it will only use EFirst
+
+  // N - Number of points
+  // EFirst - First energy point [eV]
+  // ELast  - Last energy point [eV]
+
+  // Clear existing data and resize member to the correct size for input
+  fSpectrumPoints.clear();
+  fSpectrumPoints.resize(N, std::make_pair(0.0, 0.0));
+
+
+  // If you have zero elements I don't see the point of this
+  if (N < 1) {
+    throw;
+  }
+
+  // If only one point just set it to the 'First' energy
+  if (N == 1) {
+    fSpectrumPoints[0].first = EFirst;
+    return;
+  }
+
+  // Set the energy in each element
+  for (size_t i = 0; i != fSpectrumPoints.size(); ++i) {
+    fSpectrumPoints[i].first = EFirst + (ELast - EFirst) / (N - 1) * (double) (i + 1);
+  }
+
+  return;
+}
+
+
+
+
+void TSpectrumContainer::Init (std::vector<double> const& V)
+{
+  // Initialize spectrum with an arbitrary vector of points
+  // V - vector of energy points in [eV]
+
+  // Clear existing data and reserve the correct amount for input
+  fSpectrumPoints.clear();
+  fSpectrumPoints.reserve(V.size());
+
+  // Add each input from V to the internal vector
+  for (size_t i = 0; i != V.size(); ++i) {
+    fSpectrumPoints.push_back( std::make_pair(V[i], 0.0) );
+  }
+
 }
 
 
 
 void TSpectrumContainer::SetFlux (size_t const i, double const Flux)
 {
-  if (i < fSpectrumPoints->size()) {
-    (*fSpectrumPoints)[i].second = Flux;
-    return;
+  // Set the flux for a given index
+
+  // Simple check
+  if (i >= fSpectrumPoints.size()) {
+    throw;
   }
 
-  throw;
-
+  fSpectrumPoints[i].second = Flux;
   return;
 }
 
@@ -88,8 +124,15 @@ void TSpectrumContainer::SetFlux (size_t const i, double const Flux)
 
 void TSpectrumContainer::SetPoint (size_t const i, double const Energy, double const Flux)
 {
-  (*fSpectrumPoints)[i].first  = Energy;
-  (*fSpectrumPoints)[i].second = Flux;
+  // Set the energy and flux for a given index
+
+  // I can't decide if I want to be nice and resize or just throw...
+  if (i >= fSpectrumPoints.size()) {
+    throw;
+  }
+
+  fSpectrumPoints[i].first  = Energy;
+  fSpectrumPoints[i].second = Flux;
 
   return;
 }
@@ -99,7 +142,8 @@ void TSpectrumContainer::SetPoint (size_t const i, double const Energy, double c
 
 void TSpectrumContainer::AddPoint (double const Energy)
 {
-  fSpectrumPoints->push_back( std::make_pair(Energy, 0.0) );
+  // Add an energy point to the end of the vector.  Default flux value is zero
+  fSpectrumPoints.push_back( std::make_pair(Energy, 0.0) );
 
   return;
 }
@@ -111,7 +155,8 @@ void TSpectrumContainer::AddPoint (double const Energy)
 
 double TSpectrumContainer::GetFlux (size_t const i) const
 {
-  return (*fSpectrumPoints)[i].second;
+  // Get flux at a given index
+  return fSpectrumPoints[i].second;
 }
 
 
@@ -121,7 +166,8 @@ double TSpectrumContainer::GetFlux (size_t const i) const
 
 double TSpectrumContainer::GetEnergy (size_t const i) const
 {
-  return (*fSpectrumPoints)[i].first;
+  // Get energy at a given index
+  return fSpectrumPoints[i].first;
 }
 
 
@@ -131,7 +177,9 @@ double TSpectrumContainer::GetEnergy (size_t const i) const
 
 double TSpectrumContainer::GetAngularFrequency (size_t const i) const
 {
-  return (*fSpectrumPoints)[i].first * TSRS::TwoPi() / 4.1357e-15;
+  // Get the angular frequency of this index (from energy)
+  // UPDATE: consider removing this function
+  return TSRS::EvToAngularFrequency(fSpectrumPoints[i].first);
 }
 
 
@@ -140,27 +188,86 @@ double TSpectrumContainer::GetAngularFrequency (size_t const i) const
 
 size_t TSpectrumContainer::GetNPoints () const
 {
-  return fSpectrumPoints->size();
+  // Return the number of points in this spectrum
+  return fSpectrumPoints.size();
 }
 
 
 
 
-void TSpectrumContainer::SaveToFile (std::string const fn, std::string const Header) const
+void TSpectrumContainer::SaveToFile (std::string const FileName, std::string const Header) const
 {
-  std::ofstream f(fn.c_str());
+  // Write this spectrum to a file in text format.
+  // FileName - File name to write to
+  // Header   - Header to print in file
 
+  // Open output file
+  std::ofstream f(FileName.c_str());
+
+  // Check if file is open
+  // UPDATE: try a more robust check
+  if (!f.is_open()) {
+    throw;
+  }
+
+  // If the header is specified, write one!
   if (Header != "") {
     f << Header << std::endl;
   }
 
-
+  // Set in scientific mode for printing
+  // UPDATE: Could change this to accept c-stype formatting
   f << std::scientific;
 
-  for (std::vector<std::pair<double, double> >::iterator it = fSpectrumPoints->begin(); it != fSpectrumPoints->end(); ++it) {
+  // Loop over spectrum and print to file
+  for (std::vector<std::pair<double, double> >::const_iterator it = fSpectrumPoints.begin(); it != fSpectrumPoints.end(); ++it) {
     f << it->first << " " << it->second << std::endl;
   }
 
+  // Close file
+  f.close();
+
+  return;
+}
+
+
+
+
+
+
+void TSpectrumContainer::SaveToFileBinary (std::string const FileName, std::string const Header) const
+{
+  // UPDATE: Actually make this a binary output
+  // Write this spectrum to a file in text format.
+  // FileName - File name to write to
+  // Header   - Header to print in file
+
+  throw;
+
+  // Open output file
+  std::ofstream f(FileName.c_str());
+
+  // Check if file is open
+  // UPDATE: try a more robust check
+  if (!f.is_open()) {
+    throw;
+  }
+
+  // If the header is specified, write one!
+  if (Header != "") {
+    f << Header << std::endl;
+  }
+
+  // Set in scientific mode for printing
+  // UPDATE: Could change this to accept c-stype formatting
+  f << std::scientific;
+
+  // Loop over spectrum and print to file
+  for (std::vector<std::pair<double, double> >::const_iterator it = fSpectrumPoints.begin(); it != fSpectrumPoints.end(); ++it) {
+    f << it->first << " " << it->second << std::endl;
+  }
+
+  // Close file
   f.close();
 
   return;

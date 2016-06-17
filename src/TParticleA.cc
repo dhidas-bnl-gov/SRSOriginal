@@ -16,6 +16,7 @@
 
 TParticleA::TParticleA ()
 {
+  // Default constructor
 }
 
 
@@ -23,6 +24,7 @@ TParticleA::TParticleA ()
 
 TParticleA::TParticleA (std::string const& Type)
 {
+  // Constructor.  This requires a valid type name
   this->SetParticleType(Type);
 }
 
@@ -31,11 +33,15 @@ TParticleA::TParticleA (std::string const& Type)
 
 TParticleA::TParticleA (std::string const& Type, TVector3D const& X0, TVector3D const& B0, double const T0)
 {
+  // Constructor.  Requires a valid type name, also sets initial conditions for this particle
+  // UPDATE: check this is needed and not superceeded by ParticleBeam
+
   this->SetParticleType(Type);
   this->SetX0(X0);
   this->SetB0(B0);
   this->SetT0(T0);
 
+  // Set the "gamma" variable
   SetGamma();
 }
 
@@ -44,6 +50,7 @@ TParticleA::TParticleA (std::string const& Type, TVector3D const& X0, TVector3D 
 
 TParticleA::~TParticleA ()
 {
+  // Destroy me
 }
 
 
@@ -51,11 +58,14 @@ TParticleA::~TParticleA ()
 
 void TParticleA::SetParticleType (std::string const& Type)
 {
+  // If it's a supported / built-in type I should know the charge and mass
+
+  // Get a lowercase version
   std::string type = Type;
   std::transform(type.begin(), type.end(), type.begin(), ::tolower);
 
-  // So some stuff
 
+  // built-in particle types
   // Leptons first
   // UPDATE: values
   if (type == "electron" || type == "anti-positron") {
@@ -86,7 +96,7 @@ void TParticleA::SetParticleType (std::string const& Type)
 
 void TParticleA::SetParticleTypeFromPDGID (int const ID)
 {
-  // So some stuff
+  // UPDATE: If I find an easy way to implement a list for this
   throw;
   return;
 }
@@ -96,8 +106,10 @@ void TParticleA::SetParticleTypeFromPDGID (int const ID)
 
 void TParticleA::SetQ (double const Q)
 {
+  // Set the charge of this particle
   fQ = Q;
 
+  // Need to adjust variable for fast readback
   SetQoverMGamma();
 
   return;
@@ -108,8 +120,10 @@ void TParticleA::SetQ (double const Q)
 
 void TParticleA::SetM (double const M)
 {
+  // Set mass variable for this particle
   fM = M;
 
+  // Need to adjust variable for fast readback
   SetQoverMGamma();
 
   return;
@@ -120,9 +134,11 @@ void TParticleA::SetM (double const M)
 
 void TParticleA::SetQM (double const Q, double const M)
 {
+  // Set charge and mass for this particle
   fQ = Q;
   fM = M;
 
+  // Need to adjust variable for fast readback
   SetQoverMGamma();
 
   return;
@@ -133,7 +149,9 @@ void TParticleA::SetQM (double const Q, double const M)
 
 void TParticleA::SetX0 (TVector3D const& X0)
 {
+  // Set initial position in space
   fX0 = X0;
+
   return;
 }
 
@@ -142,6 +160,7 @@ void TParticleA::SetX0 (TVector3D const& X0)
 
 void TParticleA::SetB0 (TVector3D const& B0)
 {
+  // Set initial Beta (V/c) for this particle
   fB0 = B0;
 
   SetGamma();
@@ -154,7 +173,9 @@ void TParticleA::SetB0 (TVector3D const& B0)
 
 void TParticleA::SetT0 (double const T0)
 {
+  // Set initial time for this particle
   fT0 = T0;
+
   return;
 }
 
@@ -163,6 +184,7 @@ void TParticleA::SetT0 (double const T0)
 
 double TParticleA::GetQ () const
 {
+  // Return Charge
   return fQ;
 }
 
@@ -171,6 +193,7 @@ double TParticleA::GetQ () const
 
 double TParticleA::GetM () const
 {
+  // Return mass
   return fM;
 }
 
@@ -179,6 +202,8 @@ double TParticleA::GetM () const
 
 double TParticleA::GetGamma () const
 {
+  // Return gamma
+  // UPDATE: This should be "inline"
   return fGamma;
 }
 
@@ -187,6 +212,8 @@ double TParticleA::GetGamma () const
 
 double TParticleA::GetQoverMGamma () const
 {
+  // Return computed Q / M / gamma
+  // UPDATE: this should be "inline"
   return fQoverMGamma;
 }
 
@@ -195,6 +222,7 @@ double TParticleA::GetQoverMGamma () const
 
 TVector3D const& TParticleA::GetX0 () const
 {
+  // Get initial position
   return fX0;
 }
 
@@ -203,6 +231,7 @@ TVector3D const& TParticleA::GetX0 () const
 
 TVector3D const& TParticleA::GetB0 () const
 {
+  // Get initial Beta (V/c)
   return fB0;
 }
 
@@ -211,6 +240,7 @@ TVector3D const& TParticleA::GetB0 () const
 
 double TParticleA::GetT0 () const
 {
+  // Get initial time
   return fT0;
 }
 
@@ -220,10 +250,12 @@ double TParticleA::GetT0 () const
 void TParticleA::SetInitialParticleConditions (TVector3D const& X0, TVector3D const& B0, double const T0)
 {
   // Set the initial conditions for this particle
+
   fX0 = X0;
   fB0 = B0;
   fT0 = T0;
 
+  // Need to adjust variable for fast readback
   SetGamma();
 
   return;
@@ -234,6 +266,7 @@ void TParticleA::SetInitialParticleConditions (TVector3D const& X0, TVector3D co
 
 TParticleTrajectoryPoints& TParticleA::GetTrajectory ()
 {
+  // Get reference to the trajectory member
   return fTrajectory;
 }
 
@@ -242,16 +275,16 @@ TParticleTrajectoryPoints& TParticleA::GetTrajectory ()
 
 void TParticleA::SetGamma ()
 {
-
+  // Set gamma variable for fast readback
   double const Beta2 = fB0.Mag2();
   if (Beta2 == 1) {
     return;
   }
 
-  fGamma = 1.0 / sqrt(1.0 - fB0.Mag2());
+  fGamma = 1.0 / sqrt(1.0 - Beta2);
 
+  // Need to adjust variable for fast readback
   SetQoverMGamma();
-
 
   return;
 }
@@ -261,6 +294,7 @@ void TParticleA::SetGamma ()
 
 void TParticleA::SetQoverMGamma ()
 {
+  // Set internal variable for Q / M / gamma for fast readback
   if (GetM() == 0 || GetGamma() == 0) {
     return;
   }

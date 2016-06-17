@@ -20,7 +20,7 @@
 #include "TBFieldIdeal1D.h"
 #include "TVector3D.h"
 #include "TVector3DC.h"
-#include "TSRS.h"
+#include "SRS.h"
 
 #include "TGraph.h"
 #include "TGraph2D.h"

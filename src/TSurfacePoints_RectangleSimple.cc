@@ -95,7 +95,7 @@ void TSurfacePoints_RectangleSimple::Init (std::string const& p, int const& nx1,
 
 TSurfacePoint const TSurfacePoints_RectangleSimple::GetPoint (size_t const i) const
 {
-  int const ix1 = i / fNX1;
+  int const ix1 = i / fNX2;
   int const ix2 = i % fNX2;
 
   if (fInPlane == kInPlane_XY) {
@@ -126,7 +126,7 @@ size_t TSurfacePoints_RectangleSimple::GetNPoints () const
 
 double TSurfacePoints_RectangleSimple::GetX1 (size_t const i) const
 {
-  int const ix1 = i / fNX1;
+  int const ix1 = i / fNX2;
   return fX1StepSize * ix1 + fX1Start;
 }
 
