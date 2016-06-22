@@ -122,6 +122,18 @@ TParticleA SRS::GetNewParticle ()
 
 
 
+void SRS::SetNewParticle ()
+{
+  // Get a new particle.  Randomly sampled according to input beam parameters and beam weights.
+  // Set this new particle as *the* particle in SRS fParticle
+  fParticle = fParticleBeamContainer.GetNewParticle();
+
+  return;
+}
+
+
+
+
 void SRS::SetNPointsTrajectory (size_t const N)
 {
   // Set this number of points for any trajectory calculations
@@ -186,6 +198,19 @@ double SRS::GetCTStop () const
   // Return the stop time in units of m (where v = c)
   return fCTStop;
 }
+
+
+
+
+void SRS::CalculateTrajectory ()
+{
+  // Function to calculate the particle trajectory of the member particle fParticle
+
+  this->CalculateTrajectory(fParticle);
+
+  return;
+}
+
 
 
 
@@ -280,12 +305,24 @@ void SRS::CalculateTrajectory (TParticleA& P)
   }
 
 
+
   // Re-Reverse the trajectory to be in the proper time order
   ParticleTrajectory.ReverseArrays();
 
 
   return;
 }
+
+
+
+
+TParticleTrajectoryPoints const& SRS::GetTrajectory ()
+{
+  // Get the trajectory for *the* current particle in fParticle
+
+  return fParticle.GetTrajectory();
+}
+
 
 
 
@@ -372,16 +409,15 @@ void SRS::RK4 (double y[], double dydx[], int n, double x, double h, double yout
 
 
 
-void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, double const EStart, double const EStop, size_t const N, std::string const& OutFilename)
+void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
+  // Save this in the spectrum container.
   //
   // Particle - the Particle.. with a Trajectory structure hopefully
   // ObservationPoint - Observation Point
-
-  // A spectrum object for return values
-  fSpectrum.Init(N, EStart, EStop);
+  // Spectrum - Spectrum container
 
   // UPDATE: delete this once Current is sorted out
   fCurrent = 0.500;
@@ -401,7 +437,7 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
   size_t const NTPoints = T.GetNPoints();
 
   // Number of points in the spectrum container
-  size_t const NEPoints = fSpectrum.GetNPoints();
+  size_t const NEPoints = Spectrum.GetNPoints();
 
   // Constant C0 for calculation
   double const C0 = TSRS::Qe() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
@@ -418,7 +454,7 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
   for (size_t i = 0; i != NEPoints; ++i) {
 
     // Angular frequency
-    double const Omega = fSpectrum.GetAngularFrequency(i);
+    double const Omega = Spectrum.GetAngularFrequency(i);
 
     // Constant for field calculation
     std::complex<double> ICoverOmega = I * TSRS::C() / Omega;
@@ -458,11 +494,10 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
     SumE *= C1 * DeltaT;
 
     // Set the flux for this frequency / energy point
-    fSpectrum.SetFlux(i, C2 *  SumE.Dot( SumE.CC() ).real());
+    Spectrum.SetFlux(i, C2 *  SumE.Dot( SumE.CC() ).real());
   }
 
 
-  fSpectrum.SaveToFile("del_spec.dat");
 
   return;
 }
@@ -470,7 +505,82 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
 
 
 
+void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, double const EStart, double const EStop, size_t const N, std::string const& OutFilename)
+{
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // Particle - the Particle.. with a Trajectory structure hopefully
+  // ObservationPoint - Observation Point
+
+  // A spectrum object for return values
+  fSpectrum.Init(N, EStart, EStop);
+
+  this->CalculateSpectrum(Particle, ObservationPoint, fSpectrum);
+
+  return;
+}
+
+
+
+
+void SRS::CalculateSpectrum (TVector3D const& ObservationPoint, double const EStart, double const EStop, size_t const N)
+{
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // ObservationPoint - Observation Point
+
+  // A spectrum object for return values
+  fSpectrum.Init(N, EStart, EStop);
+
+  this->CalculateSpectrum(fParticle, ObservationPoint, fSpectrum);
+
+  return;
+}
+
+
+
+
+void SRS::CalculateSpectrum (TVector3D const& ObservationPoint, std::vector<double> const& V)
+{
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // Particle - the Particle.. with a Trajectory structure hopefully
+  // ObservationPoint - Observation Point
+
+  // A spectrum object for return values
+  fSpectrum.Init(V);
+
+  this->CalculateSpectrum(fParticle, ObservationPoint, fSpectrum);
+
+  return;
+}
+
+
+
+
+TSpectrumContainer const& SRS::GetSpectrum () const
+{
+  return fSpectrum;
+}
+
+
+
+
 void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface)
+{
+  T3DScalarContainer PowerDensityContainer;
+  this->CalculatePowerDensity(Particle, Surface, PowerDensityContainer);
+
+  return;
+}
+
+
+
+
+void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -545,10 +655,26 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
     Sum /= 1e6; // m^2 to mm^2
 
 
+    PowerDensityContainer.AddPoint(Obs, Sum);
     of << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
 
   }
   of.close();
+
+  return;
+}
+
+
+
+
+void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer)
+{
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // Surface - Observation Point
+
+  this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer);
 
   return;
 }

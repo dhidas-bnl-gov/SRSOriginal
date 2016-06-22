@@ -1,7 +1,7 @@
 CC = pdflatex
 
 
-all: SRS_CodingConventions.pdf
+all: SRS_CodingConventions.pdf SRS_PythonAPI.pdf
 	echo 'Party!'
 
 

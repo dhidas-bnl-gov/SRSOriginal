@@ -39,6 +39,9 @@ int TestSRS ()
   S.SetCTStop (3.0);
   S.SetNPointsTrajectory(1901);
 
+  S.SetNewParticle();
+
+
   // Calculate the trajectory
   //S.CalculateTrajectory(P);
   //P.GetTrajectory().WriteToFile("del_Trajectory.txt");

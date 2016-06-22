@@ -25,11 +25,21 @@ TSurfacePoints_RectangleSimple::TSurfacePoints_RectangleSimple ()
 
 
 
-TSurfacePoints_RectangleSimple::TSurfacePoints_RectangleSimple (std::string const& p, int const& nx1, int const& nx2, double const& x1, double const& x2, double const& x, double const& y, double const& z, int const& n)
+TSurfacePoints_RectangleSimple::TSurfacePoints_RectangleSimple (std::string const& p, int const nx1, int const nx2, double const x1, double const x2, TVector3D const& Center, int const n)
 {
   // Constructor
 
-  this->Init(p, nx1, nx2, x1, x2, x, y, z, n);
+  this->Init(p, nx1, nx2, x1, x2, Center, n);
+
+}
+
+
+
+TSurfacePoints_RectangleSimple::TSurfacePoints_RectangleSimple (std::string const& p, int const nx1, int const nx2, double const x1, double const x2, double const x, double const y, double const z, int const n)
+{
+  // Constructor
+
+  this->Init(p, nx1, nx2, x1, x2, TVector3D(x, y, z), n);
 
 }
 
@@ -43,7 +53,16 @@ TSurfacePoints_RectangleSimple::~TSurfacePoints_RectangleSimple ()
 
 
 
-void TSurfacePoints_RectangleSimple::Init (std::string const& p, int const& nx1, int const& nx2, double const& x1, double const& x2, double const& x, double const& y, double const& z, int const& n)
+void TSurfacePoints_RectangleSimple::Init (std::string const& p, int const nx1, int const nx2, double const x1, double const x2, double const x, double const y, double const z, int const n)
+{
+  this->Init(p, nx1, nx2, x1, x2, TVector3D(x, y, z), n);
+  return;
+}
+
+
+
+
+void TSurfacePoints_RectangleSimple::Init (std::string const& p, int const nx1, int const nx2, double const x1, double const x2, TVector3D const& Center, int const n)
 {
   // Constructor
 
@@ -56,9 +75,9 @@ void TSurfacePoints_RectangleSimple::Init (std::string const& p, int const& nx1,
   fX1  = x1;
   fX2  = x2;
 
-  fX0 = x;
-  fY0 = y;
-  fZ0 = z;
+  fX0 = Center.GetX();
+  fY0 = Center.GetY();
+  fZ0 = Center.GetZ();
 
   fNPoints = (size_t) (nx1 * nx2);
 

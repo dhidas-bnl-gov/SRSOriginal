@@ -9,7 +9,31 @@
 \maketitle
 
 \section{C++ Coding Conventions}
+Largely follows the ROOT coding conventions.  Indentation is 2 spaces.  Tabs are not allowed.
 
+
+
+\section{Python User Interface}
+The coding convention used here follows as close as practical the following python convention guide:
+
+\subsection{Python User Functions}
+This is a list of functions available with the Python API.  The user should be aware that the Python API is written as a C(++) extension.  This means that although the Python interface is the main interface, the majority of code on the backend is written in C++ for speed.  All available python function are contained in the file src/SRSP.cc which may be somewhat cryptic to the casual python user, and docstrings typically short and less revealing.  This document shuold contain all information needed to use and understand the Python API.
+
+
+\section{Mathematica User Interface}
+The mathematica interface is designed to mimic the python user interface modulo that the first argument of nearly all functions will be a reference number, somewhat taking place of the python 'self', but in a much more simplistic way.  This reference number is returned by SRS\_Init() functions:
+\begin{verbatim}
+SRS0 = SRS_Init()
+SRS1 = SRS_Init()
+\end{verbatim}
+In the above example both SRS0 and SRS1 are separate SRS objects which are kep track of by their return number (an integer stored in SRS0, SRS1, etc.).
+
+{\bf YOU} are responsible for deleting the SRS objects in Mathematica when you are done with them.  This is easily done by:
+\begin{verbatim}
+SRS_Delete(SRS0)
+SRS_Delete(SRS1)
+\end{verbatim}
+There is no harm in deleting an SRS object which does not exist.  However, there is harm in using an SRS object which has been deleted.  This will cause the WSTP link to fail, and no further communication on it will work, effectively requiring you to restart the kernal.
 
 
 \end{document}

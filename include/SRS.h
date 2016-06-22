@@ -19,6 +19,7 @@
 #include "TParticleBeamContainer.h"
 #include "TSurfacePoints.h"
 #include "TSpectrumContainer.h"
+#include "T3DScalarContainer.h"
 
 
 class SRS
@@ -44,11 +45,13 @@ class SRS
     void AddParticleBeam (std::string const&, std::string const&, double const, double const, double const, double const, double const, double const, double const, double const, double const, double const);
     TParticleBeam& GetParticleBeam (std::string const&);
     TParticleA GetNewParticle ();
+    void SetNewParticle ();
 
 
     // Functions related to Trajectory
+    void CalculateTrajectory ();
     void CalculateTrajectory (TParticleA&);
-    TParticleTrajectoryPoints const& GetTrajectory (TParticleA const&) const;
+    TParticleTrajectoryPoints const& GetTrajectory ();
 
     void SetNPointsTrajectory (size_t const);
     void SetCTStart (double const);
@@ -59,10 +62,18 @@ class SRS
     double GetCTStart () const;
     double GetCTStop  () const;
 
+    void CalculateSpectrum ();
+    void CalculateSpectrum (TParticleA&, TVector3D const&, TSpectrumContainer&);
     void CalculateSpectrum (TParticleA&, TVector3D const&, double const, double const, size_t const, std::string const& OutFileName = "");
+    void CalculateSpectrum (TVector3D const&, double const, double const, size_t const);
+    void CalculateSpectrum (TVector3D const&, std::vector<double> const&);
+
+    TSpectrumContainer const& GetSpectrum () const;
 
     // Power Density calculation
     void CalculatePowerDensity (TParticleA&, TSurfacePoints const&);
+    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, T3DScalarContainer&);
+    void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&);
 
     // Flux Calculations
     void CalculateFlux (TParticleA&, TSurfacePoints const&, double const);
