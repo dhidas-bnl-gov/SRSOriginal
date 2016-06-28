@@ -195,16 +195,77 @@ static PyObject* SRS_SetNPointsTrajectory (SRSObject* self, PyObject* arg)
 static PyObject* SRS_AddMagneticField (SRSObject* self, PyObject* args)
 {
   // Set the start and stop times for SRS in [m]
+  // UPDATE: Needs comments
+
 
   // Grab the values
   char* FileName;
   char* FileFormat;
-  if (! PyArg_ParseTuple(args, "ss", &FileName, &FileFormat)) {
-    return NULL;
+  PyObject* LRotation;
+  PyObject* LTranslation;
+  PyObject* LScaling;
+
+  TVector3D Rotation(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+  std::vector<double> Scaling;
+
+  if (PyTuple_Size(args) == 2) {
+    if (! PyArg_ParseTuple(args, "ss", &FileName, &FileFormat)) {
+      return NULL;
+    }
+  } else if (PyTuple_Size(args) == 3) {
+    if (! PyArg_ParseTuple(args, "ssO!", &FileName, &FileFormat, &PyList_Type, &LRotation)) {
+      return NULL;
+    }
+    if (PyList_Size(LRotation) != 3) {
+      throw;
+    }
+    Rotation.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LRotation, 0)),
+                    PyFloat_AsDouble(PyList_GetItem(LRotation, 1)),
+                    PyFloat_AsDouble(PyList_GetItem(LRotation, 2)));
+  } else if (PyTuple_Size(args) == 4) {
+    if (! PyArg_ParseTuple(args, "ssO!O!", &FileName, &FileFormat, &PyList_Type, &LRotation, &PyList_Type, &LTranslation)) {
+      return NULL;
+    }
+    if (PyList_Size(LRotation) != 3) {
+      throw;
+    }
+    Rotation.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LRotation, 0)),
+                    PyFloat_AsDouble(PyList_GetItem(LRotation, 1)),
+                    PyFloat_AsDouble(PyList_GetItem(LRotation, 2)));
+    if (PyList_Size(LTranslation) != 3) {
+      throw;
+    }
+    Translation.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LTranslation, 0)),
+                       PyFloat_AsDouble(PyList_GetItem(LTranslation, 1)),
+                       PyFloat_AsDouble(PyList_GetItem(LTranslation, 2)));
+  } else if (PyTuple_Size(args) == 5) {
+    if (! PyArg_ParseTuple(args, "ssO!O!O!", &FileName, &FileFormat, &PyList_Type, &LRotation, &PyList_Type, &LTranslation, &PyList_Type, &LScaling)) {
+      return NULL;
+    }
+    if (PyList_Size(LRotation) != 3) {
+      throw;
+    }
+    Rotation.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LRotation, 0)),
+                    PyFloat_AsDouble(PyList_GetItem(LRotation, 1)),
+                    PyFloat_AsDouble(PyList_GetItem(LRotation, 2)));
+    if (PyList_Size(LTranslation) != 3) {
+      throw;
+    }
+    Translation.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LTranslation, 0)),
+                       PyFloat_AsDouble(PyList_GetItem(LTranslation, 1)),
+                       PyFloat_AsDouble(PyList_GetItem(LTranslation, 2)));
+
+    for (int i = 0; i < PyList_Size(LScaling); ++i) {
+      std::cout << PyFloat_AsDouble(PyList_GetItem(LScaling, i)) << std::endl;
+      Scaling.push_back(PyFloat_AsDouble(PyList_GetItem(LScaling, i)));
+    }
+  } else {
+    throw;
   }
 
   // Set the object variable
-  self->obj->AddMagneticField(FileName, FileFormat);
+  self->obj->AddMagneticField(FileName, FileFormat, Rotation, Translation, Scaling);
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);

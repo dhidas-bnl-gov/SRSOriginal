@@ -12,10 +12,10 @@ TBField3DZ::TBField3DZ ()
 
 
 
-TBField3DZ::TBField3DZ (std::string const& InFileName)
+TBField3DZ::TBField3DZ (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Constructor.  Reads input file
-  this->ReadFile(InFileName);
+  this->ReadFile(InFileName, Rotation, Translation, Scaling);
 
   // Sort array
   this->Sort();
@@ -83,11 +83,13 @@ double TBField3DZ::GetLastZ ()
 
 
 
-bool TBField3DZ::ReadFile (std::string const& InFileName)
+bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Read an input file in the format of:
   //   Z By
   // where a line beginning with # is a comment and blank lines are skipped
+
+  // UPDATE: CRITICAL - implement rotation
 
   // Open the input file.  If !f return a false
   std::ifstream f(InFileName.c_str());
@@ -116,6 +118,32 @@ bool TBField3DZ::ReadFile (std::string const& InFileName)
     Iine.clear();
     Iine.str(Line);
     Iine >> Z >> Bx >> By >> Bz;
+
+    // Scaling
+    for (size_t is = 0; is != Scaling.size(); ++is) {
+      switch (is) {
+        case 0:
+          Z *= Scaling[0];
+          break;
+        case 1:
+          Bx *= Scaling[1];
+          break;
+        case 2:
+          By *= Scaling[2];
+          break;
+        case 3:
+          Bz *= Scaling[3];
+          break;
+        default:
+          throw;
+      }
+    }
+
+    // UPDATE: rotation
+
+    // Translation
+    Z += Translation.GetZ();
+
 
     // Check the stream to see if it is not good
     if (Iine.fail()) {

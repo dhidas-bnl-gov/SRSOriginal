@@ -31,11 +31,16 @@ SRS::~SRS ()
 
 
 
-void SRS::AddMagneticField (std::string const FileName, std::string const Format, double const X0, double const Y0, double const Z0)
+void SRS::AddMagneticField (std::string const FileName, std::string const Format, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Add a magnetic field from a file to the field container
 
-  this->fBFieldContainer.AddField( new TBField3DZRegularized(FileName) );
+  std::cout << "TEST " << Rotation << std::endl;
+  std::cout << "TEST " << Translation << std::endl;
+  std::cout << "TEST " << Scaling.size() << std::endl;
+
+  // UPDATE: This needs to be fully 3D
+  this->fBFieldContainer.AddField( new TBField3DZRegularized(FileName, Rotation, Translation, Scaling) );
 
   return;
 }

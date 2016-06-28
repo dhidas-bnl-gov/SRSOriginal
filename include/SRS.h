@@ -33,7 +33,7 @@ class SRS
 
 
     // Functions related to the magnetic field
-    void AddMagneticField (std::string const, std::string const, double const X0 = 0, double const Y0 = 0, double const Z0 = 0);
+    void AddMagneticField (std::string const, std::string const, TVector3D const& R = TVector3D(0, 0, 0), TVector3D const& D = TVector3D(0, 0, 0), std::vector<double> const& S = std::vector<double>());
     void AddMagneticField (TBField*);
 
     double    GetBx (double const, double const, double const) const;

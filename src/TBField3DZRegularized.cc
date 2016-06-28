@@ -28,6 +28,19 @@ TBField3DZRegularized::TBField3DZRegularized (std::string const& InFileName)
 
 
 
+TBField3DZRegularized::TBField3DZRegularized (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
+{
+  // Constructor.
+
+  // Set some defaults
+  fZNPointsPerMeter = 0;
+
+  // Reads input file, constructs regularized data
+  this->ReadFile(InFileName, Rotation, Translation, Scaling);
+}
+
+
+
 TBField3DZRegularized::TBField3DZRegularized (std::string const& InFileName, size_t const N)
 {
   // Constructor.
@@ -80,6 +93,17 @@ bool TBField3DZRegularized::ReadFile (std::string const& InFileName)
   // store the regularized field while discarding the TBField3DZ.
 
   TBField3DZ BF(InFileName);
+  this->RegularizeField(BF);
+  return true;
+}
+
+
+
+bool TBField3DZRegularized::ReadFile (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
+{
+  // UPDATE: Comment function
+
+  TBField3DZ BF(InFileName, Rotation, Translation, Scaling);
   this->RegularizeField(BF);
   return true;
 }

@@ -8,6 +8,8 @@
 //
 ////////////////////////////////////////////////////////////////////
 
+#include "TVector3D.h"
+
 #include <vector>
 #include <array>
 #include <string>
@@ -20,7 +22,7 @@ class TBField3DZ
 
   public:
     TBField3DZ ();
-    TBField3DZ (std::string const&);
+    TBField3DZ (std::string const&, TVector3D const& Rotation = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), std::vector<double> const& Scaling = std::vector<double>());
     ~TBField3DZ ();
 
     bool Add (double const, double const, double const, double const);
@@ -30,7 +32,7 @@ class TBField3DZ
     double GetFirstZ ();
     double GetLastZ ();
 
-    bool ReadFile (std::string const&);
+    bool ReadFile (std::string const&, TVector3D const& Rotation = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), std::vector<double> const& Scaling = std::vector<double>());
     bool SaveAs (std::string const&, std::string const& Comment = "");
 
     bool Regularize (std::vector<std::array<double, 3> >&, double&, double&, double&, size_t const NPointsPerMeter = 10000);

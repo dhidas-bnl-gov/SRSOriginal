@@ -25,12 +25,14 @@ class TBField3DZRegularized : public TBField
   public:
     TBField3DZRegularized ();
     TBField3DZRegularized (std::string const&);
+    TBField3DZRegularized (std::string const&, TVector3D const&, TVector3D const&, std::vector<double> const&);
     TBField3DZRegularized (std::string const&, size_t const);
     TBField3DZRegularized (TBField3DZ&);
     TBField3DZRegularized (TBField3DZ&, size_t const);
     ~TBField3DZRegularized ();
 
     bool ReadFile (std::string const&);
+    bool ReadFile (std::string const&, TVector3D const&, TVector3D const&, std::vector<double> const&);
     bool ReadFileRegularized (std::string const&);
     bool SaveAs (std::string const&, std::string const& Comment = "");
 
