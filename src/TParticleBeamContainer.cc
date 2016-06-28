@@ -75,7 +75,35 @@ TParticleBeam& TParticleBeamContainer::GetParticleBeam (std::string const& Name)
 
 size_t TParticleBeamContainer::GetRandomBeamIndexByWeight () const
 {
-  // UPDATE: needs to actually be implemented
+  // UPDATE: Get a better random generator with seed setting elsewhere
+
+  // Size of array
+  size_t const N = fParticleBeamWeightSums.size();
+
+  // If it's zero we don't really know what we are doing here..
+  if (N == 0) {
+    throw;
+  }
+
+  // If we're 1, that's easy
+  if (N == 1) {
+    return 0;
+  }
+
+  // Get a random double [0, SumOfWeights)
+  double const Random = ((double) rand() / (RAND_MAX)) * fParticleBeamWeightSums[N - 1];
+
+  // Not the fastest algorithm, but I guess you don't have thousands of different beams...
+  // If you do, let's update this search...
+  for (size_t i = 0; i != N; ++i) {
+    if (Random < fParticleBeamWeightSums[i]) {
+      return i;
+    }
+  }
+
+  // Just in case you don't find it, something is seriously wrong..
+  throw;
+
   return 0;
 }
 

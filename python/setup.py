@@ -29,7 +29,8 @@ moduleSRS = Extension('SRS',
                                  'src/TTwiss.cc',
                                  'src/TVector3D.cc',
                                  'src/TVector3DC.cc'
-                                 ]
+                                 ],
+                      extra_compile_args=['-std=c++17', '-ansi']
                      )
 
 

@@ -25,6 +25,7 @@ class TParticleA
     ~TParticleA ();
 
     void SetParticleType (std::string const&);
+    void SetParticleTypeCustom (std::string const&, double const, double const);
     void SetParticleTypeFromPDGID (int const);
 
     void SetQ  (double const);
@@ -40,9 +41,14 @@ class TParticleA
     double GetGamma () const;
     double GetQoverMGamma () const;
 
+    void   SetCurrent (double const);
+    double GetCurrent () const;
+
     TVector3D const& GetX0 () const;
     TVector3D const& GetB0 () const;
     double           GetT0 () const;
+
+    std::string const& GetType () const;
 
     void SetInitialParticleConditions (TVector3D const&, TVector3D const&, double const);
 
@@ -54,6 +60,7 @@ class TParticleA
     void SetGamma ();
     void SetQoverMGamma ();
 
+    std::string fType;    // Type name
     double fQ;            // Charge
     double fM;            // Mass
     double fGamma;        // Relativistic gamma factor (derived quantity)
@@ -63,8 +70,13 @@ class TParticleA
     TVector3D fB0;  // Initial Beta (velocity / c)
     double    fT0;  // Time at initial conditions
 
-
     TParticleTrajectoryPoints fTrajectory;
+
+    // This is a funny one so I'll explain it here.
+    // This is here because TParticleBeam inherits this class
+    // but it is more convenient for SRS to have this as a TParticleA
+    // class member.
+    double fCurrent;
 
 };
 

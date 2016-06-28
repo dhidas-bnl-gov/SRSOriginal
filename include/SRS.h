@@ -34,6 +34,7 @@ class SRS
 
     // Functions related to the magnetic field
     void AddMagneticField (std::string const, std::string const, double const X0 = 0, double const Y0 = 0, double const Z0 = 0);
+    void AddMagneticField (TBField*);
 
     double    GetBx (double const, double const, double const) const;
     double    GetBy (double const, double const, double const) const;
@@ -77,6 +78,8 @@ class SRS
 
     // Flux Calculations
     void CalculateFlux (TParticleA&, TSurfacePoints const&, double const);
+    void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&);
+    void CalculateFlux (TSurfacePoints const&, double const, T3DScalarContainer&);
 
   private:
     TBFieldContainer fBFieldContainer;

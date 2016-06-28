@@ -39,13 +39,11 @@ class TParticleBeam : public TParticleA
     TVector3D const& GetU0 () const;
     double           GetE0 () const;
     double           GetT0 () const;
-    double           GetCurrent () const;
 
 
     TParticleA GetNewParticle ();
 
   private:
-    double fCurrent;  // Beam current [A s^-1]
 
     TTwiss fTwiss; // To be UPDATE
 

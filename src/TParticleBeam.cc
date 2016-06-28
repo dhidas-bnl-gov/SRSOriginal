@@ -28,7 +28,7 @@ TParticleBeam::TParticleBeam (std::string const& ParticleType)
 
   this->SetParticleType(ParticleType);
 
-  fCurrent = this->GetQ();
+  this->SetCurrent(this->GetQ());
 }
 
 
@@ -41,7 +41,7 @@ TParticleBeam::TParticleBeam (std::string const& ParticleType, double const Ener
   this->SetParticleType(ParticleType);
   fE0 = Energy;
 
-  fCurrent = Current;
+  this->SetCurrent(Current);
 }
 
 
@@ -59,7 +59,7 @@ TParticleBeam::TParticleBeam (std::string const& ParticleType, TVector3D const& 
   fE0 = Energy;
   fT0 = 0;
 
-  fCurrent = Current;
+  this->SetCurrent(Current);
 }
 
 
@@ -76,7 +76,7 @@ TParticleBeam::TParticleBeam (std::string const& ParticleType, TVector3D const& 
   fE0 = Energy;
   fT0 = T0;
 
-  fCurrent = Current;
+  this->SetCurrent(Current);
 }
 
 
@@ -93,7 +93,7 @@ TParticleBeam::TParticleBeam (std::string const& ParticleType, TVector3D const& 
   fE0 = Energy;
   fT0 = T0;
 
-  fCurrent = Current;
+  this->SetCurrent(Current);
 
   fTwiss = Twiss;
 }
@@ -120,14 +120,21 @@ void TParticleBeam::SetInitialConditions (double const X, double const Y, double
 
 
 
-void TParticleBeam::SetInitialConditions (TVector3D const& X, TVector3D const& D, double const E0, double const T)
+void TParticleBeam::SetInitialConditions (TVector3D const& X, TVector3D const& D, double const E0, double const T0)
 {
-  TVector3D const Direction = D.UnitVector();
+  // Set the initial conditions variables for this particle
+  // X - Initial position
+  // D - 3D vector of the initial direction of velocity (Magnitude is arbitrary)
+  // E0 - The initial energy
+  // T0 - The initial time (in [m])
+
+  // Rescale the direction to a unit vector
 
   this->fX0 = X;
-  this->fU0 = D;
+  this->fU0 = D.UnitVector();
   this->fE0 = E0;
-  this->fT0 = T;
+  this->fT0 = T0;
+
   return;
 }
 
@@ -136,6 +143,7 @@ void TParticleBeam::SetInitialConditions (TVector3D const& X, TVector3D const& D
 
 TVector3D const& TParticleBeam::GetX0 () const
 {
+  // Return const reference to the initial position
   return fX0;
 }
 
@@ -144,6 +152,7 @@ TVector3D const& TParticleBeam::GetX0 () const
 
 TVector3D const& TParticleBeam::GetU0 () const
 {
+  // Get unit vector in the direction of initial velocity
   return fU0;
 }
 
@@ -152,6 +161,7 @@ TVector3D const& TParticleBeam::GetU0 () const
 
 double TParticleBeam::GetE0 () const
 {
+  // Return initial energy
   return fE0;
 }
 
@@ -160,15 +170,8 @@ double TParticleBeam::GetE0 () const
 
 double TParticleBeam::GetT0 () const
 {
+  // Return initial time
   return fT0;
-}
-
-
-
-
-double TParticleBeam::GetCurrent () const
-{
-  return fCurrent;
 }
 
 
@@ -183,17 +186,22 @@ TParticleA TParticleBeam::GetNewParticle ()
   this->GetTrajectory().Clear();
 
   // UPDATE: Needs rand for twiss, or other beam configurations...
+  // UPDATE: Could also take a python function
 
 
   double const Gamma = this->GetE0() / TSRS::kgToGeV(this->GetM());
   double const Beta = sqrt(1.0 - 1.0 / (Gamma * Gamma));
+
+  TVector3D XNew;
+  TVector3D BNew;
+  double    TNew;
+  double    ENew; // correlated with BNew, not sure how to handle this yet
 
 
   TVector3D Beta0 = this->GetU0() * Beta;
 
   TParticleA NewParticle = (TParticleA) *this;
   NewParticle.SetInitialParticleConditions(this->GetX0(), Beta0, this->GetT0());
-
 
 
   return NewParticle;

@@ -43,6 +43,18 @@ void SRS::AddMagneticField (std::string const FileName, std::string const Format
 
 
 
+void SRS::AddMagneticField (TBField* Field)
+{
+  // Add a magnetic field from a file to the field container
+
+  this->fBFieldContainer.AddField(Field);
+
+  return;
+}
+
+
+
+
 double SRS::GetBx (double const X, double const Y, double const Z) const
 {
   // Return summed Bx from container
@@ -362,7 +374,7 @@ void SRS::Derivatives (double t, double x[], double dxdt[], TParticleA const& P)
 void SRS::RK4 (double y[], double dydx[], int n, double x, double h, double yout[], TParticleA const& P)
 {
   // Runge-Kutta 4th order method propogation
-  // UPDATE
+  // UPDATE: syntax
 
   int i;
   double xh, hh, h6;
@@ -419,8 +431,6 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
   // ObservationPoint - Observation Point
   // Spectrum - Spectrum container
 
-  // UPDATE: delete this once Current is sorted out
-  fCurrent = 0.500;
 
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
@@ -443,7 +453,7 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
   double const C0 = TSRS::Qe() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
 
   // Constant for flux calculation at the end
-  double const C2 = TSRS::FourPi() * fCurrent / (TSRS::H() * fabs(TSRS::Qe()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
+  double const C2 = TSRS::FourPi() * Particle.GetCurrent() / (TSRS::H() * fabs(TSRS::Qe()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
 
   // Imaginary "i" and complxe 1+0i
   std::complex<double> const I(0, 1);
@@ -682,7 +692,23 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
 
 
 
+
 void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV)
+{
+  T3DScalarContainer FluxContainer;
+  this->CalculateFlux(Particle, Surface, Energy_eV, FluxContainer);
+
+  return;
+}
+
+
+
+
+
+
+
+
+void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -767,10 +793,24 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
     SumE *= C0;
 
     of << Surface.GetX1(ip) << "  " << Surface.GetX2(ip) << "  " <<  C2 * SumE.Dot( SumE.CC() ).real() << std::endl;
+    FluxContainer.AddPoint(Obs, C2 * SumE.Dot( SumE.CC() ).real());
   }
 
   of.close();
 
 
+  return;
+}
+
+
+
+
+
+
+
+
+void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer)
+{
+  this->CalculateFlux(fParticle, Surface, Energy_eV, FluxContainer);
   return;
 }

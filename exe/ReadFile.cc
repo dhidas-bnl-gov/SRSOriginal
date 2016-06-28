@@ -185,7 +185,6 @@ int ReadFile (std::string const InFileName, std::string const Format)
 
   std::cout << RegularizedData->size() << std::endl;
 
-  sleep(200);
 
   return 0;
 }

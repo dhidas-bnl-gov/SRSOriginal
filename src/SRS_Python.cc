@@ -16,6 +16,7 @@
 
 #include "TSurfacePoints_RectangleSimple.h"
 #include "T3DScalarContainer.h"
+#include "TBFieldPythonFunction.h"
 
 #include <iostream>
 #include <vector>
@@ -204,6 +205,35 @@ static PyObject* SRS_AddMagneticField (SRSObject* self, PyObject* args)
 
   // Set the object variable
   self->obj->AddMagneticField(FileName, FileFormat);
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
+
+static PyObject* SRS_AddMagneticFieldFunction (SRSObject* self, PyObject* args)
+{
+  // Set the start and stop times for SRS in [m]
+
+  // Grab the values
+  PyObject* Function;
+  if (! PyArg_ParseTuple(args, "O:set_callback", &Function)) {
+    return NULL;
+  }
+
+  Py_INCREF(Function);
+
+
+  self->obj->AddMagneticField( (TBField*) new TBFieldPythonFunction(Function));
+
+  Py_DECREF(Function);
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -553,7 +583,7 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
   // Calculate the spectrum given an observation point, and energy range
 
 
-  char* SurfacePlane;
+  char*     SurfacePlane;
   int       NX1;
   int       NX2;
   double    Width_X1;
@@ -621,6 +651,83 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 
 
 
+static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args)
+{
+  // Calculate the spectrum given an observation point, and energy range
+
+
+  double    Energy;
+  char*     SurfacePlane;
+  int       NX1;
+  int       NX2;
+  double    Width_X1;
+  double    Width_X2;
+  PyObject* List_Observer;
+  int       NormalDirection;
+
+
+  // Grab the values
+  if (! PyArg_ParseTuple(args, "dsdidiO!i", &Energy, &SurfacePlane, &Width_X1, &NX1, &Width_X2, &NX2, &PyList_Type, &List_Observer, &NormalDirection)) {
+    return NULL;
+  }
+
+  // Has to have the correct number of arguments
+  if (PyList_Size(List_Observer) != 3) {
+    return NULL;
+  }
+
+  // Observation point
+  TVector3D const ObservationPoint(PyFloat_AsDouble(PyList_GetItem(List_Observer, 0)),
+                                   PyFloat_AsDouble(PyList_GetItem(List_Observer, 1)),
+                                   PyFloat_AsDouble(PyList_GetItem(List_Observer, 2)));
+
+  // Container for Point plus scalar
+  T3DScalarContainer FluxContainer;
+
+  TSurfacePoints_RectangleSimple Surface(SurfacePlane, NX1, NX2, Width_X1, Width_X2, ObservationPoint, NormalDirection);
+
+  // Actually calculate the spectrum
+  self->obj->CalculateFlux(Surface, Energy, FluxContainer);
+
+
+  // Build the output list of: [[[x, y, z], Flux], [...]]
+  // Create a python list
+  PyObject *PList = PyList_New(0);
+
+  size_t const NPoints = FluxContainer.GetNPoints();
+
+  for (size_t i = 0; i != NPoints; ++i) {
+    T3DScalar F = FluxContainer.GetPoint(i);
+
+    // Inner list for each point
+    PyObject *PList2 = PyList_New(0);
+
+    // Add position and value to list
+    PyList_Append(PList2, SRS_TVector3DAsList(F.GetX()));
+    PyList_Append(PList2, Py_BuildValue("f", F.GetV()));
+    PyList_Append(PList, PList2);
+
+  }
+
+  return PList;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -667,6 +774,7 @@ static PyMethodDef SRS_methods[] = {
   {"set_ctstartstop",   (PyCFunction)SRS_SetCTStartStop,  METH_VARARGS,       "set the start and stop time in [m]"},
 
   {"add_magnetic_field",   (PyCFunction)SRS_AddMagneticField,  METH_VARARGS,       "add a magnetic field from a file"},
+  {"add_magnetic_field_function",   (PyCFunction)SRS_AddMagneticFieldFunction,  METH_VARARGS,       "add a magnetic field in form of python function"},
   {"get_bfield",  (PyCFunction)SRS_GetBField,  METH_VARARGS,  "get the magnetic field at a given position in space (and someday time?)"},
 
 
@@ -682,6 +790,7 @@ static PyMethodDef SRS_methods[] = {
   {"get_spectrum", (PyCFunction)SRS_GetSpectrum, METH_NOARGS, "Get the spectrum for the current particle as list of 2D [[energy, flux], [...]...]"},
 
   {"calculate_power_density_rectangle",   (PyCFunction)SRS_CalculatePowerDensityRectangle,  METH_VARARGS,       "calculate the power density given a surface"},
+  {"calculate_flux_rectangle",   (PyCFunction)SRS_CalculateFluxRectangle,  METH_VARARGS,       "calculate the flux given a surface"},
 
   {NULL}  /* Sentinel */
 };

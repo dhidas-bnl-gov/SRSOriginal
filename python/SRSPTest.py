@@ -3,6 +3,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from math import sin, cos
 
 # The paths below are just convenient for me on my mac for testing...
 sys.path.append('./')
@@ -15,18 +16,49 @@ import SRS
 # Create a new SRS object
 srs0 = SRS.SRS()
 
+def myfunc (X):
+  z = X[2]
+  return [sin(5*z), cos(5*z), 0]
+
+
+
+srs0.add_magnetic_field_function(myfunc)
+
+
+
+if True:
+  Z = np.linspace(-4, 4, 2000)
+  B = [srs0.get_bfield([0, 0, z])[0] for z in Z]
+  # Bx = [item[0] for item in B]
+  plt.plot(Z, B)
+  plt.xlabel('Z [m]')
+  plt.ylabel('Bx [T]')
+  plt.title('Magnetic Field')
+  plt.show()
+
+
+
+
+
+
 
 srs0.set_ctstartstop(-2, 2)
 srs0.set_npoints_trajectory(20001)
 
-srs0.add_magnetic_field('epu_linear.dat', 'ZBxByBz')
-srs0.add_particle_beam('electron', 'beam_0', [0, 0, -2], [0, 0, 1], 3, -2, 0.500, 1)
+#srs0.add_magnetic_field('epu_linear.dat', 'ZBxByBz')
+srs0.add_particle_beam('electron', 'beam_0', [0, 0, 0], [0, 0, 1], 3, -2, 0.500, 0.1)
+#srs0.add_particle_beam('electron', 'beam_1', [0, 0, -2], [0, 0, 1], 3, -2, 0.500, 0.9)
 
 srs0.set_new_particle()
 
 
+if True:
+  for i in xrange(10000):
+    srs0.set_new_particle()
 
-if False:
+
+
+if True:
   srs0.calculate_trajectory()
   trajectory = srs0.get_trajectory()
 
@@ -38,6 +70,7 @@ if False:
   plt.title('Particle Trajectory')
   plt.show()
 
+exit(0)
 
 
 
@@ -56,7 +89,7 @@ if False:
   plt.show()
 
 
-if True:
+if False:
   power_density = srs0.calculate_power_density_rectangle('XY', 0.008, 51, 0.004, 51, [0, 0, 30], 1)
   X = [item[0][0] for item in power_density]
   Y = [item[0][1] for item in power_density]
@@ -73,4 +106,27 @@ if True:
   plt.title('Power Density ' +'[$W / mm^2$]')
 
   plt.show()
+
+
+if True:
+  flux = srs0.calculate_flux_rectangle(135, 'XY', 0.008, 51, 0.004, 51, [0, 0, 30], 1)
+  X = [item[0][0] for item in flux]
+  Y = [item[0][1] for item in flux]
+  P = [item[1]    for item in flux]
+
+  NX = len(np.unique(X))
+  NY = len(np.unique(Y))
+
+  plt.hist2d(X, Y, bins=[NX, NY], weights=P)
+  plt.colorbar()
+
+  plt.xlabel('Axis 1 [$m$]')
+  plt.ylabel('Axis 2 [$m$]')
+  plt.title('Spectral Flux' +'[$W / mm^2$]')
+
+  plt.show()
+
+
+
+
 

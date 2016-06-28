@@ -60,6 +60,9 @@ void TParticleA::SetParticleType (std::string const& Type)
 {
   // If it's a supported / built-in type I should know the charge and mass
 
+  // Save name you give it
+  fType = Type;
+
   // Get a lowercase version
   std::string type = Type;
   std::transform(type.begin(), type.end(), type.begin(), ::tolower);
@@ -87,6 +90,25 @@ void TParticleA::SetParticleType (std::string const& Type)
   } else {
     throw;
   }
+
+  return;
+}
+
+
+
+
+void TParticleA::SetParticleTypeCustom (std::string const& Type, double const Charge, double const Mass)
+{
+  // Set a custom particle type.
+  // Type - whatever name you want to call it
+  // Charge - in SI units [C]
+  // Mass   - in SI units [kg]
+
+  // Save name you give it
+  fType = Type;
+
+  // Set charge and mass
+  this->SetQM(Charge, Mass);
 
   return;
 }
@@ -220,6 +242,27 @@ double TParticleA::GetQoverMGamma () const
 
 
 
+void TParticleA::SetCurrent (double const Current)
+{
+  // Set the current.  This is mostly utilized by TParticleBeam
+  fCurrent = Current;
+  return;
+}
+
+
+
+
+double TParticleA::GetCurrent () const
+{
+  // Set the current.  This is mostly utilized by TParticleBeam
+  // and SRS functions that need current.  This was just a convenient
+  // place to put it
+  return fCurrent;
+}
+
+
+
+
 TVector3D const& TParticleA::GetX0 () const
 {
   // Get initial position
@@ -242,6 +285,15 @@ double TParticleA::GetT0 () const
 {
   // Get initial time
   return fT0;
+}
+
+
+
+
+std::string const& TParticleA::GetType () const
+{
+  // Get reference to type string
+  return fType;
 }
 
 
