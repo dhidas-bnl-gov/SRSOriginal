@@ -327,9 +327,6 @@ void TParticleTrajectoryPoints::ReadFromFileBinary (std::string const& FileName)
       fB.push_back( TVector3D(bx, by, bz) );
       fAoverC.push_back( TVector3D(0, 0, 0) );
     }
-
-    std::cout << z << std::endl;
-
   }
 
   return;

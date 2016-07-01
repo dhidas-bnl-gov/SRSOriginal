@@ -17,6 +17,8 @@
 #include "TSurfacePoints_RectangleSimple.h"
 #include "T3DScalarContainer.h"
 #include "TBFieldPythonFunction.h"
+#include "TBField3D_Gaussian.h"
+#include "TBField3D_Uniform.h"
 
 #include <iostream>
 #include <vector>
@@ -257,7 +259,6 @@ static PyObject* SRS_AddMagneticField (SRSObject* self, PyObject* args)
                        PyFloat_AsDouble(PyList_GetItem(LTranslation, 2)));
 
     for (int i = 0; i < PyList_Size(LScaling); ++i) {
-      std::cout << PyFloat_AsDouble(PyList_GetItem(LScaling, i)) << std::endl;
       Scaling.push_back(PyFloat_AsDouble(PyList_GetItem(LScaling, i)));
     }
   } else {
@@ -295,6 +296,128 @@ static PyObject* SRS_AddMagneticFieldFunction (SRSObject* self, PyObject* args)
   self->obj->AddMagneticField( (TBField*) new TBFieldPythonFunction(Function));
 
   Py_DECREF(Function);
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
+
+static PyObject* SRS_AddMagneticFieldGaussian (SRSObject* self, PyObject* args)
+{
+  // Set the start and stop times for SRS in [m]
+
+  // Grab the values
+  PyObject* LBField;
+  PyObject* LCenter;
+  PyObject* LSigma;
+  if (! PyArg_ParseTuple(args, "O!O!O!", &PyList_Type, &LBField, &PyList_Type, &LCenter, &PyList_Type, &LSigma)) {
+    return NULL;
+  }
+
+
+  // Has to have the correct number of arguments
+  if (PyList_Size(LBField) != 3 || PyList_Size(LCenter) != 3 || PyList_Size(LSigma) != 3) {
+    return NULL;
+  }
+
+  TVector3D const BField(PyFloat_AsDouble(PyList_GetItem(LBField, 0)),
+                         PyFloat_AsDouble(PyList_GetItem(LBField, 1)),
+                         PyFloat_AsDouble(PyList_GetItem(LBField, 2)));
+  TVector3D const Center(PyFloat_AsDouble(PyList_GetItem(LCenter, 0)),
+                         PyFloat_AsDouble(PyList_GetItem(LCenter, 1)),
+                         PyFloat_AsDouble(PyList_GetItem(LCenter, 2)));
+  TVector3D const Sigma( PyFloat_AsDouble(PyList_GetItem(LSigma, 0)),
+                         PyFloat_AsDouble(PyList_GetItem(LSigma, 1)),
+                         PyFloat_AsDouble(PyList_GetItem(LSigma, 2)));
+
+
+  self->obj->AddMagneticField( (TBField*) new TBField3D_Gaussian(BField, Center, Sigma));
+
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
+
+static PyObject* SRS_AddMagneticFieldUniform (SRSObject* self, PyObject* args)
+{
+  // Set the start and stop times for SRS in [m]
+  // UPDATE: Needs comments
+
+
+  // Grab the values
+  char* FileName;
+  char* FileFormat;
+  PyObject* LBField;
+  PyObject* LCenter;
+  PyObject* LWidth;
+
+  TVector3D BField(0, 0, 0);
+  TVector3D Center(0, 0, 0);
+  TVector3D Width (0, 0, 0);
+
+  if (PyTuple_Size(args) == 1) {
+    if (! PyArg_ParseTuple(args, "O!", &PyList_Type, &LBField)) {
+      return NULL;
+    }
+    if (PyList_Size(LBField) != 3) {
+      throw;
+    }
+    BField.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LBField, 0)),
+                  PyFloat_AsDouble(PyList_GetItem(LBField, 1)),
+                  PyFloat_AsDouble(PyList_GetItem(LBField, 2)));
+
+  } else if (PyTuple_Size(args) == 2) {
+    if (! PyArg_ParseTuple(args, "O!O!", &PyList_Type, &LBField, &PyList_Type, &LWidth)) {
+      return NULL;
+    }
+    if (PyList_Size(LBField) != 3 || PyList_Size(LWidth) != 3) {
+      throw;
+    }
+    BField.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LBField, 0)),
+                  PyFloat_AsDouble(PyList_GetItem(LBField, 1)),
+                  PyFloat_AsDouble(PyList_GetItem(LBField, 2)));
+
+    Width.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LWidth, 0)),
+                 PyFloat_AsDouble(PyList_GetItem(LWidth, 1)),
+                 PyFloat_AsDouble(PyList_GetItem(LWidth, 2)));
+
+  } else if (PyTuple_Size(args) == 3) {
+    if (! PyArg_ParseTuple(args, "O!O!O!", &PyList_Type, &LBField, &PyList_Type, &LWidth, &PyList_Type, &LCenter)) {
+      return NULL;
+    }
+    if (PyList_Size(LBField) != 3 || PyList_Size(LWidth) != 3 || PyList_Size(LCenter) != 3) {
+      throw;
+    }
+    BField.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LBField, 0)),
+                  PyFloat_AsDouble(PyList_GetItem(LBField, 1)),
+                  PyFloat_AsDouble(PyList_GetItem(LBField, 2)));
+
+    Width.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LWidth, 0)),
+                 PyFloat_AsDouble(PyList_GetItem(LWidth, 1)),
+                 PyFloat_AsDouble(PyList_GetItem(LWidth, 2)));
+
+    Center.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LCenter, 0)),
+                  PyFloat_AsDouble(PyList_GetItem(LCenter, 1)),
+                  PyFloat_AsDouble(PyList_GetItem(LCenter, 2)));
+  }
+
+  // Set the object variable
+  self->obj->AddMagneticField((TBField*) new TBField3D_Uniform(BField, Width, Center));
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -390,7 +513,6 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args)
   DX0 = PyFloat_AsDouble(PyList_GetItem(List_D, 0));
   DY0 = PyFloat_AsDouble(PyList_GetItem(List_D, 1));
   DZ0 = PyFloat_AsDouble(PyList_GetItem(List_D, 2));
-
 
   // Add the particle beam
   self->obj->AddParticleBeam(Type, Name, X0, Y0, Z0, DX0, DY0, DZ0, Energy, T0, Current, Weight);
@@ -825,33 +947,35 @@ static PyGetSetDef SRS_getseters[] = {
 static PyMethodDef SRS_methods[] = {
   // We must tell python about the function we allow access as well as give them nice
   // python names, and tell python the method of input parameters.
-  {"set_ctstart",  (PyCFunction)SRS_SetCTStart,  METH_O,       "set the start time in [m]"},
-  {"get_ctstart",  (PyCFunction)SRS_GetCTStart,  METH_NOARGS,  "get the start time in [m]"},
-  {"set_ctstop",   (PyCFunction)SRS_SetCTStop,   METH_O,       "set the stop time in [m]"},
-  {"get_ctstop",   (PyCFunction)SRS_GetCTStop,   METH_NOARGS,  "get the stop time in [m]"},
-  {"get_ctstop",   (PyCFunction)SRS_GetCTStop,   METH_NOARGS,  "get the stop time in [m]"},
-  {"set_npoints_trajectory",   (PyCFunction)SRS_SetNPointsTrajectory,   METH_O,       "set the total number of points for the trajectory"},
-  {"get_npoints_trajectory",   (PyCFunction)SRS_GetNPointsTrajectory,   METH_NOARGS,  "get the total number of points for the trajectory"},
-  {"set_ctstartstop",   (PyCFunction)SRS_SetCTStartStop,  METH_VARARGS,       "set the start and stop time in [m]"},
+  {"set_ctstart",                       (PyCFunction) SRS_SetCTStart,                      METH_O,       "set the start time in [m]"},
+  {"get_ctstart",                       (PyCFunction) SRS_GetCTStart,                      METH_NOARGS,  "get the start time in [m]"},
+  {"set_ctstop",                        (PyCFunction) SRS_SetCTStop,                       METH_O,       "set the stop time in [m]"},
+  {"get_ctstop",                        (PyCFunction) SRS_GetCTStop,                       METH_NOARGS,  "get the stop time in [m]"},
+  {"get_ctstop",                        (PyCFunction) SRS_GetCTStop,                       METH_NOARGS,  "get the stop time in [m]"},
+  {"set_npoints_trajectory",            (PyCFunction) SRS_SetNPointsTrajectory,            METH_O,       "set the total number of points for the trajectory"},
+  {"get_npoints_trajectory",            (PyCFunction) SRS_GetNPointsTrajectory,            METH_NOARGS,  "get the total number of points for the trajectory"},
+  {"set_ctstartstop",                   (PyCFunction) SRS_SetCTStartStop,                  METH_VARARGS, "set the start and stop time in [m]"},
+                                                                                          
+  {"add_magnetic_field",                (PyCFunction) SRS_AddMagneticField,                METH_VARARGS, "add a magnetic field from a file"},
+  {"add_magnetic_field_function",       (PyCFunction) SRS_AddMagneticFieldFunction,        METH_VARARGS, "add a magnetic field in form of python function"},
+  {"add_magnetic_field_gaussian",       (PyCFunction) SRS_AddMagneticFieldGaussian,        METH_VARARGS, "add a gaussian magnetic field in 3D"},
+  {"add_magnetic_field_uniform",        (PyCFunction) SRS_AddMagneticFieldUniform,         METH_VARARGS, "add a uniform magnetic field in 3D"},
+  {"get_bfield",                        (PyCFunction) SRS_GetBField,                       METH_VARARGS, "get the magnetic field at a given position in space (and someday time?)"},
+                                                                                          
+                                                                                          
+  {"add_particle_beam",                 (PyCFunction) SRS_AddParticleBeam,                 METH_VARARGS, "add a particle beam"},
+                                                                                          
+  {"set_new_particle",                  (PyCFunction) SRS_SetNewParticle,                  METH_NOARGS,  "Set the internal particle to a new random particle"},
+                                                                                          
+  {"calculate_trajectory",              (PyCFunction) SRS_CalculateTrajectory,             METH_NOARGS,  "Calclate the trajectory for the current particle"},
+  {"get_trajectory",                    (PyCFunction) SRS_GetTrajectory,                   METH_NOARGS,  "Get the trajectory for the current particle as 2 3D lists [[x, y, z], [BetaX, BetaY, BetaZ]]"},
 
-  {"add_magnetic_field",   (PyCFunction)SRS_AddMagneticField,  METH_VARARGS,       "add a magnetic field from a file"},
-  {"add_magnetic_field_function",   (PyCFunction)SRS_AddMagneticFieldFunction,  METH_VARARGS,       "add a magnetic field in form of python function"},
-  {"get_bfield",  (PyCFunction)SRS_GetBField,  METH_VARARGS,  "get the magnetic field at a given position in space (and someday time?)"},
+  {"calculate_spectrum",                (PyCFunction) SRS_CalculateSpectrum,               METH_VARARGS, "calculate the spectrum at an observation point"},
+  {"calculate_spectrum_from_list",      (PyCFunction) SRS_CalculateSpectrumFromList,       METH_VARARGS, "calculate the spectrum at an observation point"},
+  {"get_spectrum",                      (PyCFunction) SRS_GetSpectrum,                     METH_NOARGS,  "Get the spectrum for the current particle as list of 2D [[energy, flux], [...]...]"},
 
-
-  {"add_particle_beam",   (PyCFunction)SRS_AddParticleBeam,  METH_VARARGS,       "add a particle beam"},
-
-  {"set_new_particle", (PyCFunction)SRS_SetNewParticle, METH_NOARGS, "Set the internal particle to a new random particle"},
-
-  {"calculate_trajectory", (PyCFunction)SRS_CalculateTrajectory, METH_NOARGS, "Calclate the trajectory for the current particle"},
-  {"get_trajectory", (PyCFunction)SRS_GetTrajectory, METH_NOARGS, "Get the trajectory for the current particle as 2 3D lists [[x, y, z], [BetaX, BetaY, BetaZ]]"},
-
-  {"calculate_spectrum",   (PyCFunction)SRS_CalculateSpectrum,  METH_VARARGS,       "calculate the spectrum at an observation point"},
-  {"calculate_spectrum_from_list",   (PyCFunction)SRS_CalculateSpectrumFromList,  METH_VARARGS,       "calculate the spectrum at an observation point"},
-  {"get_spectrum", (PyCFunction)SRS_GetSpectrum, METH_NOARGS, "Get the spectrum for the current particle as list of 2D [[energy, flux], [...]...]"},
-
-  {"calculate_power_density_rectangle",   (PyCFunction)SRS_CalculatePowerDensityRectangle,  METH_VARARGS,       "calculate the power density given a surface"},
-  {"calculate_flux_rectangle",   (PyCFunction)SRS_CalculateFluxRectangle,  METH_VARARGS,       "calculate the flux given a surface"},
+  {"calculate_power_density_rectangle", (PyCFunction) SRS_CalculatePowerDensityRectangle,  METH_VARARGS, "calculate the power density given a surface"},
+  {"calculate_flux_rectangle",          (PyCFunction) SRS_CalculateFluxRectangle,          METH_VARARGS, "calculate the flux given a surface"},
 
   {NULL}  /* Sentinel */
 };

@@ -67,6 +67,7 @@ TParticleBeam::TParticleBeam (std::string const& ParticleType, TVector3D const& 
 
 TParticleBeam::TParticleBeam (std::string const& ParticleType, TVector3D const& X0, TVector3D const& D0, double const Energy, double const T0, double const Current)
 {
+  std::cout << "current " << Current << std::endl;
   // Constructor given a particle type.
 
   this->SetParticleType(ParticleType);

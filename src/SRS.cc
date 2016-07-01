@@ -35,10 +35,6 @@ void SRS::AddMagneticField (std::string const FileName, std::string const Format
 {
   // Add a magnetic field from a file to the field container
 
-  std::cout << "TEST " << Rotation << std::endl;
-  std::cout << "TEST " << Translation << std::endl;
-  std::cout << "TEST " << Scaling.size() << std::endl;
-
   // UPDATE: This needs to be fully 3D
   this->fBFieldContainer.AddField( new TBField3DZRegularized(FileName, Rotation, Translation, Scaling) );
 
@@ -113,6 +109,7 @@ void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, dou
   // T0      - Time of initial conditions, specified in units of m (for v = c)
   // Current - Beam current in Amperes
   // Weight  - Relative weight to give this beam when randomly sampling
+
 
   fParticleBeamContainer.AddNewParticleBeam(Type, Name, TVector3D(X0, Y0, Z0), TVector3D(DX0, DY0, DZ0), Energy, T0, Current, Weight);
   return;
@@ -603,8 +600,6 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
   // Particle - Particle, contains trajectory (or if not, calculate it)
   // Surface - Observation Point
 
-  // UPDATE: delete this once Current is sorted out
-  fCurrent = 0.500;
 
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
@@ -665,7 +660,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
     }
 
     // Put into SI units
-    Sum *= fabs(Particle.GetQ() * fCurrent) / (16 * TSRS::Pi2() * TSRS::Epsilon0() * TSRS::C()) * DeltaT;
+    Sum *= fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TSRS::Pi2() * TSRS::Epsilon0() * TSRS::C()) * DeltaT;
 
     Sum /= 1e6; // m^2 to mm^2
 
@@ -723,9 +718,6 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
   // Current - beam current
   // Energy - beam energy in eV
 
-  // UPDATE: delete this once Current is sorted out
-  fCurrent = 0.500;
-
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
 
@@ -745,7 +737,7 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 
 
   // Constant for flux calculation at the end
-  double const C2 = TSRS::FourPi() * fCurrent / (TSRS::H() * fabs(Particle.GetQ()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
+  double const C2 = TSRS::FourPi() * Particle.GetCurrent() / (TSRS::H() * fabs(Particle.GetQ()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
 
   // Complex number i
   std::complex<double> const I(0, 1);
