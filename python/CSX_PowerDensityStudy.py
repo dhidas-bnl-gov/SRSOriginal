@@ -18,15 +18,15 @@ srs = SRS.SRS()
 
 
 
-DATADIR = '/Users/dhidas/Desktop'
+DATADIR = './Data_CSX'
 
 
 
-srs.add_magnetic_field('/Users/dhidas/mag_low_beta.lab.dat', 'ZBxByBz', [0, 0, 0], [0, 0, 0], [1, 1, -1])
-#srs.add_magnetic_field(DATADIR + '/EPU1 1141a/B_G11.5_M0_Ph0_X0_Y0.txt', 'ZBxByBz', [0, 0, 0], [0, 0, -1.195], [1e-3])
-#srs.add_magnetic_field(DATADIR + '/EPU2 1141b/B_G11.5_M0_Ph0_X0_Y0.txt', 'ZBxByBz', [0, 0, 0], [0, 0,  1.290], [1e-3])
-srs.add_magnetic_field(DATADIR + '/EPU1 1141a/B_G11.5_M0_Ph12.3_X0_Y0.txt', 'ZBxByBz', [0, 0, 0], [0, 0, -1.195], [1e-3])
-srs.add_magnetic_field(DATADIR + '/EPU2 1141b/B_G11.5_M0_Ph12.3_X0_Y0.txt', 'ZBxByBz', [0, 0, 0], [0, 0,  1.290], [1e-3])
+srs.add_magnetic_field(DATADIR + '/mag_low_beta.lab.dat', 'ZBxByBz', [0, 0, 0], [0, 0, 0], [1, 1, -1])
+#srs.add_magnetic_field(DATADIR + '/EPU1_1141a/B_G11.5_M0_Ph0_X0_Y0.txt', 'ZBxByBz', [0, 0, 0], [0, 0, -1.195], [1e-3])
+#srs.add_magnetic_field(DATADIR + '/EPU2_1141b/B_G11.5_M0_Ph0_X0_Y0.txt', 'ZBxByBz', [0, 0, 0], [0, 0,  1.290], [1e-3])
+srs.add_magnetic_field(DATADIR + '/EPU1_1141a/B_G11.5_M0_Ph12.3_X0_Y0.txt', 'ZBxByBz', [0, 0, 0], [0, 0, -1.195], [1e-3])
+srs.add_magnetic_field(DATADIR + '/EPU2_1141b/B_G11.5_M0_Ph12.3_X0_Y0.txt', 'ZBxByBz', [0, 0, 0], [0, 0,  1.290], [1e-3])
 #srs.add_magnetic_field_gaussian([0, -0.00099, 0], [0, 0, 0], [0, 0, 0.05])
 #srs.add_magnetic_field_gaussian([0.00003, 0, 0], [0, 0, 0], [0, 0, 2])
 
@@ -76,7 +76,7 @@ srs.set_new_particle()
 
 
 
-if True:
+if False:
   srs.calculate_trajectory()
   trajectory = srs.get_trajectory()
 
@@ -107,7 +107,7 @@ if False:
 
 if True:
 #  power_density = srs.calculate_power_density_rectangle('XY', 0.050, 51, 0.050, 51, [0, 0, 30], 1)
-  power_density = srs.calculate_power_density_rectangle('XZ', 0.080, 1001, 2.40833, 1001, [0, 0.004, 1.290], 1)
+  power_density = srs.calculate_power_density_rectangle('XZ', 0.080, 51, 2.40833, 51, [0, 0.004, 1.290], 1)
   X = [item[0][0] for item in power_density]
   Y = [item[0][2] for item in power_density]
   P = [item[1]    for item in power_density]
