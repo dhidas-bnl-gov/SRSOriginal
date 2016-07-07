@@ -28,7 +28,8 @@ TBFieldContainer::TBFieldContainer (TBField* B)
 
 TBFieldContainer::~TBFieldContainer ()
 {
-  // Default destructor.  I don't own anything I know about
+  // Default destructor.  I own everything you have passed me.  Make no mistake there!!
+  this->Clear();
 }
 
 
@@ -75,7 +76,7 @@ double TBFieldContainer::GetBz (double const X, double const Y, double const Z) 
 
   // Loop over BFields for summing B-fields
   for (std::vector<TBField*>::const_iterator it = fBFields.begin(); it != fBFields.end(); ++it) {
-    Sum += (*it)->GetBy(X, Y, Z);
+    Sum += (*it)->GetBz(X, Y, Z);
   }
 
   return Sum;
@@ -93,4 +94,20 @@ TVector3D TBFieldContainer::GetB (double const X, double const Y, double const Z
   }
 
   return Sum;
+}
+
+
+
+
+void TBFieldContainer::Clear ()
+{
+  for (std::vector<TBField*>::iterator it = fBFields.begin(); it != fBFields.end(); ++it) {
+    if (*it != 0x0) {
+      delete *it;
+    }
+  }
+
+  fBFields.clear();
+
+  return;
 }
