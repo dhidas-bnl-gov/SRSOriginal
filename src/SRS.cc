@@ -11,8 +11,10 @@
 #include <cmath>
 #include <complex>
 #include <fstream>
+#include <sstream>
 
 #include "TVector3DC.h"
+#include "TBField1DZRegularized.h"
 #include "TBField3DZRegularized.h"
 #include "TSpectrumContainer.h"
 
@@ -35,8 +37,81 @@ void SRS::AddMagneticField (std::string const FileName, std::string const Format
 {
   // Add a magnetic field from a file to the field container
 
+  std::vector<bool> HasXB(6, false);
+
+  std::vector<int> Order(6, -1);
+
+  std::istringstream s;
+  s.str(Format);
+
+  std::string c;
+  int i = 0;
+  int XDIM = 0;
+  int BDIM = 0;
+  while (s >> c) {
+
+
+    if (c == "X") {
+      Order[0] = i;
+      ++XDIM;
+    } else if (c == "Y") {
+      Order[1] = i;
+      ++XDIM;
+    } else if (c == "Z") {
+      Order[2] = i;
+      ++XDIM;
+    } else if (c == "Bx") {
+      Order[3] = i;
+      ++BDIM;
+    } else if (c == "By") {
+      Order[4] = i;
+      ++BDIM;
+    } else if (c == "Bz") {
+      Order[5] = i;
+      ++BDIM;
+    } else {
+      std::cerr << "ERROR: Incorrect format" << std::endl;
+      throw;
+    }
+
+    ++i;
+  }
+
+
+  if (XDIM > 3 || BDIM > 3) {
+    std::cerr << "ERROR: spatial or B-field dimensions are too large(>3)" << std::endl;
+    throw;
+  }
+
+  std::vector<size_t> PrefOrder;
+  for (size_t j = 0; j != 6; ++j) {
+    if (Order[j] != -1) {
+      HasXB[i] = true;
+
+      PrefOrder.push_back(Order[j]);
+    }
+  }
+
   // UPDATE: This needs to be fully 3D
-  this->fBFieldContainer.AddField( new TBField3DZRegularized(FileName, Rotation, Translation, Scaling) );
+
+  if (XDIM == 1) {
+    if (BDIM == 1) {
+      throw;
+      //this->fBFieldContainer.AddField( new TBField1DZRegularized(FileName) );
+      //this->fBFieldContainer.AddField( new TBField1DZRegularized(FileName, Rotation, Translation, Scaling) );
+    } else if (BDIM == 2) {
+      throw;
+    } else if (BDIM == 3) {
+      this->fBFieldContainer.AddField( new TBField3DZRegularized(FileName, Rotation, Translation, Scaling) );
+    }
+  } else if (XDIM == 2) {
+      throw;
+  } else if (XDIM == 3) {
+      throw;
+  } else {
+    throw;
+  }
+
 
   return;
 }
@@ -49,6 +124,18 @@ void SRS::AddMagneticField (TBField* Field)
   // Add a magnetic field from a file to the field container
 
   this->fBFieldContainer.AddField(Field);
+
+  return;
+}
+
+
+
+
+void SRS::ClearMagneticFields ()
+{
+  // Add a magnetic field from a file to the field container
+
+  this->fBFieldContainer.Clear();
 
   return;
 }
@@ -141,6 +228,17 @@ void SRS::SetNewParticle ()
   // Get a new particle.  Randomly sampled according to input beam parameters and beam weights.
   // Set this new particle as *the* particle in SRS fParticle
   fParticle = fParticleBeamContainer.GetNewParticle();
+
+  return;
+}
+
+
+
+
+void SRS::ClearParticleBeams ()
+{
+  // Clear the contents of the particle beam container
+  fParticleBeamContainer.Clear();
 
   return;
 }
@@ -581,10 +679,10 @@ TSpectrumContainer const& SRS::GetSpectrum () const
 
 
 
-void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface)
+void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, int const Dimension)
 {
   T3DScalarContainer PowerDensityContainer;
-  this->CalculatePowerDensity(Particle, Surface, PowerDensityContainer);
+  this->CalculatePowerDensity(Particle, Surface, PowerDensityContainer, Dimension);
 
   return;
 }
@@ -592,7 +690,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
 
 
 
-void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer)
+void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -665,8 +763,15 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
     Sum /= 1e6; // m^2 to mm^2
 
 
-    PowerDensityContainer.AddPoint(Obs, Sum);
-    of << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
+    if (Dimension == 2) {
+      PowerDensityContainer.AddPoint(TVector3D(Surface.GetX1(io), Surface.GetX2(io), 0), Sum);
+      of << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
+    } else if (Dimension == 3) {
+      PowerDensityContainer.AddPoint(Obs, Sum);
+      of << Obs.GetX() << " " << Obs.GetY() << " " << Obs.GetZ() << " " << Sum << "\n";
+    } else {
+      throw;
+    }
 
   }
   of.close();
@@ -677,16 +782,76 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
 
 
 
-void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer)
+void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
   //
   // Surface - Observation Point
 
-  this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer);
+  this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension);
 
   return;
+}
+
+
+
+
+
+double SRS::CalculateTotalPower ()
+{
+  // UPDATE: commet
+  return this->CalculateTotalPower(fParticle);
+}
+
+
+
+
+
+double SRS::CalculateTotalPower (TParticleA& Particle)
+{
+  // Calculate total power out
+
+  // Grab the Trajectory
+  TParticleTrajectoryPoints& T = Particle.GetTrajectory();
+
+  // If trajectory is empty, calculate it
+  if (T.GetNPoints() == 0) {
+    this->CalculateTrajectory(Particle);
+  }
+
+  // Number of points in Trajectory
+  size_t const NTPoints = T.GetNPoints();
+
+  // Timestep from trajectory
+  double const DeltaT = T.GetDeltaT();
+
+  // For summing total power
+  double TotalPower = 0;
+
+  std::cout << "NTPoints: " << NTPoints << std::endl;
+  std::cout << "DeltaT:   " << DeltaT << std::endl;
+  std::cout << "Gamma:    " << Particle.GetGamma() << std::endl;
+  std::cout << "Q:        " << Particle.GetQ() << std::endl;
+  std::cout << "Current:  " << Particle.GetCurrent() << std::endl;
+
+  // Loop over all points in trajectory
+  for (int i = 0; i != NTPoints; ++i) {
+    TVector3D const& X = T.GetX(i);
+    TVector3D const& B = T.GetB(i);
+    TVector3D const& AoverC = T.GetAoverC(i);
+
+    TotalPower += (AoverC.Mag2() - (B.Cross(AoverC)).Mag2()) * DeltaT;
+
+    //TotalPower += ( (A[i] / kC_SI).Mag2() - ( (V[i] / kC_SI).Cross(A[i] / kC_SI)).Mag2() ) * DeltaT;
+  }
+  //TotalPower *= fabs(kECharge * Current) * pow(Gamma, 6) / (6 * kPI * kEpsilon0 * kC_SI);
+
+  TotalPower *= fabs(Particle.GetQ() * Particle.GetCurrent()) * pow(Particle.GetGamma(), 6) / (6 * TSRS::Pi() * TSRS::Epsilon0() * TSRS::C());
+
+  std::cout << TotalPower << std::endl;
+
+  return TotalPower;
 }
 
 

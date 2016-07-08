@@ -138,6 +138,62 @@ TVector3D TVector3D::UnitVector () const
 
 
 
+void TVector3D::RotateSelfX(double const Angle) {
+  // Rotate vector around X
+  double const s = sin(Angle);
+  double const c = cos(Angle);
+  double const yy = fY;
+
+  fY = c * yy - s * fZ;
+  fZ = s * yy + c * fZ;
+
+  return;
+}
+
+
+
+
+void TVector3D::RotateSelfY (double const Angle) {
+  // Rotate vector around Y
+  double const s = sin(Angle);
+  double const c = cos(Angle);
+  double const zz = fZ;
+
+  fZ = c * zz - s * fX;
+  fX = s * zz + c * fX;
+
+  return;
+}
+
+
+
+
+void TVector3D::RotateSelfZ (double const Angle) {
+  // Rotate vector around Z
+  double const s = sin(Angle);
+  double const c = cos(Angle);
+  double const xx = fX;
+
+  fX = c * xx - s * fY;
+  fY = s * xx + c * fY;
+
+  return;
+}
+
+
+
+
+void TVector3D::RotateSelfXYZ (TVector3D const& V)
+{
+  // Rotate a vector about X, then Y then Z.
+  this->RotateSelfX(V.GetX());
+  this->RotateSelfY(V.GetY());
+  this->RotateSelfZ(V.GetZ());
+
+  return;
+}
+
+
 
 
 

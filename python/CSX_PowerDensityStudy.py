@@ -32,21 +32,21 @@ srs.add_magnetic_field(DATADIR + '/EPU2_1141b/B_G11.5_M0_Ph12.3_X0_Y0.txt', 'ZBx
 
 
 # Dipole corrections for undulators
-srs.add_magnetic_field_uniform([+0.00002,      -0.00019, 0], [0, 0, 2.05520], [0, 0, -1.19500])
-srs.add_magnetic_field_uniform([-0.00001,      -0.00023, 0], [0, 0, 2.05520], [0, 0, +1.29000])
+srs.add_magnetic_field_uniform([+0.00002, -0.00019, 0], [0, 0, 2.05520], [0, 0, -1.19500])
+srs.add_magnetic_field_uniform([-0.00001, -0.00023, 0], [0, 0, 2.05520], [0, 0, +1.29000])
 
 # Just to slightly correct the exit angle
 srs.add_magnetic_field_gaussian([0.00035, 0, 0], [0, 0, 2.40833], [0, 0, 0.050])
 
 if False:
-  Z = np.linspace(-7.6, 3, 10000)
-  B = [srs.get_bfield([0, 0, z])[1] for z in Z]
-  # Bx = [item[0] for item in B]
-  plt.plot(Z, B)
-  plt.xlabel('Z [m]')
-  plt.ylabel('Bx [T]')
-  plt.title('Magnetic Field')
-  plt.show()
+    Z = np.linspace(-7.6, 3, 10000)
+    B = [srs.get_bfield([0, 0, z])[1] for z in Z]
+    # Bx = [item[0] for item in B]
+    plt.plot(Z, B)
+    plt.xlabel('Z [m]')
+    plt.ylabel('Bx [T]')
+    plt.title('Magnetic Field')
+    plt.show()
 
 
 
@@ -77,71 +77,71 @@ srs.set_new_particle()
 
 
 if False:
-  srs.calculate_trajectory()
-  trajectory = srs.get_trajectory()
+    srs.calculate_trajectory()
+    trajectory = srs.get_trajectory()
 
-  Z = [item[0][2] for item in trajectory]
-  X = [item[0][0] for item in trajectory]
-  plt.plot(Z, X)
-  plt.xlabel('Z [m]')
-  plt.ylabel('X [m]')
-  plt.title('Particle Trajectory')
-  plt.show()
+    Z = [item[0][2] for item in trajectory]
+    X = [item[0][0] for item in trajectory]
+    plt.plot(Z, X)
+    plt.xlabel('Z [m]')
+    plt.ylabel('X [m]')
+    plt.title('Particle Trajectory')
+    plt.show()
 
 
 
 
 if False:
-  #srs.calculate_spectrum([0, 0, 30], 100, 500, 1000)
-  srs.calculate_spectrum_from_list([0, 0, 30], range(100, 2000))
-  Spectrum = srs.get_spectrum()
+    #srs.calculate_spectrum([0, 0, 30], 100, 500, 1000)
+    srs.calculate_spectrum_from_list([0, 0, 30], range(100, 2000))
+    Spectrum = srs.get_spectrum()
 
-  X = [item[0] for item in Spectrum]
-  Y = [item[1] for item in Spectrum]
-  plt.plot(X, Y)
-  plt.xlabel('Energy [eV]')
-  plt.ylabel('Photons [$\gamma / mm^2 / 0.1bw / s$]')
-  plt.title('Spectrum')
-  plt.show()
+    X = [item[0] for item in Spectrum]
+    Y = [item[1] for item in Spectrum]
+    plt.plot(X, Y)
+    plt.xlabel('Energy [eV]')
+    plt.ylabel('Photons [$\gamma / mm^2 / 0.1bw / s$]')
+    plt.title('Spectrum')
+    plt.show()
 
 
 if True:
-#  power_density = srs.calculate_power_density_rectangle('XY', 0.050, 51, 0.050, 51, [0, 0, 30], 1)
-  power_density = srs.calculate_power_density_rectangle('XZ', 0.080, 51, 2.40833, 51, [0, 0.004, 1.290], 1)
-  X = [item[0][0] for item in power_density]
-  Y = [item[0][2] for item in power_density]
-  P = [item[1]    for item in power_density]
+#    power_density = srs.calculate_power_density_rectangle('XY', 0.050, 51, 0.050, 51, [0, 0, 30], 1)
+    power_density = srs.calculate_power_density_rectangle('XZ', 0.080, 51, 2.40833, 51, [0, 0.004, 1.290], 1)
+    X = [item[0][0] for item in power_density]
+    Y = [item[0][2] for item in power_density]
+    P = [item[1]    for item in power_density]
 
-  NX = len(np.unique(X))
-  NY = len(np.unique(Y))
+    NX = len(np.unique(X))
+    NY = len(np.unique(Y))
 
-  plt.hist2d(X, Y, bins=[NX, NY], weights=P)
-  plt.colorbar()
+    plt.hist2d(X, Y, bins=[NX, NY], weights=P)
+    plt.colorbar()
 
-  plt.xlabel('Axis 1 [$m$]')
-  plt.ylabel('Axis 2 [$m$]')
-  plt.title('Power Density ' +'[$W / mm^2$]')
+    plt.xlabel('Axis 1 [$m$]')
+    plt.ylabel('Axis 2 [$m$]')
+    plt.title('Power Density ' +'[$W / mm^2$]')
 
-#  plt.show()
+#    plt.show()
 
 
 if False:
-  flux = srs.calculate_flux_rectangle(135, 'XY', 0.008, 51, 0.004, 51, [0, 0, 30], 1)
-  X = [item[0][0] for item in flux]
-  Y = [item[0][1] for item in flux]
-  P = [item[1]    for item in flux]
+    flux = srs.calculate_flux_rectangle(135, 'XY', 0.008, 51, 0.004, 51, [0, 0, 30], 1)
+    X = [item[0][0] for item in flux]
+    Y = [item[0][1] for item in flux]
+    P = [item[1]    for item in flux]
 
-  NX = len(np.unique(X))
-  NY = len(np.unique(Y))
+    NX = len(np.unique(X))
+    NY = len(np.unique(Y))
 
-  plt.hist2d(X, Y, bins=[NX, NY], weights=P)
-  plt.colorbar()
+    plt.hist2d(X, Y, bins=[NX, NY], weights=P)
+    plt.colorbar()
 
-  plt.xlabel('Axis 1 [$m$]')
-  plt.ylabel('Axis 2 [$m$]')
-  plt.title('Spectral Flux' +'[$W / mm^2$]')
+    plt.xlabel('Axis 1 [$m$]')
+    plt.ylabel('Axis 2 [$m$]')
+    plt.title('Spectral Flux' +'[$W / mm^2$]')
 
-  plt.show()
+    plt.show()
 
 
 

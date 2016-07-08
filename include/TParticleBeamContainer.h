@@ -33,6 +33,8 @@ class TParticleBeamContainer
 
     size_t GetRandomBeamIndexByWeight () const;
 
+    void Clear ();
+
   private:
 
     std::vector<double>        fParticleBeamWeightSums;

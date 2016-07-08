@@ -40,6 +40,11 @@ class TVector3D
     TVector3D Cross (TVector3D const&) const;
     TVector3D UnitVector () const;
 
+    void RotateSelfX (double const);
+    void RotateSelfY (double const);
+    void RotateSelfZ (double const);
+    void RotateSelfXYZ (TVector3D const&);
+
 
     // Operators
     bool operator < (TVector3D const&) const;

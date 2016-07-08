@@ -35,6 +35,7 @@ class SRS
     // Functions related to the magnetic field
     void AddMagneticField (std::string const, std::string const, TVector3D const& R = TVector3D(0, 0, 0), TVector3D const& D = TVector3D(0, 0, 0), std::vector<double> const& S = std::vector<double>());
     void AddMagneticField (TBField*);
+    void ClearMagneticFields ();
 
     double    GetBx (double const, double const, double const) const;
     double    GetBy (double const, double const, double const) const;
@@ -47,6 +48,7 @@ class SRS
     TParticleBeam& GetParticleBeam (std::string const&);
     TParticleA GetNewParticle ();
     void SetNewParticle ();
+    void ClearParticleBeams ();
 
 
     // Functions related to Trajectory
@@ -72,9 +74,11 @@ class SRS
     TSpectrumContainer const& GetSpectrum () const;
 
     // Power Density calculation
-    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&);
-    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, T3DScalarContainer&);
-    void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&);
+    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, int const Dimension = 3);
+    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3);
+    void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3);
+    double CalculateTotalPower ();
+    double CalculateTotalPower (TParticleA&);
 
     // Flux Calculations
     void CalculateFlux (TParticleA&, TSurfacePoints const&, double const);

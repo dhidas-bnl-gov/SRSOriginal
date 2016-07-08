@@ -31,6 +31,8 @@ class TBFieldContainer
     double    GetBz (double const, double const, double const) const;
     TVector3D GetB  (double const, double const, double const) const;
 
+    void      Clear ();
+
   private:
     std::vector<TBField*> fBFields;
 };

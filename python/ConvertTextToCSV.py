@@ -36,14 +36,14 @@ def ConvertTextToCSV (fileName) :
     y2.sort()
 
 
-    print ' ,', ', '.join(map(str, x2))
-    for i in xrange(ny):
-        print str(y2[i]) + ',',
-        for j in xrange(nx):
-            if j is not nx - 1:
-                print str(z[i + j * nx]) + ',',
-            else:
-                print str(z[i + j * nx])
+  print ' ,', ', '.join(map(str, y2))
+  for i in xrange(nx):
+    print str(x2[i]) + ',',
+    for j in xrange(ny):
+      if j < ny - 1:
+        print str(z[i * ny + j]) + ',',
+      else:
+        print z[i * ny + j]
 
 
 

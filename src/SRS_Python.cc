@@ -15,6 +15,7 @@
 #include "SRS.h"
 
 #include "TSurfacePoints_RectangleSimple.h"
+#include "TSurfacePoints_Rectangle.h"
 #include "T3DScalarContainer.h"
 #include "TBFieldPythonFunction.h"
 #include "TBField3D_Gaussian.h"
@@ -122,6 +123,31 @@ static PyObject* SRS_SetCTStop (SRSObject* self, PyObject* arg)
 
   // Set the object variable
   self->obj->SetCTStop(val);
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+static PyObject* SRS_SetCTStop2 (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Set the stop time in [m] for calculations
+
+    int voltage;
+    char *state = "a stiff";
+    char *action = "voom";
+    char *type = "Norwegian Blue";
+
+    static char *kwlist[] = {"voltage", "state", "action", "type", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "i|sss", kwlist,
+                                     &voltage, &state, &action, &type))
+        return NULL;
+
+
+  self->obj->SetCTStop(0.1);
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -428,6 +454,23 @@ static PyObject* SRS_AddMagneticFieldUniform (SRSObject* self, PyObject* args)
 
 
 
+static PyObject* SRS_ClearMagneticFields (SRSObject* self)
+{
+  // Clear all magnetic fields in the SRS object
+
+  self->obj->ClearMagneticFields();
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
 
 
 
@@ -541,12 +584,27 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args)
 
 
 
-static PyObject* SRS_SetNewParticle(SRSObject* self)
+static PyObject* SRS_SetNewParticle (SRSObject* self)
 {
-  // Get the CTStop variable from SRS
+  // Set a new particle within the SRS object
 
   self->obj->SetNewParticle();
 
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+static PyObject* SRS_ClearParticleBeams (SRSObject* self)
+{
+  // Clear the contents of the particle beam container in SRS
+
+  self->obj->ClearParticleBeams();
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -754,6 +812,27 @@ static PyObject* SRS_GetSpectrum (SRSObject* self)
 
 
 
+static PyObject* SRS_CalculateTotalPower (SRSObject* self)
+{
+  // Calculate the total power radiated by the current particle
+
+  // Return the total power
+  return Py_BuildValue("f", self->obj->CalculateTotalPower());
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -772,31 +851,37 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
   double    Width_X1;
   double    Width_X2;
   PyObject* List_Observer;
+  PyObject* List_Rotations;
   int       NormalDirection;
 
 
   // Grab the values
-  if (! PyArg_ParseTuple(args, "sdidiO!i", &SurfacePlane, &Width_X1, &NX1, &Width_X2, &NX2, &PyList_Type, &List_Observer, &NormalDirection)) {
+  if (! PyArg_ParseTuple(args, "sdidiO!O!", &SurfacePlane, &Width_X1, &NX1, &Width_X2, &NX2, &PyList_Type, &List_Rotations, &PyList_Type, &List_Observer)) {
     return NULL;
   }
 
   // Has to have the correct number of arguments
-  if (PyList_Size(List_Observer) != 3) {
+  if (PyList_Size(List_Rotations) != 3 || PyList_Size(List_Observer) != 3) {
     return NULL;
   }
 
-  // Observation point
-  TVector3D const ObservationPoint(PyFloat_AsDouble(PyList_GetItem(List_Observer, 0)),
-                                   PyFloat_AsDouble(PyList_GetItem(List_Observer, 1)),
-                                   PyFloat_AsDouble(PyList_GetItem(List_Observer, 2)));
+  // Translation
+  TVector3D const Translation(PyFloat_AsDouble(PyList_GetItem(List_Observer, 0)),
+                              PyFloat_AsDouble(PyList_GetItem(List_Observer, 1)),
+                              PyFloat_AsDouble(PyList_GetItem(List_Observer, 2)));
+  // Rotations in [rad]
+  TVector3D const Rotations(PyFloat_AsDouble(PyList_GetItem(List_Rotations, 0)),
+                            PyFloat_AsDouble(PyList_GetItem(List_Rotations, 1)),
+                            PyFloat_AsDouble(PyList_GetItem(List_Rotations, 2)));
+
 
   // Container for Point plus scalar
   T3DScalarContainer PowerDensityContainer;
 
-  TSurfacePoints_RectangleSimple Surface(SurfacePlane, NX1, NX2, Width_X1, Width_X2, ObservationPoint, NormalDirection);
+  TSurfacePoints_Rectangle Surface(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation);
 
   // Actually calculate the spectrum
-  self->obj->CalculatePowerDensity(Surface, PowerDensityContainer);
+  self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, 2);
 
 
   // Build the output list of: [[[x, y, z], PowerDensity], [...]]
@@ -947,10 +1032,18 @@ static PyGetSetDef SRS_getseters[] = {
 static PyMethodDef SRS_methods[] = {
   // We must tell python about the function we allow access as well as give them nice
   // python names, and tell python the method of input parameters.
-  {"set_ctstart",                       (PyCFunction) SRS_SetCTStart,                      METH_O,       "set the start time in [m]"},
+  {"set_ctstart",                       (PyCFunction) SRS_SetCTStart,                      METH_O,       
+     "set the start time in [m]\n\n\\
+     :param name: the input name and a much longer description of what this function does really\n\\
+     :type name: str\n\\
+     :param last: the input last name\n\\
+     :type last: str\n\\
+     :returns: str -- a string hello\n\\
+     :raises: AttributeError\n"
+  },
+  //{"set_ctstop2",                       (PyCFunction) SRS_SetCTStop2,                      METH_VARARGS | METH_KEYWORDS,       "set the stop time in [m]"},
   {"get_ctstart",                       (PyCFunction) SRS_GetCTStart,                      METH_NOARGS,  "get the start time in [m]"},
   {"set_ctstop",                        (PyCFunction) SRS_SetCTStop,                       METH_O,       "set the stop time in [m]"},
-  {"get_ctstop",                        (PyCFunction) SRS_GetCTStop,                       METH_NOARGS,  "get the stop time in [m]"},
   {"get_ctstop",                        (PyCFunction) SRS_GetCTStop,                       METH_NOARGS,  "get the stop time in [m]"},
   {"set_npoints_trajectory",            (PyCFunction) SRS_SetNPointsTrajectory,            METH_O,       "set the total number of points for the trajectory"},
   {"get_npoints_trajectory",            (PyCFunction) SRS_GetNPointsTrajectory,            METH_NOARGS,  "get the total number of points for the trajectory"},
@@ -958,12 +1051,14 @@ static PyMethodDef SRS_methods[] = {
                                                                                           
   {"add_magnetic_field",                (PyCFunction) SRS_AddMagneticField,                METH_VARARGS, "add a magnetic field from a file"},
   {"add_magnetic_field_function",       (PyCFunction) SRS_AddMagneticFieldFunction,        METH_VARARGS, "add a magnetic field in form of python function"},
-  {"add_magnetic_field_gaussian",       (PyCFunction) SRS_AddMagneticFieldGaussian,        METH_VARARGS, "add a gaussian magnetic field in 3D"},
+  {"add_magnetic_field_gaussian",       (PyCFunction) SRS_AddMagneticFieldGaussian,        METH_VARARGS, "add a magnetic field in form of 3D gaussian"},
+  {"clear_magnetic_fields",             (PyCFunction) SRS_ClearMagneticFields,             METH_NOARGS,  "clear all internal magnetic fields"},
   {"add_magnetic_field_uniform",        (PyCFunction) SRS_AddMagneticFieldUniform,         METH_VARARGS, "add a uniform magnetic field in 3D"},
   {"get_bfield",                        (PyCFunction) SRS_GetBField,                       METH_VARARGS, "get the magnetic field at a given position in space (and someday time?)"},
                                                                                           
                                                                                           
   {"add_particle_beam",                 (PyCFunction) SRS_AddParticleBeam,                 METH_VARARGS, "add a particle beam"},
+  {"clear_particle_beams",              (PyCFunction) SRS_ClearParticleBeams,              METH_NOARGS,  "Clear all existing particle beams from SRS"},
                                                                                           
   {"set_new_particle",                  (PyCFunction) SRS_SetNewParticle,                  METH_NOARGS,  "Set the internal particle to a new random particle"},
                                                                                           
@@ -974,6 +1069,7 @@ static PyMethodDef SRS_methods[] = {
   {"calculate_spectrum_from_list",      (PyCFunction) SRS_CalculateSpectrumFromList,       METH_VARARGS, "calculate the spectrum at an observation point"},
   {"get_spectrum",                      (PyCFunction) SRS_GetSpectrum,                     METH_NOARGS,  "Get the spectrum for the current particle as list of 2D [[energy, flux], [...]...]"},
 
+  {"calculate_total_power",             (PyCFunction) SRS_CalculateTotalPower,             METH_NOARGS,  "calculate total power radiated"},
   {"calculate_power_density_rectangle", (PyCFunction) SRS_CalculatePowerDensityRectangle,  METH_VARARGS, "calculate the power density given a surface"},
   {"calculate_flux_rectangle",          (PyCFunction) SRS_CalculateFluxRectangle,          METH_VARARGS, "calculate the flux given a surface"},
 
@@ -1049,7 +1145,7 @@ PyMODINIT_FUNC initSRS ()
   if (PyType_Ready(&SRSType) < 0)
     return;
 
-  m = Py_InitModule3("SRS", module_methods, "Example module that creates an extension type.");
+  m = Py_InitModule3("SRS", module_methods, "SRS Extension module for the SRS Python API.");
   if (m == NULL)
     return;
 

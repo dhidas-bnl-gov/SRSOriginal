@@ -109,3 +109,14 @@ size_t TParticleBeamContainer::GetRandomBeamIndexByWeight () const
 
 
 
+
+void TParticleBeamContainer::Clear ()
+{
+  // Clear the particle beam container contents
+
+  fParticleBeamWeightSums.clear();
+  fParticleBeams.clear();
+  fParticleBeamMap.clear();
+
+  return;
+}
