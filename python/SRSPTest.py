@@ -16,6 +16,10 @@ import SRS
 # Create a new SRS object
 srs0 = SRS.SRS()
 
+print srs0.pi()
+exit(0)
+
+
 def myfunc (X):
   z = X[2]
   return [sin(5*z), cos(5*z), 0]
@@ -26,7 +30,7 @@ srs0.add_magnetic_field_function(myfunc)
 
 
 
-if True:
+if False:
   Z = np.linspace(-4, 4, 2000)
   B = [srs0.get_bfield([0, 0, z])[0] for z in Z]
   # Bx = [item[0] for item in B]
@@ -52,13 +56,13 @@ srs0.add_particle_beam('electron', 'beam_0', [0, 0, 0], [0, 0, 1], 3, -2, 0.500,
 srs0.set_new_particle()
 
 
-if True:
+if False:
   for i in xrange(10000):
     srs0.set_new_particle()
 
 
 
-if True:
+if False:
   srs0.calculate_trajectory()
   trajectory = srs0.get_trajectory()
 
@@ -69,6 +73,9 @@ if True:
   plt.ylabel('X [m]')
   plt.title('Particle Trajectory')
   plt.show()
+
+power_density = srs0.calculate_power_density_rectangle2(width_x1=0.008, nx1=51, width_x2=0.004, nx2=51, rotations=[0, 0, 30], translation=[0, 0, 0], x0x1x2=[[1,1,1],[2,2,2],[3,3,3]], plane="XY")
+#power_density = srs0.calculate_power_density_rectangle2(width_x1=0.008, nx1=51, width_x2=0.004, nx2=51, rotations=[0, 0, 30], translation=[0, 0, 0], points=[[1,1,1],[2,2,2],[3,3,3]], plane="XY")
 
 exit(0)
 

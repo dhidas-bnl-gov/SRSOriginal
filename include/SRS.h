@@ -44,7 +44,7 @@ class SRS
 
 
     // Functions related to the particle beam(s)
-    void AddParticleBeam (std::string const&, std::string const&, double const, double const, double const, double const, double const, double const, double const, double const, double const, double const);
+    void AddParticleBeam (std::string const&, std::string const&, TVector3D const&, TVector3D const&, double const, double const, double const, double const);
     TParticleBeam& GetParticleBeam (std::string const&);
     TParticleA GetNewParticle ();
     void SetNewParticle ();
@@ -74,9 +74,9 @@ class SRS
     TSpectrumContainer const& GetSpectrum () const;
 
     // Power Density calculation
-    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, int const Dimension = 3);
-    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3);
-    void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3);
+    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, int const Dimension = 3, bool const Directional = true);
+    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true);
+    void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true);
     double CalculateTotalPower ();
     double CalculateTotalPower (TParticleA&);
 

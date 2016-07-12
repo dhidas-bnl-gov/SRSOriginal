@@ -25,8 +25,8 @@ int TestSRS ()
 
 
 
-  S.AddParticleBeam("electron", "Beam_01", 0, 0, -1.5, 0, 0, 1, 3, 0, 0.500, 1);
-  //S.AddParticleBeam("positron", "Beam_02", 0, 0, -2, 0, 0, 1, 6, 0, 0.500, 1);
+  S.AddParticleBeam("electron", "Beam_01", TVector3D(0, 0, -1.5), TVector3D(0, 0, 1), 3, 0, 0.500, 1);
+  //S.AddParticleBeam("positron", "Beam_02", TVector3D(0, 0, -1.5), TVector3D(0, 0, 1), 3, 0, 0.500, 1);
   std::cout << S.GetParticleBeam("Beam_01") << std::endl;
 
 

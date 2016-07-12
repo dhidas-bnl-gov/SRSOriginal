@@ -18,10 +18,12 @@ class TSurfacePoints_Rectangle : public TSurfacePoints
 {
   public:
     TSurfacePoints_Rectangle ();
-    TSurfacePoints_Rectangle (std::string const&, int const, int const, double const, double const, TVector3D const&, TVector3D const&);
+    TSurfacePoints_Rectangle (int const, int const, TVector3D const&, TVector3D const&, TVector3D const&, int const);
+    TSurfacePoints_Rectangle (std::string const&, int const, int const, double const, double const, TVector3D const&, TVector3D const&, int const);
     ~TSurfacePoints_Rectangle ();
 
-    void Init(std::string const&, int const, int const, double const, double const, TVector3D const&, TVector3D const&);
+    void Init (int const, int const, TVector3D const&, TVector3D const&, TVector3D const&, int const);
+    void Init (std::string const&, int const, int const, double const, double const, TVector3D const&, TVector3D const&, int const);
     TSurfacePoint const GetPoint (size_t const) const;
     TVector3D GetXYZ (size_t const) const;
     size_t GetNPoints () const;
@@ -31,27 +33,17 @@ class TSurfacePoints_Rectangle : public TSurfacePoints
 
     double GetElementArea () const;
 
-    enum eInPlane {
-      kInPlane_XY,
-      kInPlane_XZ,
-      kInPlane_YZ
-    };
-
   private:
     int fNX1;
     int fNX2;
 
-    double fWidthX1;
-    double fWidthX2;
 
-    double fX1Start;
-    double fX2Start;
+    int fNormal;
 
     double fX1StepSize;
     double fX2StepSize;
 
     size_t fNPoints;
-    eInPlane fInPlane;
 
     TVector3D fNormalVector;
     TVector3D fX1Vector;

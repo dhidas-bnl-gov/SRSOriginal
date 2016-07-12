@@ -12,6 +12,8 @@
 // Include Python.h first!
 #include <Python.h>
 
+#include "SRS_Python.h"
+
 #include "SRS.h"
 
 #include "TSurfacePoints_RectangleSimple.h"
@@ -24,12 +26,6 @@
 #include <iostream>
 #include <vector>
 
-
-typedef struct {
-  // Define the SRSObject struct which contains the class I want
-  PyObject_HEAD
-  SRS* obj;
-} SRSObject;
 
 
 
@@ -66,6 +62,29 @@ static PyObject* SRS_new (PyTypeObject* type, PyObject* args, PyObject* kwds)
 
 
 
+static TVector3D SRS_ListAsTVector3D (PyObject* List)
+{
+  TVector3D V;
+  if (PyList_Size(List) == 3) {
+    Py_INCREF(List);
+    V.SetXYZ(PyFloat_AsDouble(PyList_GetItem(List, 0)),
+             PyFloat_AsDouble(PyList_GetItem(List, 1)),
+             PyFloat_AsDouble(PyList_GetItem(List, 2)));
+    Py_DECREF(List);
+  } else {
+    throw;
+  }
+
+  // Return the python list
+  return V;
+}
+
+
+
+
+
+
+
 static PyObject* SRS_TVector3DAsList (TVector3D const& V)
 {
   // Create a python list
@@ -80,6 +99,15 @@ static PyObject* SRS_TVector3DAsList (TVector3D const& V)
 }
 
 
+
+
+
+
+
+static PyObject* SRS_Pi (SRSObject* self, PyObject* arg)
+{
+  return Py_BuildValue("d", TSRS::Pi());
+}
 
 
 
@@ -220,76 +248,61 @@ static PyObject* SRS_SetNPointsTrajectory (SRSObject* self, PyObject* arg)
 
 
 
-static PyObject* SRS_AddMagneticField (SRSObject* self, PyObject* args)
+static PyObject* SRS_AddMagneticField (SRSObject* self, PyObject* args, PyObject* keywds)
 {
   // Set the start and stop times for SRS in [m]
   // UPDATE: Needs comments
 
 
   // Grab the values
-  char* FileName;
-  char* FileFormat;
-  PyObject* LRotation;
-  PyObject* LTranslation;
-  PyObject* LScaling;
+  char* FileName = "";
+  char* FileFormat = "";
+  PyObject* LRotation = PyList_New(0);
+  PyObject* LTranslation = PyList_New(0);
+  PyObject* LScaling = PyList_New(0);
 
   TVector3D Rotation(0, 0, 0);
   TVector3D Translation(0, 0, 0);
   std::vector<double> Scaling;
 
-  if (PyTuple_Size(args) == 2) {
-    if (! PyArg_ParseTuple(args, "ss", &FileName, &FileFormat)) {
-      return NULL;
-    }
-  } else if (PyTuple_Size(args) == 3) {
-    if (! PyArg_ParseTuple(args, "ssO!", &FileName, &FileFormat, &PyList_Type, &LRotation)) {
-      return NULL;
-    }
-    if (PyList_Size(LRotation) != 3) {
-      throw;
-    }
-    Rotation.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LRotation, 0)),
-                    PyFloat_AsDouble(PyList_GetItem(LRotation, 1)),
-                    PyFloat_AsDouble(PyList_GetItem(LRotation, 2)));
-  } else if (PyTuple_Size(args) == 4) {
-    if (! PyArg_ParseTuple(args, "ssO!O!", &FileName, &FileFormat, &PyList_Type, &LRotation, &PyList_Type, &LTranslation)) {
-      return NULL;
-    }
-    if (PyList_Size(LRotation) != 3) {
-      throw;
-    }
-    Rotation.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LRotation, 0)),
-                    PyFloat_AsDouble(PyList_GetItem(LRotation, 1)),
-                    PyFloat_AsDouble(PyList_GetItem(LRotation, 2)));
-    if (PyList_Size(LTranslation) != 3) {
-      throw;
-    }
-    Translation.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LTranslation, 0)),
-                       PyFloat_AsDouble(PyList_GetItem(LTranslation, 1)),
-                       PyFloat_AsDouble(PyList_GetItem(LTranslation, 2)));
-  } else if (PyTuple_Size(args) == 5) {
-    if (! PyArg_ParseTuple(args, "ssO!O!O!", &FileName, &FileFormat, &PyList_Type, &LRotation, &PyList_Type, &LTranslation, &PyList_Type, &LScaling)) {
-      return NULL;
-    }
-    if (PyList_Size(LRotation) != 3) {
-      throw;
-    }
-    Rotation.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LRotation, 0)),
-                    PyFloat_AsDouble(PyList_GetItem(LRotation, 1)),
-                    PyFloat_AsDouble(PyList_GetItem(LRotation, 2)));
-    if (PyList_Size(LTranslation) != 3) {
-      throw;
-    }
-    Translation.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LTranslation, 0)),
-                       PyFloat_AsDouble(PyList_GetItem(LTranslation, 1)),
-                       PyFloat_AsDouble(PyList_GetItem(LTranslation, 2)));
 
-    for (int i = 0; i < PyList_Size(LScaling); ++i) {
-      Scaling.push_back(PyFloat_AsDouble(PyList_GetItem(LScaling, i)));
-    }
-  } else {
+
+  static char *kwlist[] = {"file", "format", "rotations", "translation", "scale", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss|OOO", kwlist,
+                                                           &FileName,
+                                                           &FileFormat,
+                                                           &LRotation,
+                                                           &LTranslation,
+                                                           &LScaling)) {
+    return NULL;
+  }
+
+
+
+  if (FileName == "" || FileFormat == "") {
     throw;
   }
+
+
+  // Check Rotations
+  if (PyList_Size(LRotation) != 0) {
+    Rotation = SRS_ListAsTVector3D(LRotation);
+  }
+
+
+  // Check Translation
+  if (PyList_Size(LTranslation) != 0) {
+    Translation = SRS_ListAsTVector3D(LTranslation);
+  }
+
+
+  // Add any scaling factors
+  // UPDATE: Check against fileformat number of strings
+  for (int i = 0; i < PyList_Size(LScaling); ++i) {
+    Scaling.push_back(PyFloat_AsDouble(PyList_GetItem(LScaling, i)));
+  }
+
 
   // Set the object variable
   self->obj->AddMagneticField(FileName, FileFormat, Rotation, Translation, Scaling);
@@ -335,37 +348,59 @@ static PyObject* SRS_AddMagneticFieldFunction (SRSObject* self, PyObject* args)
 
 
 
-static PyObject* SRS_AddMagneticFieldGaussian (SRSObject* self, PyObject* args)
+static PyObject* SRS_AddMagneticFieldGaussian (SRSObject* self, PyObject* args, PyObject* keywds)
 {
   // Set the start and stop times for SRS in [m]
 
+
   // Grab the values
-  PyObject* LBField;
-  PyObject* LCenter;
-  PyObject* LSigma;
-  if (! PyArg_ParseTuple(args, "O!O!O!", &PyList_Type, &LBField, &PyList_Type, &LCenter, &PyList_Type, &LSigma)) {
+  PyObject* LBField = PyList_New(0);
+  PyObject* LTranslation = PyList_New(0);
+  PyObject* LRotation = PyList_New(0);
+  PyObject* LSigma = PyList_New(0);
+
+  TVector3D BField(0, 0, 0);
+  TVector3D Sigma(0, 0, 0);
+  TVector3D Rotation(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+
+  static char *kwlist[] = {"bfield", "sigma", "rotations", "translation", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "OO|OO", kwlist,
+                                                          &LBField,
+                                                          &LSigma,
+                                                          &LRotation,
+                                                          &LTranslation)) {
     return NULL;
   }
 
 
-  // Has to have the correct number of arguments
-  if (PyList_Size(LBField) != 3 || PyList_Size(LCenter) != 3 || PyList_Size(LSigma) != 3) {
-    return NULL;
+
+  // Check BField
+  BField = SRS_ListAsTVector3D(LBField);
+
+  // Check Width
+  Sigma = SRS_ListAsTVector3D(LSigma);
+
+  // Check Rotations
+  if (PyList_Size(LRotation) != 0) {
+    Rotation = SRS_ListAsTVector3D(LRotation);
   }
 
-  TVector3D const BField(PyFloat_AsDouble(PyList_GetItem(LBField, 0)),
-                         PyFloat_AsDouble(PyList_GetItem(LBField, 1)),
-                         PyFloat_AsDouble(PyList_GetItem(LBField, 2)));
-  TVector3D const Center(PyFloat_AsDouble(PyList_GetItem(LCenter, 0)),
-                         PyFloat_AsDouble(PyList_GetItem(LCenter, 1)),
-                         PyFloat_AsDouble(PyList_GetItem(LCenter, 2)));
-  TVector3D const Sigma( PyFloat_AsDouble(PyList_GetItem(LSigma, 0)),
-                         PyFloat_AsDouble(PyList_GetItem(LSigma, 1)),
-                         PyFloat_AsDouble(PyList_GetItem(LSigma, 2)));
+  // Check Translation
+  if (PyList_Size(LTranslation) != 0) {
+    Translation = SRS_ListAsTVector3D(LTranslation);
+  }
 
 
-  self->obj->AddMagneticField( (TBField*) new TBField3D_Gaussian(BField, Center, Sigma));
+  // Rotate field and sigma
+  // UPDATE: check this
+  BField.RotateSelfXYZ(Rotation);
+  Sigma.RotateSelfXYZ(Rotation);
 
+  // Add field
+  self->obj->AddMagneticField( (TBField*) new TBField3D_Gaussian(BField, Translation, Sigma));
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -379,71 +414,65 @@ static PyObject* SRS_AddMagneticFieldGaussian (SRSObject* self, PyObject* args)
 
 
 
-static PyObject* SRS_AddMagneticFieldUniform (SRSObject* self, PyObject* args)
+static PyObject* SRS_AddMagneticFieldUniform (SRSObject* self, PyObject* args, PyObject* keywds)
 {
   // Set the start and stop times for SRS in [m]
   // UPDATE: Needs comments
 
 
   // Grab the values
-  char* FileName;
-  char* FileFormat;
-  PyObject* LBField;
-  PyObject* LCenter;
-  PyObject* LWidth;
+  PyObject* LBField = PyList_New(0);
+  PyObject* LTranslation = PyList_New(0);
+  PyObject* LRotation = PyList_New(0);
+  PyObject* LWidth = PyList_New(0);
 
   TVector3D BField(0, 0, 0);
-  TVector3D Center(0, 0, 0);
   TVector3D Width (0, 0, 0);
+  TVector3D Rotation(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
 
-  if (PyTuple_Size(args) == 1) {
-    if (! PyArg_ParseTuple(args, "O!", &PyList_Type, &LBField)) {
-      return NULL;
-    }
-    if (PyList_Size(LBField) != 3) {
-      throw;
-    }
-    BField.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LBField, 0)),
-                  PyFloat_AsDouble(PyList_GetItem(LBField, 1)),
-                  PyFloat_AsDouble(PyList_GetItem(LBField, 2)));
 
-  } else if (PyTuple_Size(args) == 2) {
-    if (! PyArg_ParseTuple(args, "O!O!", &PyList_Type, &LBField, &PyList_Type, &LWidth)) {
-      return NULL;
-    }
-    if (PyList_Size(LBField) != 3 || PyList_Size(LWidth) != 3) {
-      throw;
-    }
-    BField.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LBField, 0)),
-                  PyFloat_AsDouble(PyList_GetItem(LBField, 1)),
-                  PyFloat_AsDouble(PyList_GetItem(LBField, 2)));
+  static char *kwlist[] = {"bfield", "width", "rotations", "translation", NULL};
 
-    Width.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LWidth, 0)),
-                 PyFloat_AsDouble(PyList_GetItem(LWidth, 1)),
-                 PyFloat_AsDouble(PyList_GetItem(LWidth, 2)));
-
-  } else if (PyTuple_Size(args) == 3) {
-    if (! PyArg_ParseTuple(args, "O!O!O!", &PyList_Type, &LBField, &PyList_Type, &LWidth, &PyList_Type, &LCenter)) {
-      return NULL;
-    }
-    if (PyList_Size(LBField) != 3 || PyList_Size(LWidth) != 3 || PyList_Size(LCenter) != 3) {
-      throw;
-    }
-    BField.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LBField, 0)),
-                  PyFloat_AsDouble(PyList_GetItem(LBField, 1)),
-                  PyFloat_AsDouble(PyList_GetItem(LBField, 2)));
-
-    Width.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LWidth, 0)),
-                 PyFloat_AsDouble(PyList_GetItem(LWidth, 1)),
-                 PyFloat_AsDouble(PyList_GetItem(LWidth, 2)));
-
-    Center.SetXYZ(PyFloat_AsDouble(PyList_GetItem(LCenter, 0)),
-                  PyFloat_AsDouble(PyList_GetItem(LCenter, 1)),
-                  PyFloat_AsDouble(PyList_GetItem(LCenter, 2)));
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "OO|OO", kwlist,
+                                                          &LBField,
+                                                          &LWidth,
+                                                          &LRotation,
+                                                          &LTranslation)) {
+    return NULL;
   }
 
+
+
+  // Check BField
+  if (PyList_Size(LBField) != 0) {
+    BField = SRS_ListAsTVector3D(LBField);
+  }
+
+
+  // Check Width
+  if (PyList_Size(LWidth) != 0) {
+    Width = SRS_ListAsTVector3D(LWidth);
+  }
+
+
+  // Check Rotations
+  if (PyList_Size(LRotation) != 0) {
+    Rotation = SRS_ListAsTVector3D(LRotation);
+  }
+
+
+  // Check Translation
+  if (PyList_Size(LTranslation) != 0) {
+    Translation = SRS_ListAsTVector3D(LTranslation);
+  }
+
+
+  BField.RotateSelfXYZ(Rotation);
+  Width.RotateSelfXYZ(Rotation);
+
   // Set the object variable
-  self->obj->AddMagneticField((TBField*) new TBField3D_Uniform(BField, Width, Center));
+  self->obj->AddMagneticField((TBField*) new TBField3D_Uniform(BField, Width, Translation));
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -518,47 +547,85 @@ static PyObject* SRS_GetBField (SRSObject* self, PyObject* args)
 
 
 
-static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args)
+static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject* keywds)
 {
   // Add a particle beam to the experiment
 
-  char* Type;
-  char* Name;
-
-  // Python list object
-  PyObject* List_X;
-  PyObject* List_D;
-
-  double X0, Y0, Z0;
-  double DX0, DY0, DZ0;
-  double Energy;
-  double T0;
-  double Current;
-  double Weight;
-
 
 
   // Grab the values
-  if (! PyArg_ParseTuple(args, "ssO!O!dddd", &Type, &Name, &PyList_Type, &List_X, &PyList_Type, &List_D, &Energy, &T0, &Current, &Weight)) {
+  char* Type = "";
+  char* Name = "";
+  PyObject* LX0 = PyList_New(0);
+  PyObject* LV0 = PyList_New(0);
+  double Energy_GeV = 0;
+  double T0 = 0;
+  double Current = 0;
+  double Weight = 1;
+  double Mass = 0;
+  double Charge = 0;
+  PyObject* LRotation = PyList_New(0);
+  PyObject* LTranslation = PyList_New(0);
+
+  TVector3D X0;
+  TVector3D V0;
+  TVector3D Rotation(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+
+
+  static char *kwlist[] = {"type", "name", "x0", "v0", "energy_GeV", "t0", "current", "weight", "rotations", "translation", "mass", "charge", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssOO|ddddOO", kwlist,
+                                                               &Type,
+                                                               &Name,
+                                                               &LX0,
+                                                               &LV0,
+                                                               &Energy_GeV,
+                                                               &T0,
+                                                               &Current,
+                                                               &Weight,
+                                                               &LRotation,
+                                                               &LTranslation,
+                                                               &Mass,
+                                                               &Charge)) {
     return NULL;
   }
 
 
-  // Has to have the correct number of arguments
-  if (PyList_Size(List_X) != 3 || PyList_Size(List_D) != 3) {
-    return NULL;
+  // Check that type and name exist
+  if (Type == "" || Name == "") {
+    throw;
   }
 
-  // Grab the values
-  X0  = PyFloat_AsDouble(PyList_GetItem(List_X, 0));
-  Y0  = PyFloat_AsDouble(PyList_GetItem(List_X, 1));
-  Z0  = PyFloat_AsDouble(PyList_GetItem(List_X, 2));
-  DX0 = PyFloat_AsDouble(PyList_GetItem(List_D, 0));
-  DY0 = PyFloat_AsDouble(PyList_GetItem(List_D, 1));
-  DZ0 = PyFloat_AsDouble(PyList_GetItem(List_D, 2));
+  // If this is a custom particle
+  if (Type == "custom") {
+    if (Mass == 0 || Charge == 0) {
+      throw;
+    }
+    // UPDATE: for custom beams
+    throw;
+  }
+
+  X0 = SRS_ListAsTVector3D(LX0);
+  V0 = SRS_ListAsTVector3D(LV0);
+
+  if (Energy_GeV == 0) {
+    // UPDATE: get energy from V vector
+  }
+
+  // Check Rotations
+  if (PyList_Size(LRotation) != 0) {
+    Rotation = SRS_ListAsTVector3D(LRotation);
+  }
+
+  // Check Translation
+  if (PyList_Size(LTranslation) != 0) {
+    Translation = SRS_ListAsTVector3D(LTranslation);
+  }
 
   // Add the particle beam
-  self->obj->AddParticleBeam(Type, Name, X0, Y0, Z0, DX0, DY0, DZ0, Energy, T0, Current, Weight);
+  self->obj->AddParticleBeam(Type, Name, X0, V0, Energy_GeV, T0, Current, Weight);
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -622,10 +689,8 @@ static PyObject* SRS_CalculateTrajectory (SRSObject* self)
 
   self->obj->CalculateTrajectory();
 
-
-  // Must return python object None in a special way
-  Py_INCREF(Py_None);
-  return Py_None;
+  // Return the trajectory
+  return SRS_GetTrajectory(self);
 }
 
 
@@ -659,118 +724,6 @@ static PyObject* SRS_GetTrajectory (SRSObject* self)
 
   // Return the python list
   return PList;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args)
-{
-  // Calculate the spectrum given an observation point, and energy range
-
-  // Python list object
-  PyObject* List_X;
-
-  double EStart;
-  double EStop;
-  int     N;
-
-
-  // Grab the values
-  if (! PyArg_ParseTuple(args, "O!ddi", &PyList_Type, &List_X, &EStart, &EStop, &N)) {
-    return NULL;
-  }
-
-  // Has to have the correct number of arguments
-  if (PyList_Size(List_X) != 3) {
-    return NULL;
-  }
-
-  // Observation point
-  TVector3D const ObservationPoint(PyFloat_AsDouble(PyList_GetItem(List_X, 0)),
-                                   PyFloat_AsDouble(PyList_GetItem(List_X, 1)),
-                                   PyFloat_AsDouble(PyList_GetItem(List_X, 2)));
-
-
-  // Actually calculate the spectrum
-  self->obj->CalculateSpectrum(ObservationPoint, EStart, EStop, N);
-
-  // Must return python object None in a special way
-  Py_INCREF(Py_None);
-  return Py_None;
-}
-
-
-
-
-
-
-static PyObject* SRS_CalculateSpectrumFromList (SRSObject* self, PyObject* args)
-{
-  // Calculate the spectrum given an observation point given a list of energy values
-
-  // Python list object
-  PyObject* List_X;
-  PyObject* List_E;
-
-  double EStart;
-  double EStop;
-  int     N;
-
-
-  // Grab the values
-  if (! PyArg_ParseTuple(args, "O!O!", &PyList_Type, &List_X, &PyList_Type, &List_E)) {
-    return NULL;
-  }
-
-  // Has to have the correct number of arguments
-  if (PyList_Size(List_X) != 3) {
-    return NULL;
-  }
-
-  // Has to have the correct number of arguments
-  if (PyList_Size(List_E) < 1) {
-    return NULL;
-  }
-
-  // Observation point
-  TVector3D const ObservationPoint(PyFloat_AsDouble(PyList_GetItem(List_X, 0)),
-                                   PyFloat_AsDouble(PyList_GetItem(List_X, 1)),
-                                   PyFloat_AsDouble(PyList_GetItem(List_X, 2)));
-
-  // Add all values to a vector
-  std::vector<double> VEnergy;
-  for (int i = 0; i < PyList_Size(List_E); ++i) {
-    VEnergy.push_back(PyFloat_AsDouble(PyList_GetItem(List_E, i)));
-  }
-
-
-  // Actually calculate the spectrum
-  self->obj->CalculateSpectrum(ObservationPoint, VEnergy);
-
-  // Must return python object None in a special way
-  Py_INCREF(Py_None);
-  return Py_None;
 }
 
 
@@ -812,6 +765,90 @@ static PyObject* SRS_GetSpectrum (SRSObject* self)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObject* keywds)
+{
+  // Calculate the spectrum given an observation point, and energy range
+
+
+  PyObject* LX0 = PyList_New(0);
+  int NPoints = 0;
+  PyObject* LEnergyRange_eV = PyList_New(0);
+  PyObject* LPoints_eV = PyList_New(0);
+
+
+
+  static char *kwlist[] = {"xyz", "npoints", "energy_range_eV", "points_eV", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOO", kwlist,
+                                                          &LX0,
+                                                          &NPoints,
+                                                          &LEnergyRange_eV,
+                                                          &LPoints_eV)) {
+    return NULL;
+  }
+
+
+  // Add all values to a vector
+  std::vector<double> VEnergy;
+  for (int i = 0; i < PyList_Size(LPoints_eV); ++i) {
+    VEnergy.push_back(PyFloat_AsDouble(PyList_GetItem(LPoints_eV, i)));
+  }
+
+  double EStart;
+  double EStop;
+
+  if (PyList_Size(LEnergyRange_eV) != 0) {
+    if (PyList_Size(LEnergyRange_eV) == 2) {
+      EStart = PyFloat_AsDouble(PyList_GetItem(LEnergyRange_eV, 0));
+      EStop  = PyFloat_AsDouble(PyList_GetItem(LEnergyRange_eV, 1));
+    } else {
+      throw;
+    }
+  }
+
+
+
+
+  // Observation point
+  TVector3D const X0 = SRS_ListAsTVector3D(LX0);
+
+  // Actually calculate the spectrum
+  if (VEnergy.size() == 0) {
+    self->obj->CalculateSpectrum(X0, EStart, EStop, NPoints);
+  } else {
+    self->obj->CalculateSpectrum(X0, VEnergy);
+  }
+
+  // Return the spectrum
+  return SRS_GetSpectrum(self);
+}
+
+
+
+
+
+
+
+
+
 static PyObject* SRS_CalculateTotalPower (SRSObject* self)
 {
   // Calculate the total power radiated by the current particle
@@ -836,52 +873,113 @@ static PyObject* SRS_CalculateTotalPower (SRSObject* self)
 
 
 
-
-
-
-
-static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* args)
+static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* args, PyObject *keywds)
 {
   // Calculate the spectrum given an observation point, and energy range
 
+  char*     SurfacePlane = "";
+  size_t    NX1 = 0;
+  size_t    NX2 = 0;
+  double    Width_X1 = 0;
+  double    Width_X2 = 0;
+  PyObject* List_NPoints= PyList_New(0);
+  PyObject* List_Width= PyList_New(0);
+  PyObject* List_Translation = PyList_New(0);
+  PyObject* List_Rotations = PyList_New(0);
+  PyObject* List_X0X1X2 = PyList_New(0);
+  int       NormalDirection = 0;
+  int       Dim = 2;
 
-  char*     SurfacePlane;
-  int       NX1;
-  int       NX2;
-  double    Width_X1;
-  double    Width_X2;
-  PyObject* List_Observer;
-  PyObject* List_Rotations;
-  int       NormalDirection;
 
+  static char *kwlist[] = {"npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", NULL};
 
-  // Grab the values
-  if (! PyArg_ParseTuple(args, "sdidiO!O!", &SurfacePlane, &Width_X1, &NX1, &Width_X2, &NX2, &PyList_Type, &List_Rotations, &PyList_Type, &List_Observer)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|siiOOOO", kwlist,
+                                                              &List_NPoints,
+                                                              &SurfacePlane,
+                                                              &NormalDirection,
+                                                              &Dim,
+                                                              &List_Width,
+                                                              &List_Rotations,
+                                                              &List_Translation,
+                                                              &List_X0X1X2)) {
     return NULL;
   }
 
-  // Has to have the correct number of arguments
-  if (PyList_Size(List_Rotations) != 3 || PyList_Size(List_Observer) != 3) {
-    return NULL;
+
+  // The rectangular surface object we'll use
+  TSurfacePoints_Rectangle Surface;
+
+  if (PyList_Size(List_NPoints) == 2) {
+    // NPoints in [m]
+    NX1 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 0));
+    NX2 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 1));
+  } else {
+    throw;
   }
 
-  // Translation
-  TVector3D const Translation(PyFloat_AsDouble(PyList_GetItem(List_Observer, 0)),
-                              PyFloat_AsDouble(PyList_GetItem(List_Observer, 1)),
-                              PyFloat_AsDouble(PyList_GetItem(List_Observer, 2)));
-  // Rotations in [rad]
-  TVector3D const Rotations(PyFloat_AsDouble(PyList_GetItem(List_Rotations, 0)),
-                            PyFloat_AsDouble(PyList_GetItem(List_Rotations, 1)),
-                            PyFloat_AsDouble(PyList_GetItem(List_Rotations, 2)));
+
+
+  if (NX1 <= 0 || NX2 <= 0) {
+    std::cerr << "ERROR: NX1,2 < 1" << std::endl;
+    throw;
+  }
+
+  // Vectors for rotations and translations.  Default to 0
+  TVector3D Rotations(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    Rotations = SRS_ListAsTVector3D(List_Rotations);
+  }
+
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    Translation = SRS_ListAsTVector3D(List_Translation);
+  }
+
+  if (PyList_Size(List_Width) == 2) {
+    // Width in [m]
+    Width_X1 = PyFloat_AsDouble(PyList_GetItem(List_Width, 0));
+    Width_X2 = PyFloat_AsDouble(PyList_GetItem(List_Width, 1));
+  }
+
+
+
+  // If you are requesting a simple surface plane, check that you have widths
+  if (SurfacePlane != "" && Width_X1 > 0 && Width_X2 > 0) {
+    Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
+  }
+
+
+
+  // If X0X1X2 defined
+  std::vector<TVector3D> X0X1X2;
+
+  if (PyList_Size(List_X0X1X2) != 0) {
+    if (PyList_Size(List_X0X1X2) == 3) {
+      for (int i = 0; i != 3; ++i) {
+        PyObject* List_X = PyList_GetItem(List_X0X1X2, i);
+
+        X0X1X2.push_back(SRS_ListAsTVector3D(List_X));
+      }
+    } else {
+      throw;
+    }
+
+    // UPDATE: Check for orthogonality
+    Surface.Init(NX1, NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
+  }
 
 
   // Container for Point plus scalar
   T3DScalarContainer PowerDensityContainer;
 
-  TSurfacePoints_Rectangle Surface(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation);
 
   // Actually calculate the spectrum
-  self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, 2);
+  bool const Directional = NormalDirection == 0 ? false : true;
+  self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional);
 
 
   // Build the output list of: [[[x, y, z], PowerDensity], [...]]
@@ -895,6 +993,7 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 
     // Inner list for each point
     PyObject *PList2 = PyList_New(0);
+
 
     // Add position and value to list
     PyList_Append(PList2, SRS_TVector3DAsList(P.GetX()));
@@ -945,9 +1044,7 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args)
   }
 
   // Observation point
-  TVector3D const ObservationPoint(PyFloat_AsDouble(PyList_GetItem(List_Observer, 0)),
-                                   PyFloat_AsDouble(PyList_GetItem(List_Observer, 1)),
-                                   PyFloat_AsDouble(PyList_GetItem(List_Observer, 2)));
+  TVector3D const ObservationPoint = SRS_ListAsTVector3D(List_Observer);
 
   // Container for Point plus scalar
   T3DScalarContainer FluxContainer;
@@ -1032,6 +1129,10 @@ static PyGetSetDef SRS_getseters[] = {
 static PyMethodDef SRS_methods[] = {
   // We must tell python about the function we allow access as well as give them nice
   // python names, and tell python the method of input parameters.
+
+  {"pi",                       (PyCFunction) SRS_Pi,                      METH_NOARGS,  "do you want some pi?"},
+
+
   {"set_ctstart",                       (PyCFunction) SRS_SetCTStart,                      METH_O,       
      "set the start time in [m]\n\n\\
      :param name: the input name and a much longer description of what this function does really\n\\
@@ -1049,15 +1150,15 @@ static PyMethodDef SRS_methods[] = {
   {"get_npoints_trajectory",            (PyCFunction) SRS_GetNPointsTrajectory,            METH_NOARGS,  "get the total number of points for the trajectory"},
   {"set_ctstartstop",                   (PyCFunction) SRS_SetCTStartStop,                  METH_VARARGS, "set the start and stop time in [m]"},
                                                                                           
-  {"add_magnetic_field",                (PyCFunction) SRS_AddMagneticField,                METH_VARARGS, "add a magnetic field from a file"},
+  {"add_magnetic_field",                (PyCFunction) SRS_AddMagneticField,                METH_VARARGS | METH_KEYWORDS, "add a magnetic field from a file"},
   {"add_magnetic_field_function",       (PyCFunction) SRS_AddMagneticFieldFunction,        METH_VARARGS, "add a magnetic field in form of python function"},
-  {"add_magnetic_field_gaussian",       (PyCFunction) SRS_AddMagneticFieldGaussian,        METH_VARARGS, "add a magnetic field in form of 3D gaussian"},
+  {"add_magnetic_field_gaussian",       (PyCFunction) SRS_AddMagneticFieldGaussian,        METH_VARARGS | METH_KEYWORDS, "add a magnetic field in form of 3D gaussian"},
   {"clear_magnetic_fields",             (PyCFunction) SRS_ClearMagneticFields,             METH_NOARGS,  "clear all internal magnetic fields"},
-  {"add_magnetic_field_uniform",        (PyCFunction) SRS_AddMagneticFieldUniform,         METH_VARARGS, "add a uniform magnetic field in 3D"},
+  {"add_magnetic_field_uniform",        (PyCFunction) SRS_AddMagneticFieldUniform,         METH_VARARGS | METH_KEYWORDS, "add a uniform magnetic field in 3D"},
   {"get_bfield",                        (PyCFunction) SRS_GetBField,                       METH_VARARGS, "get the magnetic field at a given position in space (and someday time?)"},
                                                                                           
                                                                                           
-  {"add_particle_beam",                 (PyCFunction) SRS_AddParticleBeam,                 METH_VARARGS, "add a particle beam"},
+  {"add_particle_beam",                 (PyCFunction) SRS_AddParticleBeam,                 METH_VARARGS | METH_KEYWORDS, "add a particle beam"},
   {"clear_particle_beams",              (PyCFunction) SRS_ClearParticleBeams,              METH_NOARGS,  "Clear all existing particle beams from SRS"},
                                                                                           
   {"set_new_particle",                  (PyCFunction) SRS_SetNewParticle,                  METH_NOARGS,  "Set the internal particle to a new random particle"},
@@ -1065,12 +1166,11 @@ static PyMethodDef SRS_methods[] = {
   {"calculate_trajectory",              (PyCFunction) SRS_CalculateTrajectory,             METH_NOARGS,  "Calclate the trajectory for the current particle"},
   {"get_trajectory",                    (PyCFunction) SRS_GetTrajectory,                   METH_NOARGS,  "Get the trajectory for the current particle as 2 3D lists [[x, y, z], [BetaX, BetaY, BetaZ]]"},
 
-  {"calculate_spectrum",                (PyCFunction) SRS_CalculateSpectrum,               METH_VARARGS, "calculate the spectrum at an observation point"},
-  {"calculate_spectrum_from_list",      (PyCFunction) SRS_CalculateSpectrumFromList,       METH_VARARGS, "calculate the spectrum at an observation point"},
+  {"calculate_spectrum",                (PyCFunction) SRS_CalculateSpectrum,               METH_VARARGS | METH_KEYWORDS, "calculate the spectrum at an observation point"},
   {"get_spectrum",                      (PyCFunction) SRS_GetSpectrum,                     METH_NOARGS,  "Get the spectrum for the current particle as list of 2D [[energy, flux], [...]...]"},
 
   {"calculate_total_power",             (PyCFunction) SRS_CalculateTotalPower,             METH_NOARGS,  "calculate total power radiated"},
-  {"calculate_power_density_rectangle", (PyCFunction) SRS_CalculatePowerDensityRectangle,  METH_VARARGS, "calculate the power density given a surface"},
+  {"calculate_power_density_rectangle", (PyCFunction) SRS_CalculatePowerDensityRectangle,  METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_flux_rectangle",          (PyCFunction) SRS_CalculateFluxRectangle,          METH_VARARGS, "calculate the flux given a surface"},
 
   {NULL}  /* Sentinel */

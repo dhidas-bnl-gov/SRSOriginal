@@ -181,24 +181,22 @@ TVector3D SRS::GetB (double const X, double const Y, double const Z) const
 
 
 
-void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, double const X0, double const Y0, double const Z0, double const DX0, double const DY0, double const DZ0, double const Energy, double const T0, double const Current, double const Weight)
+//void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, double const X0, double const Y0, double const Z0, double const DX0, double const DY0, double const DZ0, double const Energy, double const T0, double const Current, double const Weight)
+
+void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, TVector3D const& X0, TVector3D const& V0, double const Energy_GeV, double const T0, double const Current, double const Weight)
 {
   // Add a particle beam
-  // Type    - The name of the particle type that you want to use
-  // Name    - A user specified 'name' for this beam
-  // X0      - Initial position in X
-  // Y0      - Initial position in Y
-  // Z0      - Initial position in Z
-  // DX0     - X-component of 'direction' (just a vector pointing in the direction of the velocity of arbitrary magnitude)
-  // DY0     - Y-component of 'direction'
-  // DZ0     - Z-component of 'direction'
-  // Energy  - Energy of particle beam in GeV
-  // T0      - Time of initial conditions, specified in units of m (for v = c)
-  // Current - Beam current in Amperes
-  // Weight  - Relative weight to give this beam when randomly sampling
+  // Type        - The name of the particle type that you want to use
+  // Name        - A user specified 'name' for this beam
+  // X0          - Initial position in X,Y,Z
+  // V0          - A vector pointing in the direction of the velocity of arbitrary magnitude
+  // Energy_GeV  - Energy of particle beam in GeV
+  // T0          - Time of initial conditions, specified in units of m (for v = c)
+  // Current     - Beam current in Amperes
+  // Weight      - Relative weight to give this beam when randomly sampling
 
 
-  fParticleBeamContainer.AddNewParticleBeam(Type, Name, TVector3D(X0, Y0, Z0), TVector3D(DX0, DY0, DZ0), Energy, T0, Current, Weight);
+  fParticleBeamContainer.AddNewParticleBeam(Type, Name, X0, V0, Energy_GeV, T0, Current, Weight);
   return;
 }
 
@@ -679,10 +677,10 @@ TSpectrumContainer const& SRS::GetSpectrum () const
 
 
 
-void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, int const Dimension)
+void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, int const Dimension, bool const Directional)
 {
   T3DScalarContainer PowerDensityContainer;
-  this->CalculatePowerDensity(Particle, Surface, PowerDensityContainer, Dimension);
+  this->CalculatePowerDensity(Particle, Surface, PowerDensityContainer, Dimension, Directional);
 
   return;
 }
@@ -690,7 +688,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
 
 
 
-void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension)
+void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -762,6 +760,12 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
 
     Sum /= 1e6; // m^2 to mm^2
 
+    // If you don't care about the direction of the normal vector
+    if (!Directional) {
+      if (Sum < 0) {
+        Sum *= -1;
+      }
+    }
 
     if (Dimension == 2) {
       PowerDensityContainer.AddPoint(TVector3D(Surface.GetX1(io), Surface.GetX2(io), 0), Sum);
@@ -782,14 +786,14 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
 
 
 
-void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension)
+void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
   //
   // Surface - Observation Point
 
-  this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension);
+  this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional);
 
   return;
 }
@@ -829,11 +833,6 @@ double SRS::CalculateTotalPower (TParticleA& Particle)
   // For summing total power
   double TotalPower = 0;
 
-  std::cout << "NTPoints: " << NTPoints << std::endl;
-  std::cout << "DeltaT:   " << DeltaT << std::endl;
-  std::cout << "Gamma:    " << Particle.GetGamma() << std::endl;
-  std::cout << "Q:        " << Particle.GetQ() << std::endl;
-  std::cout << "Current:  " << Particle.GetCurrent() << std::endl;
 
   // Loop over all points in trajectory
   for (int i = 0; i != NTPoints; ++i) {
@@ -843,13 +842,10 @@ double SRS::CalculateTotalPower (TParticleA& Particle)
 
     TotalPower += (AoverC.Mag2() - (B.Cross(AoverC)).Mag2()) * DeltaT;
 
-    //TotalPower += ( (A[i] / kC_SI).Mag2() - ( (V[i] / kC_SI).Cross(A[i] / kC_SI)).Mag2() ) * DeltaT;
   }
-  //TotalPower *= fabs(kECharge * Current) * pow(Gamma, 6) / (6 * kPI * kEpsilon0 * kC_SI);
 
   TotalPower *= fabs(Particle.GetQ() * Particle.GetCurrent()) * pow(Particle.GetGamma(), 6) / (6 * TSRS::Pi() * TSRS::Epsilon0() * TSRS::C());
 
-  std::cout << TotalPower << std::endl;
 
   return TotalPower;
 }
