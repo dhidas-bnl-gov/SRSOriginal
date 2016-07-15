@@ -51,7 +51,8 @@ static PyObject* SRS_GetSpectrum (SRSObject* self);
 static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObject* keywds);
 static PyObject* SRS_CalculateTotalPower (SRSObject* self);
 static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* args, PyObject *keywds);
-static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args);
+static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, PyObject *keywds);
+static PyObject* SRS_CalculateFluxRectangle2 (SRSObject* self, PyObject* args);
 
 
 

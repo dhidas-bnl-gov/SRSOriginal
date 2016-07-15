@@ -74,16 +74,16 @@ class SRS
     TSpectrumContainer const& GetSpectrum () const;
 
     // Power Density calculation
-    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, int const Dimension = 3, bool const Directional = true);
-    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true);
-    void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true);
+    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, int const Dimension = 3, bool const Directional = true, std::string const& OutFileName = "");
+    void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, std::string const& OutFileName = "");
+    void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, std::string const& OutFileName = "");
     double CalculateTotalPower ();
     double CalculateTotalPower (TParticleA&);
 
     // Flux Calculations
-    void CalculateFlux (TParticleA&, TSurfacePoints const&, double const);
-    void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&);
-    void CalculateFlux (TSurfacePoints const&, double const, T3DScalarContainer&);
+    void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, std::string const& OutFileName = "");
+    void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
+    void CalculateFlux (TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
 
   private:
     TBFieldContainer fBFieldContainer;

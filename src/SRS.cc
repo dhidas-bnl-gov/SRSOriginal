@@ -181,8 +181,6 @@ TVector3D SRS::GetB (double const X, double const Y, double const Z) const
 
 
 
-//void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, double const X0, double const Y0, double const Z0, double const DX0, double const DY0, double const DZ0, double const Energy, double const T0, double const Current, double const Weight)
-
 void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, TVector3D const& X0, TVector3D const& V0, double const Energy_GeV, double const T0, double const Current, double const Weight)
 {
   // Add a particle beam
@@ -582,7 +580,7 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
       // Particle "Beta" (velocity over speed of light)
       TVector3D const& B = T.GetB(iT);
 
-      // vector pointing from particle to observer
+      // Vector pointing from particle to observer
       TVector3D const R = ObservationPoint - X;
 
       // Unit vector pointing from particl to observer
@@ -677,10 +675,10 @@ TSpectrumContainer const& SRS::GetSpectrum () const
 
 
 
-void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, int const Dimension, bool const Directional)
+void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, int const Dimension, bool const Directional, std::string const& OutFileName)
 {
   T3DScalarContainer PowerDensityContainer;
-  this->CalculatePowerDensity(Particle, Surface, PowerDensityContainer, Dimension, Directional);
+  this->CalculatePowerDensity(Particle, Surface, PowerDensityContainer, Dimension, Directional, OutFileName);
 
   return;
 }
@@ -688,7 +686,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
 
 
 
-void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional)
+void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -696,6 +694,8 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
   // Particle - Particle, contains trajectory (or if not, calculate it)
   // Surface - Observation Point
 
+  // Are we writing to a file?
+  bool const WriteToFile = OutFileName != "" ? true : false;
 
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
@@ -715,8 +715,16 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
   TVector3D Numerator;
   double Denominator;
 
-  std::ofstream of("out_pow2.dat");
-  of << std::scientific;
+  // If writing to a file, open it and set to scientific output
+  std::ofstream of;
+  if (WriteToFile) {
+    of.open(OutFileName.c_str());
+    if (!of.is_open()) {
+      throw;
+    }
+    of << std::scientific;
+  }
+  std::cout << "Directional: " << Directional << std::endl;
 
   // Loop over all points in the given surface
   for (size_t io = 0; io < Surface.GetNPoints(); ++io) {
@@ -724,6 +732,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
     // Get the observation point (on the surface, and its "normal"
     TVector3D Obs = Surface.GetPoint(io).GetPoint();
     TVector3D Normal = Surface.GetPoint(io).GetNormal();
+
 
     // For summing power contributions
     double Sum = 0;
@@ -740,11 +749,14 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
       // N2 and N3 are in a plane perpendicular to N1
       TVector3D const N1 = (Obs - X).UnitVector();
       TVector3D const N2 = N1.Orthogonal().UnitVector();
-      //TVector3D const N2 = N1.Cross(TVector3D(1, 0, 0)).UnitVector();
       TVector3D const N3 = N1.Cross(N2).UnitVector();
 
       // For computing non-normally incidence
       double const N1DotNormal = N1.Dot(Normal);
+      // UPDATE: URGENT: Check this
+      if (Directional && N1DotNormal <= 0) {
+        continue;
+      }
 
       // Compute Numerator and denominator
       Numerator = N1.Cross( ( (N1 - B).Cross((AoverC)) ) );
@@ -768,17 +780,26 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
     }
 
     if (Dimension == 2) {
-      PowerDensityContainer.AddPoint(TVector3D(Surface.GetX1(io), Surface.GetX2(io), 0), Sum);
-      of << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
+      if (WriteToFile) {
+        of << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
+      } else {
+        PowerDensityContainer.AddPoint(TVector3D(Surface.GetX1(io), Surface.GetX2(io), 0), Sum);
+      }
     } else if (Dimension == 3) {
-      PowerDensityContainer.AddPoint(Obs, Sum);
-      of << Obs.GetX() << " " << Obs.GetY() << " " << Obs.GetZ() << " " << Sum << "\n";
+      if (WriteToFile) {
+        of << Obs.GetX() << " " << Obs.GetY() << " " << Obs.GetZ() << " " << Sum << "\n";
+      } else {
+        PowerDensityContainer.AddPoint(Obs, Sum);
+      }
     } else {
       throw;
     }
 
   }
-  of.close();
+
+  if (WriteToFile) {
+    of.close();
+  }
 
   return;
 }
@@ -786,14 +807,14 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
 
 
 
-void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional)
+void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
   //
   // Surface - Observation Point
 
-  this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional);
+  this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional, OutFileName);
 
   return;
 }
@@ -854,7 +875,7 @@ double SRS::CalculateTotalPower (TParticleA& Particle)
 
 
 
-void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV)
+void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, std::string const& OutFileName)
 {
   T3DScalarContainer FluxContainer;
   this->CalculateFlux(Particle, Surface, Energy_eV, FluxContainer);
@@ -869,7 +890,7 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 
 
 
-void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer)
+void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -878,6 +899,12 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
   // Surface - Surface of Observation Points
   // Current - beam current
   // Energy - beam energy in eV
+
+  int const Dimension = 2;
+
+  // Write to a file?
+  bool const WriteToFile = OutFileName != "" ? true : false;
+
 
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
@@ -909,8 +936,15 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
   // Constant C1 (complex)
   //std::complex<double> const C1(0, C0 * Omega);
 
-  std::ofstream of("out_flux2.dat");
-  of << std::scientific;
+  // If writing to a file, open it and set to scientific output
+  std::ofstream of;
+  if (WriteToFile) {
+    of.open(OutFileName.c_str());
+    if (!of.is_open()) {
+      throw;
+    }
+    of << std::scientific;
+  }
 
   // Loop over all surface points
   for (size_t ip = 0; ip != Surface.GetNPoints(); ++ip) {
@@ -950,12 +984,40 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
     // Multiply by constant factor
     SumE *= C0;
 
-    of << Surface.GetX1(ip) << "  " << Surface.GetX2(ip) << "  " <<  C2 * SumE.Dot( SumE.CC() ).real() << std::endl;
-    FluxContainer.AddPoint(Obs, C2 * SumE.Dot( SumE.CC() ).real());
+    //of << Surface.GetX1(ip) << "  " << Surface.GetX2(ip) << "  " <<  C2 * SumE.Dot( SumE.CC() ).real() << std::endl;
+    //FluxContainer.AddPoint(Obs, C2 * SumE.Dot( SumE.CC() ).real());
+
+    double const ThisFlux = C2 * SumE.Dot( SumE.CC() ).real();
+
+
+    // If you don't care about the direction of the normal vector
+    //if (!Directional) {
+    //  if (Sum < 0) {
+    //    Sum *= -1;
+    //  }
+    //}
+
+    if (Dimension == 2) {
+      if (WriteToFile) {
+        of << Surface.GetX1(ip) << " " << Surface.GetX2(ip) << " " << ThisFlux << "\n";
+      } else {
+        FluxContainer.AddPoint(TVector3D(Surface.GetX1(ip), Surface.GetX2(ip), 0), ThisFlux);
+      }
+    } else if (Dimension == 3) {
+      if (WriteToFile) {
+        of << Obs.GetX() << " " << Obs.GetY() << " " << Obs.GetZ() << " " << ThisFlux << "\n";
+      } else {
+        FluxContainer.AddPoint(Obs, ThisFlux);
+      }
+    } else {
+      throw;
+    }
+
   }
 
-  of.close();
-
+  if (WriteToFile) {
+    of.close();
+  }
 
   return;
 }
@@ -967,7 +1029,7 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 
 
 
-void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer)
+void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
 {
   this->CalculateFlux(fParticle, Surface, Energy_eV, FluxContainer);
   return;

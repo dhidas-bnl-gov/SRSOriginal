@@ -16,8 +16,8 @@
 
 #include "SRS.h"
 
-#include "TSurfacePoints_RectangleSimple.h"
 #include "TSurfacePoints_Rectangle.h"
+#include "TSurfacePoints_3D.h"
 #include "T3DScalarContainer.h"
 #include "TBFieldPythonFunction.h"
 #include "TBField3D_Gaussian.h"
@@ -267,7 +267,7 @@ static PyObject* SRS_AddMagneticField (SRSObject* self, PyObject* args, PyObject
 
 
 
-  static char *kwlist[] = {"file", "format", "rotations", "translation", "scale", NULL};
+  static char *kwlist[] = {"ifile", "iformat", "rotations", "translation", "scale", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss|OOO", kwlist,
                                                            &FileName,
@@ -864,6 +864,102 @@ static PyObject* SRS_CalculateTotalPower (SRSObject* self)
 
 
 
+static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Calculate the spectrum given an observation point, and energy range
+
+  PyObject* List_Translation = PyList_New(0);
+  PyObject* List_Rotations = PyList_New(0);
+  PyObject* List_Points = PyList_New(0);
+  int       NormalDirection = 0;
+  int const Dim = 3;
+  char*     OutFileName = "";
+
+
+  static char *kwlist[] = {"points", "normal", "rotations", "translation", "ofile", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOs", kwlist,
+                                                           &List_Points,
+                                                           &NormalDirection,
+                                                           &List_Rotations,
+                                                           &List_Translation,
+                                                           &OutFileName)) {
+    return NULL;
+  }
+
+
+
+  // Vectors for rotations and translations.  Default to 0
+  TVector3D Rotations(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    Rotations = SRS_ListAsTVector3D(List_Rotations);
+  }
+
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    Translation = SRS_ListAsTVector3D(List_Translation);
+  }
+
+
+  // Look for arbitrary shape 3D points
+  TSurfacePoints_3D Surface;
+  for (int i = 0; i < PyList_Size(List_Points); ++i) {
+    PyObject* LXN = PyList_GetItem(List_Points, i);
+    if (PyList_Size(LXN) == 2) {
+      TVector3D X = SRS_ListAsTVector3D(PyList_GetItem(LXN, 0));
+      TVector3D N = SRS_ListAsTVector3D(PyList_GetItem(LXN, 1));
+
+      // Rotate point and normal
+      X.RotateSelfXYZ(Rotations);
+      N.RotateSelfXYZ(Rotations);
+
+      // Translate point, normal does not get translated
+      X += Translation;
+
+      Surface.AddPoint(X, N);
+    } else {
+      // input format error
+      throw;
+    }
+  }
+
+
+
+  // Container for Point plus scalar
+  T3DScalarContainer PowerDensityContainer;
+
+
+  // Actually calculate the spectrum
+  bool const Directional = NormalDirection == 0 ? false : true;
+
+  self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, OutFileName);
+
+  // Build the output list of: [[[x, y, z], PowerDensity], [...]]
+  // Create a python list
+  PyObject *PList = PyList_New(0);
+
+  size_t const NPoints = PowerDensityContainer.GetNPoints();
+
+  for (size_t i = 0; i != NPoints; ++i) {
+    T3DScalar P = PowerDensityContainer.GetPoint(i);
+
+    // Inner list for each point
+    PyObject *PList2 = PyList_New(0);
+
+
+    // Add position and value to list
+    PyList_Append(PList2, SRS_TVector3DAsList(P.GetX()));
+    PyList_Append(PList2, Py_BuildValue("f", P.GetV()));
+    PyList_Append(PList, PList2);
+
+  }
+
+  return PList;
+}
 
 
 
@@ -889,19 +985,177 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
   PyObject* List_X0X1X2 = PyList_New(0);
   int       NormalDirection = 0;
   int       Dim = 2;
+  char*     OutFileName = "";
 
 
-  static char *kwlist[] = {"npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", NULL};
+  static char *kwlist[] = {"npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "ofile",  NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|siiOOOO", kwlist,
-                                                              &List_NPoints,
-                                                              &SurfacePlane,
-                                                              &NormalDirection,
-                                                              &Dim,
-                                                              &List_Width,
-                                                              &List_Rotations,
-                                                              &List_Translation,
-                                                              &List_X0X1X2)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|siiOOOOs", kwlist,
+                                                               &List_NPoints,
+                                                               &SurfacePlane,
+                                                               &NormalDirection,
+                                                               &Dim,
+                                                               &List_Width,
+                                                               &List_Rotations,
+                                                               &List_Translation,
+                                                               &List_X0X1X2,
+                                                               &OutFileName)) {
+    return NULL;
+  }
+
+
+  // The rectangular surface object we'll use
+  TSurfacePoints_Rectangle Surface;
+
+  if (PyList_Size(List_NPoints) == 2) {
+    // NPoints in [m]
+    NX1 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 0));
+    NX2 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 1));
+  } else {
+    throw;
+  }
+
+
+
+  if (NX1 <= 0 || NX2 <= 0) {
+    std::cerr << "ERROR: NX1,2 < 1" << std::endl;
+    throw;
+  }
+
+  // Vectors for rotations and translations.  Default to 0
+  TVector3D Rotations(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    Rotations = SRS_ListAsTVector3D(List_Rotations);
+  }
+
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    Translation = SRS_ListAsTVector3D(List_Translation);
+  }
+
+  if (PyList_Size(List_Width) == 2) {
+    // Width in [m]
+    Width_X1 = PyFloat_AsDouble(PyList_GetItem(List_Width, 0));
+    Width_X2 = PyFloat_AsDouble(PyList_GetItem(List_Width, 1));
+  }
+
+
+
+  // If you are requesting a simple surface plane, check that you have widths
+  if (SurfacePlane != "" && Width_X1 > 0 && Width_X2 > 0) {
+    Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
+    std::cout << "init A" << std::endl;
+  }
+
+
+
+  // If X0X1X2 defined
+  std::vector<TVector3D> X0X1X2;
+
+  if (PyList_Size(List_X0X1X2) != 0) {
+    if (PyList_Size(List_X0X1X2) == 3) {
+      for (int i = 0; i != 3; ++i) {
+        PyObject* List_X = PyList_GetItem(List_X0X1X2, i);
+
+        X0X1X2.push_back(SRS_ListAsTVector3D(List_X));
+      }
+    } else {
+      throw;
+    }
+
+    for (std::vector<TVector3D>::iterator it = X0X1X2.begin(); it != X0X1X2.end(); ++it) {
+      it->RotateSelfXYZ(Rotations);
+      *it += Translation;
+    }
+
+    // UPDATE: Check for orthogonality
+    Surface.Init(NX1, NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
+    std::cout << "init B" << std::endl;
+  }
+
+
+  // Container for Point plus scalar
+  T3DScalarContainer PowerDensityContainer;
+
+
+  // Actually calculate the spectrum
+  bool const Directional = NormalDirection == 0 ? false : true;
+  self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, OutFileName);
+
+
+  // Build the output list of: [[[x, y, z], PowerDensity], [...]]
+  // Create a python list
+  PyObject *PList = PyList_New(0);
+
+  size_t const NPoints = PowerDensityContainer.GetNPoints();
+
+  for (size_t i = 0; i != NPoints; ++i) {
+    T3DScalar P = PowerDensityContainer.GetPoint(i);
+
+    // Inner list for each point
+    PyObject *PList2 = PyList_New(0);
+
+
+    // Add position and value to list
+    PyList_Append(PList2, SRS_TVector3DAsList(P.GetX()));
+    PyList_Append(PList2, Py_BuildValue("f", P.GetV()));
+    PyList_Append(PList, PList2);
+
+  }
+
+  return PList;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Calculate the spectrum given an observation point, and energy range
+
+  char*     SurfacePlane = "";
+  size_t    NX1 = 0;
+  size_t    NX2 = 0;
+  double    Width_X1 = 0;
+  double    Width_X2 = 0;
+  PyObject* List_NPoints= PyList_New(0);
+  PyObject* List_Width= PyList_New(0);
+  PyObject* List_Translation = PyList_New(0);
+  PyObject* List_Rotations = PyList_New(0);
+  PyObject* List_X0X1X2 = PyList_New(0);
+  int       NormalDirection = 0;
+  int       Dim = 2;
+  double    Energy_eV = 0;
+  char*     OutFileName = "";
+
+
+  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "ofile", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOs", kwlist,
+                                                                &Energy_eV,
+                                                                &List_NPoints,
+                                                                &SurfacePlane,
+                                                                &NormalDirection,
+                                                                &Dim,
+                                                                &List_Width,
+                                                                &List_Rotations,
+                                                                &List_Translation,
+                                                                &List_X0X1X2,
+                                                                &OutFileName)) {
     return NULL;
   }
 
@@ -974,22 +1228,23 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 
 
   // Container for Point plus scalar
-  T3DScalarContainer PowerDensityContainer;
+  T3DScalarContainer FluxContainer;
 
 
   // Actually calculate the spectrum
   bool const Directional = NormalDirection == 0 ? false : true;
-  self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional);
+  //self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, Directional);
+  self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer);
 
 
-  // Build the output list of: [[[x, y, z], PowerDensity], [...]]
+  // Build the output list of: [[[x, y, z], Flux], [...]]
   // Create a python list
   PyObject *PList = PyList_New(0);
 
-  size_t const NPoints = PowerDensityContainer.GetNPoints();
+  size_t const NPoints = FluxContainer.GetNPoints();
 
   for (size_t i = 0; i != NPoints; ++i) {
-    T3DScalar P = PowerDensityContainer.GetPoint(i);
+    T3DScalar P = FluxContainer.GetPoint(i);
 
     // Inner list for each point
     PyObject *PList2 = PyList_New(0);
@@ -1004,101 +1259,6 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 
   return PList;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args)
-{
-  // Calculate the spectrum given an observation point, and energy range
-
-
-  double    Energy;
-  char*     SurfacePlane;
-  int       NX1;
-  int       NX2;
-  double    Width_X1;
-  double    Width_X2;
-  PyObject* List_Observer;
-  int       NormalDirection;
-
-
-  // Grab the values
-  if (! PyArg_ParseTuple(args, "dsdidiO!i", &Energy, &SurfacePlane, &Width_X1, &NX1, &Width_X2, &NX2, &PyList_Type, &List_Observer, &NormalDirection)) {
-    return NULL;
-  }
-
-  // Has to have the correct number of arguments
-  if (PyList_Size(List_Observer) != 3) {
-    return NULL;
-  }
-
-  // Observation point
-  TVector3D const ObservationPoint = SRS_ListAsTVector3D(List_Observer);
-
-  // Container for Point plus scalar
-  T3DScalarContainer FluxContainer;
-
-  TSurfacePoints_RectangleSimple Surface(SurfacePlane, NX1, NX2, Width_X1, Width_X2, ObservationPoint, NormalDirection);
-
-  // Actually calculate the spectrum
-  self->obj->CalculateFlux(Surface, Energy, FluxContainer);
-
-
-  // Build the output list of: [[[x, y, z], Flux], [...]]
-  // Create a python list
-  PyObject *PList = PyList_New(0);
-
-  size_t const NPoints = FluxContainer.GetNPoints();
-
-  for (size_t i = 0; i != NPoints; ++i) {
-    T3DScalar F = FluxContainer.GetPoint(i);
-
-    // Inner list for each point
-    PyObject *PList2 = PyList_New(0);
-
-    // Add position and value to list
-    PyList_Append(PList2, SRS_TVector3DAsList(F.GetX()));
-    PyList_Append(PList2, Py_BuildValue("f", F.GetV()));
-    PyList_Append(PList, PList2);
-
-  }
-
-  return PList;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1171,7 +1331,8 @@ static PyMethodDef SRS_methods[] = {
 
   {"calculate_total_power",             (PyCFunction) SRS_CalculateTotalPower,             METH_NOARGS,  "calculate total power radiated"},
   {"calculate_power_density_rectangle", (PyCFunction) SRS_CalculatePowerDensityRectangle,  METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
-  {"calculate_flux_rectangle",          (PyCFunction) SRS_CalculateFluxRectangle,          METH_VARARGS, "calculate the flux given a surface"},
+  {"calculate_power_density",           (PyCFunction) SRS_CalculatePowerDensity,           METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
+  {"calculate_flux_rectangle",          (PyCFunction) SRS_CalculateFluxRectangle,          METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
 
   {NULL}  /* Sentinel */
 };
