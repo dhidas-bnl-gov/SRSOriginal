@@ -59,6 +59,8 @@ class TVector3D
     TVector3D& operator /= (double const);
     bool       operator == (TVector3D const&) const;
     bool       operator != (TVector3D const&) const;
+    double     operator [] (int const) const;
+    double&    operator [] (int const);
 
 
 

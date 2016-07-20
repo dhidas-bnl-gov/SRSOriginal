@@ -312,5 +312,40 @@ bool TVector3D::operator != (TVector3D const& V) const
 
 
 
+double TVector3D::operator [] (int const i) const
+{
+  switch(i) {
+    case 0:
+      return fX;
+    case 1:
+      return fY;
+    case 2:
+      return fZ;
+    default:
+      std::cerr << "ERROR: TVector3D operator []" << std::endl;
+      throw;
+  }
+  return 0.;
+}
+
+
+
+
+
+double& TVector3D::operator [] (int const i)
+{
+  switch(i) {
+    case 0:
+      return fX;
+    case 1:
+      return fY;
+    case 2:
+      return fZ;
+    default:
+      std::cerr << "ERROR: TVector3D operator []" << std::endl;
+      throw;
+  }
+  return fX;
+}
 
 

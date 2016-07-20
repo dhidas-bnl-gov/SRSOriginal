@@ -14,12 +14,20 @@ class TTwiss
 {
   public:
     TTwiss ();
+    TTwiss (double const, double const, double const, double const, TVector3D const& X0 = TVector3D(0, 0, 0));
     ~TTwiss ();
 
+    void SetParameters ();
+    void SetX0 (TVector3D const&);
+
   private:
-    double fTestVariable;
 
     TVector3D fX0;  // Location that Twiss parameters are defined
+
+    TVector3D fAlpha;
+    TVector3D fBeta;
+    TVector3D fEpsilon;
+    TVector3D fGamma;
 };
 
 

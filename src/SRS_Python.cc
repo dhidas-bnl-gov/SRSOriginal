@@ -22,6 +22,7 @@
 #include "TBFieldPythonFunction.h"
 #include "TBField3D_Gaussian.h"
 #include "TBField3D_Uniform.h"
+#include "TBField3D_Idealundulator.h"
 
 #include <iostream>
 #include <vector>
@@ -495,6 +496,77 @@ static PyObject* SRS_ClearMagneticFields (SRSObject* self)
 }
 
 
+
+
+
+
+
+
+
+
+static PyObject* SRS_AddMagneticFieldIdealUndulator (SRSObject* self, PyObject* args, PyObject* keywds)
+{
+  // Set the start and stop times for SRS in [m]
+
+
+  // Grab the values
+  PyObject* LBField = PyList_New(0);
+  PyObject* LPeriod = PyList_New(0);
+  int       NPeriods = 0;
+  double    Phase = 0;
+  PyObject* LRotation = PyList_New(0);
+  PyObject* LTranslation = PyList_New(0);
+
+  TVector3D BField(0, 0, 0);
+  TVector3D Period(0, 0, 0);
+  TVector3D Rotation(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+
+  static char *kwlist[] = {"bfield", "period", "nperiods", "phase", "rotations", "translation", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "OOi|dOO", kwlist,
+                                                            &LBField,
+                                                            &LPeriod,
+                                                            &NPeriods,
+                                                            &Phase,
+                                                            &LRotation,
+                                                            &LTranslation)) {
+    return NULL;
+  }
+
+
+
+  // Check BField
+  BField = SRS_ListAsTVector3D(LBField);
+
+  // Check Period
+  Period = SRS_ListAsTVector3D(LPeriod);
+
+  // Check Rotations
+  if (PyList_Size(LRotation) != 0) {
+    Rotation = SRS_ListAsTVector3D(LRotation);
+  }
+
+  // Check Translation
+  if (PyList_Size(LTranslation) != 0) {
+    Translation = SRS_ListAsTVector3D(LTranslation);
+  }
+
+
+  // Rotate field and sigma
+  // UPDATE: check this
+  BField.RotateSelfXYZ(Rotation);
+
+  std::cout << BField << " " << Period << " " << NPeriods << std::endl;
+
+  // Add field
+  self->obj->AddMagneticField( (TBField*) new TBField3D_IdealUndulator(BField, Period, NPeriods, Translation, Phase));
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
 
 
 
@@ -1048,7 +1120,6 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
   // If you are requesting a simple surface plane, check that you have widths
   if (SurfacePlane != "" && Width_X1 > 0 && Width_X2 > 0) {
     Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
-    std::cout << "init A" << std::endl;
   }
 
 
@@ -1074,7 +1145,6 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 
     // UPDATE: Check for orthogonality
     Surface.Init(NX1, NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
-    std::cout << "init B" << std::endl;
   }
 
 
@@ -1315,6 +1385,7 @@ static PyMethodDef SRS_methods[] = {
   {"add_magnetic_field_gaussian",       (PyCFunction) SRS_AddMagneticFieldGaussian,        METH_VARARGS | METH_KEYWORDS, "add a magnetic field in form of 3D gaussian"},
   {"clear_magnetic_fields",             (PyCFunction) SRS_ClearMagneticFields,             METH_NOARGS,  "clear all internal magnetic fields"},
   {"add_magnetic_field_uniform",        (PyCFunction) SRS_AddMagneticFieldUniform,         METH_VARARGS | METH_KEYWORDS, "add a uniform magnetic field in 3D"},
+  {"add_undulator",                     (PyCFunction) SRS_AddMagneticFieldIdealUndulator,  METH_VARARGS | METH_KEYWORDS, "add magnetic field from ideal undulator in 3D"},
   {"get_bfield",                        (PyCFunction) SRS_GetBField,                       METH_VARARGS, "get the magnetic field at a given position in space (and someday time?)"},
                                                                                           
                                                                                           

@@ -102,6 +102,7 @@ void TSurfacePoints_Rectangle::Init (int const NX1, int const NX2, TVector3D con
     throw;
   }
 
+
   return;
 }
 
@@ -161,6 +162,8 @@ void TSurfacePoints_Rectangle::Init (std::string const& p, int const NX1, int co
     throw;
   }
 
+
+
   return;
 }
 
@@ -195,7 +198,7 @@ size_t TSurfacePoints_Rectangle::GetNPoints () const
 double TSurfacePoints_Rectangle::GetX1 (size_t const i) const
 {
   int const ix1 = i / fNX2;
-  return fX1StepSize * ix1 - fX1Vector.Mag() * fNX1/ 2.;
+  return fX1StepSize * ix1 - fX1Vector.Mag() * (fNX1 - 1)/ 2.;
 }
 
 
@@ -204,7 +207,7 @@ double TSurfacePoints_Rectangle::GetX1 (size_t const i) const
 double TSurfacePoints_Rectangle::GetX2 (size_t const i) const
 {
   int const ix2 = i % fNX2;
-  return fX2StepSize * ix2 - fX2Vector.Mag() * fNX2/ 2.;
+  return fX2StepSize * ix2 - fX2Vector.Mag() * (fNX2 - 1)/ 2.;
 }
 
 

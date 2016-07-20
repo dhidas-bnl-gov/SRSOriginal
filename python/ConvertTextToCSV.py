@@ -22,8 +22,8 @@ def ConvertTextToCSV (fileName) :
                 continue
     
             x.append(float(v[0]))
-            y.append(float(v[1]))
-            z.append(float(v[2]))
+            y.append(float(v[2]))
+            z.append(float(v[3]))
 
 
     x2 = list(set(x))
@@ -36,14 +36,14 @@ def ConvertTextToCSV (fileName) :
     y2.sort()
 
 
-  print ' ,', ', '.join(map(str, y2))
-  for i in xrange(nx):
-    print str(x2[i]) + ',',
-    for j in xrange(ny):
-      if j < ny - 1:
-        print str(z[i * ny + j]) + ',',
-      else:
-        print z[i * ny + j]
+    print ' ,', ', '.join(map(str, x2))
+    for i in xrange(ny):
+        print str(y2[i]) + ',',
+        for j in xrange(nx):
+            if j < nx - 1:
+                print str(z[i * nx + j]) + ',',
+            else:
+                print z[i * nx + j]
 
 
 
