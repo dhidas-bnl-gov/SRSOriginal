@@ -205,8 +205,7 @@ void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, TVe
   // Charge      - Charge of custom particle
   // Mass        - Mass of custom particle
 
-
-  fParticleBeamContainer.AddNewParticleBeam(Type, Name, X0, V0, Energy_GeV, T0, Current, Weight);
+  fParticleBeamContainer.AddNewParticleBeam(Type, Name, X0, V0, Energy_GeV, T0, Current, Weight, Charge, Mass);
   return;
 }
 
@@ -562,10 +561,10 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
   size_t const NEPoints = Spectrum.GetNPoints();
 
   // Constant C0 for calculation
-  double const C0 = TSRS::Qe() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
+  double const C0 = Particle.GetQ() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
 
   // Constant for flux calculation at the end
-  double const C2 = TSRS::FourPi() * Particle.GetCurrent() / (TSRS::H() * fabs(TSRS::Qe()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
+  double const C2 = TSRS::FourPi() * Particle.GetCurrent() / (TSRS::H() * fabs(Particle.GetQ()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
 
   // Imaginary "i" and complxe 1+0i
   std::complex<double> const I(0, 1);
@@ -1056,9 +1055,9 @@ void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, 
 
 
 
-void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer)
+void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer& XYZT)
 {
-  this->CalculateElectricFieldTimeDomain(Observer, fParticle);
+  this->CalculateElectricFieldTimeDomain(Observer, XYZT, fParticle);
   return;
 }
 
@@ -1066,7 +1065,7 @@ void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer)
 
 
 
-void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, TParticleA& Particle)
+void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer& XYZT,  TParticleA& Particle)
 {
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
@@ -1076,6 +1075,8 @@ void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, TParticle
   if (T.GetNPoints() == 0) {
     this->CalculateTrajectory(Particle);
   }
+
+  double const DeltaT = T.GetDeltaT();
 
   double const C0 = Particle.GetQ() / (TSRS::FourPi() * TSRS::Epsilon0());
   // Loop over trajectory points
@@ -1098,7 +1099,9 @@ void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, TParticle
     TVector3D const  FarField = (1.0 / TSRS::C()) * (N.Cross(  (N - B).Cross(AoverC))  ) / R.Mag();
 
     TVector3D const EField = Mult * (NearField + FarField);
-    double    const ProperTime = D / TSRS::C();
+    double    const Time = iT * DeltaT + D / TSRS::C();
+
+    XYZT.AddPoint(EField, Time);
   }
 
   //return TVector3D(Mult * (NearField + FarField));

@@ -90,6 +90,7 @@ void TParticleA::SetParticleType (std::string const& Type)
   } else if (type == "custom") {
     // Don't do anything.  Q and M are set elsewhere for custom particles
   } else {
+    std::cerr << "TParticleA::SetParticleType type not found: " << Type << std::endl;
     throw;
   }
 
@@ -108,6 +109,7 @@ void TParticleA::SetParticleTypeCustom (std::string const& Type, double const Ch
 
   // Save name you give it
   fType = Type;
+
 
   // Set charge and mass
   this->SetQM(Charge, Mass);

@@ -87,8 +87,8 @@ class SRS
     void CalculateFlux (TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
 
     // Electric Field Calculations
-    void CalculateElectricFieldTimeDomain (TVector3D const& Observer);
-    void CalculateElectricFieldTimeDomain (TVector3D const& Observer, TParticleA& Particle);
+    void CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer&);
+    void CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer&, TParticleA& Particle);
 
   private:
     TBFieldContainer fBFieldContainer;

@@ -612,7 +612,6 @@ static PyObject* SRS_AddMagneticFieldIdealUndulator (SRSObject* self, PyObject* 
   BField.RotateSelfXYZ(Rotations);
   Period.RotateSelfXYZ(Rotations);
 
-  std::cout << BField << " " << Period << " " << NPeriods << std::endl;
 
   // Add field
   self->obj->AddMagneticField( (TBField*) new TBField3D_IdealUndulator(BField, Period, NPeriods, Translation, Phase));
@@ -699,20 +698,20 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject*
 
   // Input variables and parsing
   static char *kwlist[] = {"type", "name", "x0", "v0", "energy_GeV", "sigma_energy_GeV", "t0", "current", "weight", "rotations", "translation", "mass", "charge", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssOO|dddddOO", kwlist,
-                                                                 &Type,
-                                                                 &Name,
-                                                                 &List_X0,
-                                                                 &List_V0,
-                                                                 &Energy_GeV,
-                                                                 &Sigma_Energy_GeV,
-                                                                 &T0,
-                                                                 &Current,
-                                                                 &Weight,
-                                                                 &List_Rotations,
-                                                                 &List_Translation,
-                                                                 &Mass,
-                                                                 &Charge)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssOO|dddddOOdd", kwlist,
+                                                                   &Type,
+                                                                   &Name,
+                                                                   &List_X0,
+                                                                   &List_V0,
+                                                                   &Energy_GeV,
+                                                                   &Sigma_Energy_GeV,
+                                                                   &T0,
+                                                                   &Current,
+                                                                   &Weight,
+                                                                   &List_Rotations,
+                                                                   &List_Translation,
+                                                                   &Mass,
+                                                                   &Charge)) {
     return NULL;
   }
 
@@ -770,7 +769,7 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject*
   X0 += Translation;
 
   // Add the particle beam
-  if (Type == "custom") {
+  if (std::string(Type) == "custom") {
     if (Mass == 0 || Charge == 0) {
       PyErr_SetString(PyExc_ValueError, "'mass' or 'charge' is zero");
       return NULL;
@@ -1103,7 +1102,6 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
       Surface.AddPoint(X, N);
     } else {
       // input format error
-      std::cout << "ERR" << std::endl;
       PyErr_SetString(PyExc_ValueError, "Incorrect format in 'points'");
       return NULL;
     }
@@ -1512,10 +1510,31 @@ static PyObject* SRS_CalculateElectricFieldTimeDomain (SRSObject* self, PyObject
     return NULL;
   }
 
+  T3DScalarContainer XYZT;
+  self->obj->CalculateElectricFieldTimeDomain(Obs, XYZT);
 
-  // Must return python object None in a special way
-  Py_INCREF(Py_None);
-  return Py_None;
+
+  // Build the output list of: [[[x, y, z], Flux], [...]]
+  // Create a python list
+  PyObject *PList = PyList_New(0);
+
+  size_t const NPoints = XYZT.GetNPoints();
+
+  for (size_t i = 0; i != NPoints; ++i) {
+    T3DScalar P = XYZT.GetPoint(i);
+
+    // Inner list for each point
+    PyObject *PList2 = PyList_New(0);
+
+
+    // Add position and value to list
+    PyList_Append(PList2, Py_BuildValue("f", P.GetV()));
+    PyList_Append(PList2, SRS_TVector3DAsList(P.GetX()));
+    PyList_Append(PList, PList2);
+
+  }
+
+  return PList;
 }
 
 
