@@ -22,6 +22,7 @@
 SRS::SRS ()
 {
   // Default constructor
+  //fParticle.SetParticleType("");
 }
 
 
@@ -181,7 +182,16 @@ TVector3D SRS::GetB (double const X, double const Y, double const Z) const
 
 
 
-void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, TVector3D const& X0, TVector3D const& V0, double const Energy_GeV, double const T0, double const Current, double const Weight)
+TVector3D SRS::GetB (TVector3D const& X) const
+{
+  // Return summed Bx from container
+  return this->fBFieldContainer.GetB(X);
+}
+
+
+
+
+void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, TVector3D const& X0, TVector3D const& V0, double const Energy_GeV, double const T0, double const Current, double const Weight, double const Charge, double const Mass)
 {
   // Add a particle beam
   // Type        - The name of the particle type that you want to use
@@ -192,6 +202,8 @@ void SRS::AddParticleBeam (std::string const& Type, std::string const& Name, TVe
   // T0          - Time of initial conditions, specified in units of m (for v = c)
   // Current     - Beam current in Amperes
   // Weight      - Relative weight to give this beam when randomly sampling
+  // Charge      - Charge of custom particle
+  // Mass        - Mass of custom particle
 
 
   fParticleBeamContainer.AddNewParticleBeam(Type, Name, X0, V0, Energy_GeV, T0, Current, Weight);
@@ -314,6 +326,11 @@ void SRS::CalculateTrajectory ()
 {
   // Function to calculate the particle trajectory of the member particle fParticle
 
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    this->SetNewParticle();
+  }
+
   this->CalculateTrajectory(fParticle);
 
   return;
@@ -412,11 +429,8 @@ void SRS::CalculateTrajectory (TParticleA& P)
     ParticleTrajectory.AddPoint(x[0], x[2], x[4], x[1] / TSRS::C(), x[3] / TSRS::C(), x[5] / TSRS::C(), dxdt[1] / TSRS::C(), dxdt[3] / TSRS::C(), dxdt[5] / TSRS::C());
   }
 
-
-
   // Re-Reverse the trajectory to be in the proper time order
   ParticleTrajectory.ReverseArrays();
-
 
   return;
 }
@@ -454,13 +468,15 @@ void SRS::Derivatives (double t, double x[], double dxdt[], TParticleA const& P)
   // x[4] - z
   // x[5] - Vz
 
+  // BField at this point
+  TVector3D const B = this->GetB(x[0], x[2], x[4]);
 
   dxdt[0] = x[1];
-  dxdt[1] = P.GetQoverMGamma() * (-x[5] * this->GetBy(x[0], x[2], x[4]) + x[3] * this->GetBz(x[0], x[2], x[4]));
-  dxdt[2] = x[3];                                                                                                                            
-  dxdt[3] = P.GetQoverMGamma() * ( x[5] * this->GetBx(x[0], x[2], x[4]) - x[1] * this->GetBz(x[0], x[2], x[4]));
-  dxdt[4] = x[5];                                                                                                                            
-  dxdt[5] = P.GetQoverMGamma() * ( x[1] * this->GetBy(x[0], x[2], x[4]) - x[3] * this->GetBx(x[0], x[2], x[4]));
+  dxdt[1] = P.GetQoverMGamma() * (-x[5] * B.GetY() + x[3] * B.GetZ());
+  dxdt[2] = x[3];                                                                                            
+  dxdt[3] = P.GetQoverMGamma() * ( x[5] * B.GetX() - x[1] * B.GetZ());
+  dxdt[4] = x[5];                                                                                            
+  dxdt[5] = P.GetQoverMGamma() * ( x[1] * B.GetY() - x[3] * B.GetX());
 
   return;
 }
@@ -767,7 +783,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
       Sum += pow(Numerator.Dot(N3), 2) / Denominator / (Obs - X).Mag2() * N1DotNormal;
     }
 
-    // Put into SI units
+    // Undulators, Wigglers and their applications, p42
     Sum *= fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TSRS::Pi2() * TSRS::Epsilon0() * TSRS::C()) * DeltaT;
 
     Sum /= 1e6; // m^2 to mm^2
@@ -865,6 +881,7 @@ double SRS::CalculateTotalPower (TParticleA& Particle)
 
   }
 
+  // Undulators, Wigglers and their applications, p42
   TotalPower *= fabs(Particle.GetQ() * Particle.GetCurrent()) * pow(Particle.GetGamma(), 6) / (6 * TSRS::Pi() * TSRS::Epsilon0() * TSRS::C());
 
 
@@ -1032,5 +1049,58 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
 {
   this->CalculateFlux(fParticle, Surface, Energy_eV, FluxContainer);
+  return;
+}
+
+
+
+
+
+void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer)
+{
+  this->CalculateElectricFieldTimeDomain(Observer, fParticle);
+  return;
+}
+
+
+
+
+
+void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, TParticleA& Particle)
+{
+  // Grab the Trajectory
+  TParticleTrajectoryPoints& T = Particle.GetTrajectory();
+  size_t const NTPoints = T.GetNPoints();
+
+  // If trajectory is empty, calculate it
+  if (T.GetNPoints() == 0) {
+    this->CalculateTrajectory(Particle);
+  }
+
+  double const C0 = Particle.GetQ() / (TSRS::FourPi() * TSRS::Epsilon0());
+  // Loop over trajectory points
+  for (size_t iT = 0; iT != NTPoints; ++iT) {
+
+    // Get position, Beta, and Acceleration (over c)
+    TVector3D const& X = T.GetX(iT);
+    TVector3D const& B = T.GetB(iT);
+    TVector3D const& AoverC = T.GetAoverC(iT);
+
+    // Define R and unit vector in direction of R, and D (distance to observer)
+    TVector3D const R = Observer - X;
+    TVector3D const N = R.UnitVector();
+    double const D = R.Mag();
+
+    // Synchrotron Radiation, Philip john Duke, p74
+
+    double    const      Mult = C0 * pow(1.0 / (1.0 - N.Dot(B)), 3);
+    TVector3D const NearField = ((1.0 - B.Mag2() ) * (N - B)) / R.Mag2();
+    TVector3D const  FarField = (1.0 / TSRS::C()) * (N.Cross(  (N - B).Cross(AoverC))  ) / R.Mag();
+
+    TVector3D const EField = Mult * (NearField + FarField);
+    double    const ProperTime = D / TSRS::C();
+  }
+
+  //return TVector3D(Mult * (NearField + FarField));
   return;
 }

@@ -41,6 +41,7 @@ class TBField3DZRegularized : public TBField
     double    GetBy (double const, double const, double const) const;
     double    GetBz (double const, double const, double const) const;
     TVector3D GetB  (double const, double const, double const) const;
+    TVector3D GetB  (TVector3D const&) const;
 
     double GetBxAtZ (double const) const;
     double GetByAtZ (double const) const;

@@ -259,7 +259,15 @@ double TBField3DZRegularized::GetBz (double const X, double const Y, double cons
 
 TVector3D TBField3DZRegularized::GetB (double const X, double const Y, double const Z) const
 {
-  return TVector3D(this->GetBxAtZ(Z), this->GetByAtZ(Z), this->GetBzAtZ(Z));
+  return this->GetB(TVector3D(X, Y, Z));
+}
+
+
+
+
+TVector3D TBField3DZRegularized::GetB (TVector3D const& P) const
+{
+  return TVector3D(this->GetBxAtZ(P.GetZ()), this->GetByAtZ(P.GetZ()), this->GetBzAtZ(P.GetZ()));
 }
 
 

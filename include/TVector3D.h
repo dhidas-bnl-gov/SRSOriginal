@@ -77,6 +77,7 @@ class TVector3D
 
 inline std::ostream& operator << (std::ostream& os, TVector3D const& o)
 {
+  // For easy printing
   os << "(" << o.GetX() << ", " << o.GetY() << ", " << o.GetZ() << ")";
   return os;
 }
@@ -84,14 +85,6 @@ inline std::ostream& operator << (std::ostream& os, TVector3D const& o)
 
 
 
-inline bool TVector3D::operator < (TVector3D const& R) const
-{
-  if (this->GetX() < R.GetX() && this->GetY() < R.GetY() && this->GetZ() < R.GetZ()) {
-    return true;
-  }
-
-  return false;
-}
 
 
 
@@ -130,9 +123,9 @@ inline TVector3D TVector3D::Orthogonal() const
   double yy = fY < 0.0 ? -fY : fY;
   double zz = fZ < 0.0 ? -fZ : fZ;
   if (xx < yy) {
-    return xx < zz ? TVector3D(0,fZ,-fY) : TVector3D(fY,-fX,0);
+    return xx < zz ? TVector3D(0, fZ, -fY) : TVector3D(fY, -fX, 0);
   } else {
-    return yy < zz ? TVector3D(-fZ,0,fX) : TVector3D(fY,-fX,0);
+    return yy < zz ? TVector3D(-fZ, 0, fX) : TVector3D(fY, -fX, 0);
   }
 }
 

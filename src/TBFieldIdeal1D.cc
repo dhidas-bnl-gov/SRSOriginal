@@ -67,5 +67,13 @@ double TBFieldIdeal1D::GetBz (double const X, double const Y, double const Z) co
 
 TVector3D TBFieldIdeal1D::GetB (double const X, double const Y, double const Z) const
 {
-  return TVector3D(0, this->GetBy(X, Y, Z), 0);
+  return this->GetB(TVector3D(X, Y, Z));
+}
+
+
+
+
+TVector3D TBFieldIdeal1D::GetB (TVector3D const& P) const
+{
+  return TVector3D(0, this->GetBy(P.GetX(), P.GetY(), P.GetZ()), 0);
 }

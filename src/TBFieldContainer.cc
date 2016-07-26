@@ -99,6 +99,21 @@ TVector3D TBFieldContainer::GetB (double const X, double const Y, double const Z
 
 
 
+TVector3D TBFieldContainer::GetB (TVector3D const& X) const
+{
+  TVector3D Sum(0, 0, 0);
+
+  // Loop over BFields for summing B-fields
+  for (std::vector<TBField*>::const_iterator it = fBFields.begin(); it != fBFields.end(); ++it) {
+    Sum += (*it)->GetB(X);
+  }
+
+  return Sum;
+}
+
+
+
+
 void TBFieldContainer::Clear ()
 {
   for (std::vector<TBField*>::iterator it = fBFields.begin(); it != fBFields.end(); ++it) {

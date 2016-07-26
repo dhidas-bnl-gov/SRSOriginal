@@ -314,7 +314,10 @@ bool TVector3D::operator != (TVector3D const& V) const
 
 double TVector3D::operator [] (int const i) const
 {
-  switch(i) {
+  // An operator to use an index like a vector
+  // For getting a value
+
+  switch (i) {
     case 0:
       return fX;
     case 1:
@@ -334,7 +337,10 @@ double TVector3D::operator [] (int const i) const
 
 double& TVector3D::operator [] (int const i)
 {
-  switch(i) {
+  // An operator to use an index like a vector
+  // For setting a value
+
+  switch (i) {
     case 0:
       return fX;
     case 1:

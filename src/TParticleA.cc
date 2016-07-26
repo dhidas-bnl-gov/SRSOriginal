@@ -87,6 +87,8 @@ void TParticleA::SetParticleType (std::string const& Type)
     this->SetQM( -TSRS::Qe(), TSRS::Me() );
   } else if (type == "neutron") {
     this->SetQM(           0, TSRS::Me() );
+  } else if (type == "custom") {
+    // Don't do anything.  Q and M are set elsewhere for custom particles
   } else {
     throw;
   }

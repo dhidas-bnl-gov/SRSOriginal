@@ -17,7 +17,6 @@ import SRS
 srs0 = SRS.SRS()
 
 print srs0.pi()
-exit(0)
 
 
 def myfunc (X):
@@ -50,11 +49,13 @@ srs0.set_ctstartstop(-2, 2)
 srs0.set_npoints_trajectory(20001)
 
 #srs0.add_magnetic_field('epu_linear.dat', 'ZBxByBz')
-srs0.add_particle_beam('electron', 'beam_0', [0, 0, 0], [0, 0, 1], 3, -2, 0.500, 0.1)
-#srs0.add_particle_beam('electron', 'beam_1', [0, 0, -2], [0, 0, 1], 3, -2, 0.500, 0.9)
+srs0.add_particle_beam(type='electron', name='beam_0', x0=[0, 0, 0], v0=[0, 0, 1], energy_GeV=3, t0=-2, current=0.500, weight=0.1)
 
-srs0.set_new_particle()
 
+srs0.calculate_trajectory()
+power_density = srs0.calculate_power_density(points=[[[0, 0, 30], [0, 0, 1]]])
+print power_density
+exit(0)
 
 if False:
   for i in xrange(10000):

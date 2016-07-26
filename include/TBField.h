@@ -19,16 +19,7 @@ class TBField
     virtual double    GetBy (double const, double const, double const) const = 0;
     virtual double    GetBz (double const, double const, double const) const = 0;
     virtual TVector3D GetB  (double const, double const, double const) const = 0;
-
-    bool IsWithinRange (double const, double const, double const) const;
-
-  private:
-    double fXMin;
-    double fXMax;
-    double fYMin;
-    double fYMax;
-    double fZMin;
-    double fZMax;
+    virtual TVector3D GetB  (TVector3D const&) const = 0;
 
 };
 

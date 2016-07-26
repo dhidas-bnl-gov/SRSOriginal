@@ -24,7 +24,7 @@ class TParticleBeam : public TParticleA
     TParticleBeam (std::string const&);
     TParticleBeam (std::string const&, double const, double const);
     TParticleBeam (std::string const&, TVector3D const&, TVector3D const&, double const, double const);
-    TParticleBeam (std::string const&, TVector3D const&, TVector3D const&, double const, double const, double const);
+    TParticleBeam (std::string const&, TVector3D const&, TVector3D const&, double const, double const, double const, double const Charge = 0, double const Mass = 0);
     TParticleBeam (std::string const&, TVector3D const&, TVector3D const&, double const, double const, double const, TTwiss const&);
     ~TParticleBeam ();
 

@@ -30,7 +30,7 @@ TParticleBeamContainer::~TParticleBeamContainer ()
 
 
 
-void TParticleBeamContainer::AddNewParticleBeam (std::string const& Type, std::string const& Name, TVector3D const& X0, TVector3D const& D0, double const E0, double const T0, double const Current, double const Weight)
+void TParticleBeamContainer::AddNewParticleBeam (std::string const& Type, std::string const& Name, TVector3D const& X0, TVector3D const& D0, double const E0, double const T0, double const Current, double const Weight, double const Charge, double const Mass)
 {
   if (fParticleBeamMap.count(Name) != 0) {
     throw;
@@ -42,7 +42,11 @@ void TParticleBeamContainer::AddNewParticleBeam (std::string const& Type, std::s
     fParticleBeamWeightSums.push_back(fParticleBeamWeightSums.back() + Weight);
   }
 
-  fParticleBeams.push_back( TParticleBeam(Type, X0, D0, E0, T0, Current) );
+  if (Type == "custom") {
+    fParticleBeams.push_back( TParticleBeam(Type, X0, D0, E0, T0, Current, Weight, Mass) );
+  } else {
+    fParticleBeams.push_back( TParticleBeam(Type, X0, D0, E0, T0, Current) );
+  }
   fParticleBeamMap[Name] = fParticleBeams.back();
 
   return;

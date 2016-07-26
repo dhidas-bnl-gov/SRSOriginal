@@ -30,6 +30,7 @@ class TBFieldContainer
     double    GetBy (double const, double const, double const) const;
     double    GetBz (double const, double const, double const) const;
     TVector3D GetB  (double const, double const, double const) const;
+    TVector3D GetB  (TVector3D const&) const;
 
     void      Clear ();
 

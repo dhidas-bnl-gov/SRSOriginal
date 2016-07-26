@@ -65,12 +65,16 @@ TParticleBeam::TParticleBeam (std::string const& ParticleType, TVector3D const& 
 
 
 
-TParticleBeam::TParticleBeam (std::string const& ParticleType, TVector3D const& X0, TVector3D const& D0, double const Energy, double const T0, double const Current)
+TParticleBeam::TParticleBeam (std::string const& ParticleType, TVector3D const& X0, TVector3D const& D0, double const Energy, double const T0, double const Current, double const Charge, double const Mass)
 {
   std::cout << "current " << Current << std::endl;
   // Constructor given a particle type.
 
-  this->SetParticleType(ParticleType);
+  if (ParticleType == "custom") {
+    this->SetParticleTypeCustom(ParticleType, Charge, Mass);
+  } else {
+    this->SetParticleType(ParticleType);
+  }
 
   fX0 = X0;
   fU0 = D0.UnitVector();

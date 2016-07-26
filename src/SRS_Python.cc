@@ -73,7 +73,7 @@ static TVector3D SRS_ListAsTVector3D (PyObject* List)
              PyFloat_AsDouble(PyList_GetItem(List, 2)));
     Py_DECREF(List);
   } else {
-    throw;
+    throw std::length_error("number of elements not 3");
   }
 
   // Return the python list
@@ -88,6 +88,8 @@ static TVector3D SRS_ListAsTVector3D (PyObject* List)
 
 static PyObject* SRS_TVector3DAsList (TVector3D const& V)
 {
+  // Turn a TVector3D into a list (like a vector)
+
   // Create a python list
   PyObject *PList = PyList_New(0);
 
@@ -107,8 +109,31 @@ static PyObject* SRS_TVector3DAsList (TVector3D const& V)
 
 static PyObject* SRS_Pi (SRSObject* self, PyObject* arg)
 {
+  // Return the internal SRS number constant pi
   return Py_BuildValue("d", TSRS::Pi());
 }
+
+
+
+static PyObject* SRS_Qe (SRSObject* self, PyObject* arg)
+{
+  // Return the internal SRS number for elementary charge
+  return Py_BuildValue("d", TSRS::Qe());
+}
+
+
+
+
+static PyObject* SRS_Me (SRSObject* self, PyObject* arg)
+{
+  // Return the internal SRS number for mass of the electron [kg]
+  return Py_BuildValue("d", TSRS::Me());
+}
+
+
+
+
+
 
 
 
@@ -136,7 +161,6 @@ static PyObject* SRS_SetCTStart (SRSObject* self, PyObject* arg)
 static PyObject* SRS_GetCTStart (SRSObject* self)
 {
   // Get the start time in [m] for calculation
-
   return Py_BuildValue("d", self->obj->GetCTStart());
 }
 
@@ -160,35 +184,11 @@ static PyObject* SRS_SetCTStop (SRSObject* self, PyObject* arg)
 
 
 
-static PyObject* SRS_SetCTStop2 (SRSObject* self, PyObject* args, PyObject *keywds)
-{
-  // Set the stop time in [m] for calculations
-
-    int voltage;
-    char *state = "a stiff";
-    char *action = "voom";
-    char *type = "Norwegian Blue";
-
-    static char *kwlist[] = {"voltage", "state", "action", "type", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, keywds, "i|sss", kwlist,
-                                     &voltage, &state, &action, &type))
-        return NULL;
-
-
-  self->obj->SetCTStop(0.1);
-
-  // Must return python object None in a special way
-  Py_INCREF(Py_None);
-  return Py_None;
-}
-
 
 
 static PyObject* SRS_GetCTStop (SRSObject* self)
 {
   // Get the CTStop variable from SRS
-
   return Py_BuildValue("d", self->obj->GetCTStop());
 }
 
@@ -201,7 +201,7 @@ static PyObject* SRS_SetCTStartStop (SRSObject* self, PyObject* args)
 
   // Grab the values
   double Start, Stop;
-  if (! PyArg_ParseTuple(args, "dd", &Start, &Stop)) {
+  if (!PyArg_ParseTuple(args, "dd", &Start, &Stop)) {
     return NULL;
   }
 
@@ -251,62 +251,68 @@ static PyObject* SRS_SetNPointsTrajectory (SRSObject* self, PyObject* arg)
 
 static PyObject* SRS_AddMagneticField (SRSObject* self, PyObject* args, PyObject* keywds)
 {
-  // Set the start and stop times for SRS in [m]
-  // UPDATE: Needs comments
+  // Add a magnetic field from a file.
+  // UPDATE: add binary file reading
 
 
   // Grab the values
-  char* FileName = "";
-  char* FileFormat = "";
-  PyObject* LRotation = PyList_New(0);
-  PyObject* LTranslation = PyList_New(0);
-  PyObject* LScaling = PyList_New(0);
+  char const* FileName = "";
+  char const* FileFormat = "";
+  PyObject*   List_Rotations   = PyList_New(0);
+  PyObject*   List_Translation = PyList_New(0);
+  PyObject*   List_Scaling     = PyList_New(0);
 
-  TVector3D Rotation(0, 0, 0);
+  TVector3D Rotations(0, 0, 0);
   TVector3D Translation(0, 0, 0);
   std::vector<double> Scaling;
 
 
-
+  // Input variables and parsing
   static char *kwlist[] = {"ifile", "iformat", "rotations", "translation", "scale", NULL};
-
   if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss|OOO", kwlist,
                                                            &FileName,
                                                            &FileFormat,
-                                                           &LRotation,
-                                                           &LTranslation,
-                                                           &LScaling)) {
+                                                           &List_Rotations,
+                                                           &List_Translation,
+                                                           &List_Scaling)) {
     return NULL;
   }
 
-
-
+  // Check that filename and format exist
   if (FileName == "" || FileFormat == "") {
-    throw;
+    PyErr_SetString(PyExc_ValueError, "'ifile' or 'iformat' is blank");
+    return NULL;
+  }
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
   }
 
 
-  // Check Rotations
-  if (PyList_Size(LRotation) != 0) {
-    Rotation = SRS_ListAsTVector3D(LRotation);
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
   }
 
-
-  // Check Translation
-  if (PyList_Size(LTranslation) != 0) {
-    Translation = SRS_ListAsTVector3D(LTranslation);
-  }
-
-
-  // Add any scaling factors
+  // Get any scaling factors
   // UPDATE: Check against fileformat number of strings
-  for (int i = 0; i < PyList_Size(LScaling); ++i) {
-    Scaling.push_back(PyFloat_AsDouble(PyList_GetItem(LScaling, i)));
+  for (int i = 0; i < PyList_Size(List_Scaling); ++i) {
+    Scaling.push_back(PyFloat_AsDouble(PyList_GetItem(List_Scaling, i)));
   }
 
-
-  // Set the object variable
-  self->obj->AddMagneticField(FileName, FileFormat, Rotation, Translation, Scaling);
+  // Add the magnetic field to the SRS object
+  self->obj->AddMagneticField(FileName, FileFormat, Rotations, Translation, Scaling);
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -322,19 +328,21 @@ static PyObject* SRS_AddMagneticField (SRSObject* self, PyObject* args, PyObject
 
 static PyObject* SRS_AddMagneticFieldFunction (SRSObject* self, PyObject* args)
 {
-  // Set the start and stop times for SRS in [m]
+  // Add a python function as a magnetic field object
 
-  // Grab the values
+  // Grab the function
   PyObject* Function;
   if (! PyArg_ParseTuple(args, "O:set_callback", &Function)) {
     return NULL;
   }
 
+  // Increment ref to function for python
   Py_INCREF(Function);
 
-
+  // Add the function as a field to the SRS object
   self->obj->AddMagneticField( (TBField*) new TBFieldPythonFunction(Function));
 
+  // Decrement reference to function for python
   Py_DECREF(Function);
 
   // Must return python object None in a special way
@@ -351,54 +359,73 @@ static PyObject* SRS_AddMagneticFieldFunction (SRSObject* self, PyObject* args)
 
 static PyObject* SRS_AddMagneticFieldGaussian (SRSObject* self, PyObject* args, PyObject* keywds)
 {
-  // Set the start and stop times for SRS in [m]
+  // Add a magnetic field that is a gaussian
 
-
-  // Grab the values
-  PyObject* LBField = PyList_New(0);
-  PyObject* LTranslation = PyList_New(0);
-  PyObject* LRotation = PyList_New(0);
-  PyObject* LSigma = PyList_New(0);
+  // Lists and variables
+  PyObject* List_BField       = PyList_New(0);
+  PyObject* List_Translation  = PyList_New(0);
+  PyObject* List_Rotations    = PyList_New(0);
+  PyObject* List_Sigma        = PyList_New(0);
 
   TVector3D BField(0, 0, 0);
   TVector3D Sigma(0, 0, 0);
-  TVector3D Rotation(0, 0, 0);
+  TVector3D Rotations(0, 0, 0);
   TVector3D Translation(0, 0, 0);
 
 
+  // Input variables and parsing
   static char *kwlist[] = {"bfield", "sigma", "rotations", "translation", NULL};
-
   if (!PyArg_ParseTupleAndKeywords(args, keywds, "OO|OO", kwlist,
-                                                          &LBField,
-                                                          &LSigma,
-                                                          &LRotation,
-                                                          &LTranslation)) {
+                                                          &List_BField,
+                                                          &List_Sigma,
+                                                          &List_Rotations,
+                                                          &List_Translation)) {
     return NULL;
   }
 
 
 
   // Check BField
-  BField = SRS_ListAsTVector3D(LBField);
-
-  // Check Width
-  Sigma = SRS_ListAsTVector3D(LSigma);
-
-  // Check Rotations
-  if (PyList_Size(LRotation) != 0) {
-    Rotation = SRS_ListAsTVector3D(LRotation);
+  try {
+    BField = SRS_ListAsTVector3D(List_BField);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'bfield'");
+    return NULL;
   }
 
-  // Check Translation
-  if (PyList_Size(LTranslation) != 0) {
-    Translation = SRS_ListAsTVector3D(LTranslation);
+  // Check Width
+  try {
+    Sigma = SRS_ListAsTVector3D(List_Sigma);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'sigma'");
+    return NULL;
+  }
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
+  }
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
   }
 
 
   // Rotate field and sigma
   // UPDATE: check this
-  BField.RotateSelfXYZ(Rotation);
-  Sigma.RotateSelfXYZ(Rotation);
+  BField.RotateSelfXYZ(Rotations);
+  Sigma.RotateSelfXYZ(Rotations);
 
   // Add field
   self->obj->AddMagneticField( (TBField*) new TBField3D_Gaussian(BField, Translation, Sigma));
@@ -417,62 +444,72 @@ static PyObject* SRS_AddMagneticFieldGaussian (SRSObject* self, PyObject* args, 
 
 static PyObject* SRS_AddMagneticFieldUniform (SRSObject* self, PyObject* args, PyObject* keywds)
 {
-  // Set the start and stop times for SRS in [m]
-  // UPDATE: Needs comments
+  // Add a uniform field with a given width in a given direction, or for all space
 
-
-  // Grab the values
-  PyObject* LBField = PyList_New(0);
-  PyObject* LTranslation = PyList_New(0);
-  PyObject* LRotation = PyList_New(0);
-  PyObject* LWidth = PyList_New(0);
+  // Lists and vectors
+  PyObject* List_BField      = PyList_New(0);
+  PyObject* List_Translation = PyList_New(0);
+  PyObject* List_Rotations   = PyList_New(0);
+  PyObject* List_Width       = PyList_New(0);
 
   TVector3D BField(0, 0, 0);
   TVector3D Width (0, 0, 0);
-  TVector3D Rotation(0, 0, 0);
+  TVector3D Rotations(0, 0, 0);
   TVector3D Translation(0, 0, 0);
 
 
+  // Input variables and parsing
   static char *kwlist[] = {"bfield", "width", "rotations", "translation", NULL};
-
   if (!PyArg_ParseTupleAndKeywords(args, keywds, "OO|OO", kwlist,
-                                                          &LBField,
-                                                          &LWidth,
-                                                          &LRotation,
-                                                          &LTranslation)) {
+                                                          &List_BField,
+                                                          &List_Width,
+                                                          &List_Rotations,
+                                                          &List_Translation)) {
     return NULL;
   }
 
 
-
   // Check BField
-  if (PyList_Size(LBField) != 0) {
-    BField = SRS_ListAsTVector3D(LBField);
+  try {
+    BField = SRS_ListAsTVector3D(List_BField);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'bfield'");
+    return NULL;
   }
-
 
   // Check Width
-  if (PyList_Size(LWidth) != 0) {
-    Width = SRS_ListAsTVector3D(LWidth);
+  try {
+    Width = SRS_ListAsTVector3D(List_Width);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'width'");
+    return NULL;
   }
 
-
-  // Check Rotations
-  if (PyList_Size(LRotation) != 0) {
-    Rotation = SRS_ListAsTVector3D(LRotation);
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
   }
 
-
-  // Check Translation
-  if (PyList_Size(LTranslation) != 0) {
-    Translation = SRS_ListAsTVector3D(LTranslation);
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
   }
 
+  // Rotate field and widths
+  BField.RotateSelfXYZ(Rotations);
+  Width.RotateSelfXYZ(Rotations);
 
-  BField.RotateSelfXYZ(Rotation);
-  Width.RotateSelfXYZ(Rotation);
-
-  // Set the object variable
+  // Add the field
   self->obj->AddMagneticField((TBField*) new TBField3D_Uniform(BField, Width, Translation));
 
   // Must return python object None in a special way
@@ -487,7 +524,6 @@ static PyObject* SRS_AddMagneticFieldUniform (SRSObject* self, PyObject* args, P
 static PyObject* SRS_ClearMagneticFields (SRSObject* self)
 {
   // Clear all magnetic fields in the SRS object
-
   self->obj->ClearMagneticFields();
 
   // Must return python object None in a special way
@@ -508,55 +544,73 @@ static PyObject* SRS_AddMagneticFieldIdealUndulator (SRSObject* self, PyObject* 
 {
   // Set the start and stop times for SRS in [m]
 
-
-  // Grab the values
-  PyObject* LBField = PyList_New(0);
-  PyObject* LPeriod = PyList_New(0);
+  // Lists and variables
+  PyObject* List_BField      = PyList_New(0);
+  PyObject* List_Period      = PyList_New(0);
+  PyObject* List_Rotations   = PyList_New(0);
+  PyObject* List_Translation = PyList_New(0);
   int       NPeriods = 0;
   double    Phase = 0;
-  PyObject* LRotation = PyList_New(0);
-  PyObject* LTranslation = PyList_New(0);
 
   TVector3D BField(0, 0, 0);
   TVector3D Period(0, 0, 0);
-  TVector3D Rotation(0, 0, 0);
+  TVector3D Rotations(0, 0, 0);
   TVector3D Translation(0, 0, 0);
 
-
+  // Input variables and parsing
   static char *kwlist[] = {"bfield", "period", "nperiods", "phase", "rotations", "translation", NULL};
-
   if (!PyArg_ParseTupleAndKeywords(args, keywds, "OOi|dOO", kwlist,
-                                                            &LBField,
-                                                            &LPeriod,
+                                                            &List_BField,
+                                                            &List_Period,
                                                             &NPeriods,
                                                             &Phase,
-                                                            &LRotation,
-                                                            &LTranslation)) {
+                                                            &List_Rotations,
+                                                            &List_Translation)) {
     return NULL;
   }
 
 
-
   // Check BField
-  BField = SRS_ListAsTVector3D(LBField);
-
-  // Check Period
-  Period = SRS_ListAsTVector3D(LPeriod);
-
-  // Check Rotations
-  if (PyList_Size(LRotation) != 0) {
-    Rotation = SRS_ListAsTVector3D(LRotation);
+  try {
+    BField = SRS_ListAsTVector3D(List_BField);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'bfield'");
+    return NULL;
   }
 
-  // Check Translation
-  if (PyList_Size(LTranslation) != 0) {
-    Translation = SRS_ListAsTVector3D(LTranslation);
+  // Check Period
+  try {
+    Period = SRS_ListAsTVector3D(List_Period);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'sigma'");
+    return NULL;
+  }
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
+  }
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
   }
 
 
   // Rotate field and sigma
   // UPDATE: check this
-  BField.RotateSelfXYZ(Rotation);
+  BField.RotateSelfXYZ(Rotations);
+  Period.RotateSelfXYZ(Rotations);
 
   std::cout << BField << " " << Period << " " << NPeriods << std::endl;
 
@@ -592,21 +646,20 @@ static PyObject* SRS_GetBField (SRSObject* self, PyObject* args)
     return NULL;
   }
 
-
   // Grab the values
-  double const X = PyFloat_AsDouble(PyList_GetItem(List, 0));
-  double const Y = PyFloat_AsDouble(PyList_GetItem(List, 1));
-  double const Z = PyFloat_AsDouble(PyList_GetItem(List, 2));
+  TVector3D X;
+  try {
+    X = SRS_ListAsTVector3D(List);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+    return NULL;
+  }
 
   // Set the object variable
-  TVector3D const B = self->obj->GetB(X, Y, Z);
+  TVector3D const B = self->obj->GetB(X);
 
   // Create a python list
-  PyObject *PList = PyList_New(0);
-
-  PyList_Append(PList, Py_BuildValue("f", B.GetX()));
-  PyList_Append(PList, Py_BuildValue("f", B.GetY()));
-  PyList_Append(PList, Py_BuildValue("f", B.GetZ()));
+  PyObject *PList = SRS_TVector3DAsList(B);
 
   // Return the python list
   return PList;
@@ -623,81 +676,110 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject*
 {
   // Add a particle beam to the experiment
 
-
-
-  // Grab the values
-  char* Type = "";
-  char* Name = "";
-  PyObject* LX0 = PyList_New(0);
-  PyObject* LV0 = PyList_New(0);
-  double Energy_GeV = 0;
-  double T0 = 0;
-  double Current = 0;
-  double Weight = 1;
-  double Mass = 0;
-  double Charge = 0;
-  PyObject* LRotation = PyList_New(0);
-  PyObject* LTranslation = PyList_New(0);
+  // Lists and variables some with initial values
+  char const* Type             = "";
+  char const* Name             = "";
+  double      Energy_GeV       = 0;
+  double      Sigma_Energy_GeV = 0;
+  double      T0               = 0;
+  double      Current          = 0;
+  double      Weight           = 1;
+  double      Mass             = 0;
+  double      Charge           = 0;
+  PyObject*   List_X0          = PyList_New(0);
+  PyObject*   List_V0          = PyList_New(0);
+  PyObject*   List_Rotations   = PyList_New(0);
+  PyObject*   List_Translation = PyList_New(0);
 
   TVector3D X0;
   TVector3D V0;
-  TVector3D Rotation(0, 0, 0);
+  TVector3D Rotations(0, 0, 0);
   TVector3D Translation(0, 0, 0);
 
 
-
-  static char *kwlist[] = {"type", "name", "x0", "v0", "energy_GeV", "t0", "current", "weight", "rotations", "translation", "mass", "charge", NULL};
-
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssOO|ddddOO", kwlist,
-                                                               &Type,
-                                                               &Name,
-                                                               &LX0,
-                                                               &LV0,
-                                                               &Energy_GeV,
-                                                               &T0,
-                                                               &Current,
-                                                               &Weight,
-                                                               &LRotation,
-                                                               &LTranslation,
-                                                               &Mass,
-                                                               &Charge)) {
+  // Input variables and parsing
+  static char *kwlist[] = {"type", "name", "x0", "v0", "energy_GeV", "sigma_energy_GeV", "t0", "current", "weight", "rotations", "translation", "mass", "charge", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssOO|dddddOO", kwlist,
+                                                                 &Type,
+                                                                 &Name,
+                                                                 &List_X0,
+                                                                 &List_V0,
+                                                                 &Energy_GeV,
+                                                                 &Sigma_Energy_GeV,
+                                                                 &T0,
+                                                                 &Current,
+                                                                 &Weight,
+                                                                 &List_Rotations,
+                                                                 &List_Translation,
+                                                                 &Mass,
+                                                                 &Charge)) {
     return NULL;
   }
 
 
   // Check that type and name exist
   if (Type == "" || Name == "") {
-    throw;
+    PyErr_SetString(PyExc_ValueError, "'type' or 'name' is blank");
+    return NULL;
   }
 
   // If this is a custom particle
-  if (Type == "custom") {
-    if (Mass == 0 || Charge == 0) {
-      throw;
-    }
-    // UPDATE: for custom beams
-    throw;
+  try {
+    X0 = SRS_ListAsTVector3D(List_X0);
+    V0 = SRS_ListAsTVector3D(List_V0);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0' or 'v0'");
+    return NULL;
   }
-
-  X0 = SRS_ListAsTVector3D(LX0);
-  V0 = SRS_ListAsTVector3D(LV0);
 
   if (Energy_GeV == 0) {
     // UPDATE: get energy from V vector
   }
 
-  // Check Rotations
-  if (PyList_Size(LRotation) != 0) {
-    Rotation = SRS_ListAsTVector3D(LRotation);
+  if (Sigma_Energy_GeV == 0) {
+    // Do nothing.  zero energy diff is alright
+  } else if (Sigma_Energy_GeV < 0) {
+    PyErr_SetString(PyExc_ValueError, "'sigma_energy_GeV' cannot be less than zero");
+    return NULL;
   }
 
-  // Check Translation
-  if (PyList_Size(LTranslation) != 0) {
-    Translation = SRS_ListAsTVector3D(LTranslation);
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
   }
+
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
+  }
+
+
+  // Rotate beam parameters
+  X0.RotateSelfXYZ(Rotations);
+  X0 += Translation;
 
   // Add the particle beam
-  self->obj->AddParticleBeam(Type, Name, X0, V0, Energy_GeV, T0, Current, Weight);
+  if (Type == "custom") {
+    if (Mass == 0 || Charge == 0) {
+      PyErr_SetString(PyExc_ValueError, "'mass' or 'charge' is zero");
+      return NULL;
+    }
+    // UPDATE: for custom beams
+    self->obj->AddParticleBeam(Type, Name, X0, V0, Energy_GeV, T0, Current, Weight, Charge, Mass);
+  } else {
+    self->obj->AddParticleBeam(Type, Name, X0, V0, Energy_GeV, T0, Current, Weight);
+  }
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -860,39 +942,40 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   // Calculate the spectrum given an observation point, and energy range
 
 
-  PyObject* LX0 = PyList_New(0);
+  PyObject* List_Obs = PyList_New(0);
   int NPoints = 0;
-  PyObject* LEnergyRange_eV = PyList_New(0);
-  PyObject* LPoints_eV = PyList_New(0);
+  PyObject* List_EnergyRange_eV = PyList_New(0);
+  PyObject* List_Points_eV      = PyList_New(0);
 
 
 
-  static char *kwlist[] = {"xyz", "npoints", "energy_range_eV", "points_eV", NULL};
+  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOO", kwlist,
-                                                          &LX0,
+                                                          &List_Obs,
                                                           &NPoints,
-                                                          &LEnergyRange_eV,
-                                                          &LPoints_eV)) {
+                                                          &List_EnergyRange_eV,
+                                                          &List_Points_eV)) {
     return NULL;
   }
 
 
   // Add all values to a vector
-  std::vector<double> VEnergy;
-  for (int i = 0; i < PyList_Size(LPoints_eV); ++i) {
-    VEnergy.push_back(PyFloat_AsDouble(PyList_GetItem(LPoints_eV, i)));
+  std::vector<double> VPoints_eV;
+  for (int i = 0; i < PyList_Size(List_Points_eV); ++i) {
+    VPoints_eV.push_back(PyFloat_AsDouble(PyList_GetItem(List_Points_eV, i)));
   }
 
   double EStart;
   double EStop;
 
-  if (PyList_Size(LEnergyRange_eV) != 0) {
-    if (PyList_Size(LEnergyRange_eV) == 2) {
-      EStart = PyFloat_AsDouble(PyList_GetItem(LEnergyRange_eV, 0));
-      EStop  = PyFloat_AsDouble(PyList_GetItem(LEnergyRange_eV, 1));
+  if (PyList_Size(List_EnergyRange_eV) != 0) {
+    if (PyList_Size(List_EnergyRange_eV) == 2) {
+      EStart = PyFloat_AsDouble(PyList_GetItem(List_EnergyRange_eV, 0));
+      EStop  = PyFloat_AsDouble(PyList_GetItem(List_EnergyRange_eV, 1));
     } else {
-      throw;
+      PyErr_SetString(PyExc_ValueError, "'energy_range_eV' must be a list of length 2");
+      return NULL;
     }
   }
 
@@ -900,13 +983,19 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
 
 
   // Observation point
-  TVector3D const X0 = SRS_ListAsTVector3D(LX0);
+  TVector3D Obs(0, 0, 0);
+  try {
+    Obs = SRS_ListAsTVector3D(List_Obs);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'obs'");
+    return NULL;
+  }
 
   // Actually calculate the spectrum
-  if (VEnergy.size() == 0) {
-    self->obj->CalculateSpectrum(X0, EStart, EStop, NPoints);
+  if (VPoints_eV.size() == 0) {
+    self->obj->CalculateSpectrum(Obs, EStart, EStop, NPoints);
   } else {
-    self->obj->CalculateSpectrum(X0, VEnergy);
+    self->obj->CalculateSpectrum(Obs, VPoints_eV);
   }
 
   // Return the spectrum
@@ -940,12 +1029,12 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
 {
   // Calculate the spectrum given an observation point, and energy range
 
-  PyObject* List_Translation = PyList_New(0);
-  PyObject* List_Rotations = PyList_New(0);
-  PyObject* List_Points = PyList_New(0);
-  int       NormalDirection = 0;
-  int const Dim = 3;
-  char*     OutFileName = "";
+  PyObject*   List_Translation = PyList_New(0);
+  PyObject*   List_Rotations   = PyList_New(0);
+  PyObject*   List_Points      = PyList_New(0);
+  int         NormalDirection = 0;
+  int const   Dim = 3;
+  char const* OutFileName = "";
 
 
   static char *kwlist[] = {"points", "normal", "rotations", "translation", "ofile", NULL};
@@ -965,15 +1054,26 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
   TVector3D Rotations(0, 0, 0);
   TVector3D Translation(0, 0, 0);
 
+
   // Check for Rotations in the input
   if (PyList_Size(List_Rotations) != 0) {
-    Rotations = SRS_ListAsTVector3D(List_Rotations);
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
   }
 
 
   // Check for Translation in the input
   if (PyList_Size(List_Translation) != 0) {
-    Translation = SRS_ListAsTVector3D(List_Translation);
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
   }
 
 
@@ -981,9 +1081,17 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
   TSurfacePoints_3D Surface;
   for (int i = 0; i < PyList_Size(List_Points); ++i) {
     PyObject* LXN = PyList_GetItem(List_Points, i);
+    TVector3D X;
+    TVector3D N;
     if (PyList_Size(LXN) == 2) {
-      TVector3D X = SRS_ListAsTVector3D(PyList_GetItem(LXN, 0));
-      TVector3D N = SRS_ListAsTVector3D(PyList_GetItem(LXN, 1));
+
+      try {
+        X = SRS_ListAsTVector3D(PyList_GetItem(LXN, 0));
+        N = SRS_ListAsTVector3D(PyList_GetItem(LXN, 1));
+      } catch (std::length_error e) {
+        PyErr_SetString(PyExc_ValueError, "Incorrect format in 'points': Point or Normal does not have 3 elements");
+        return NULL;
+      }
 
       // Rotate point and normal
       X.RotateSelfXYZ(Rotations);
@@ -995,7 +1103,9 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
       Surface.AddPoint(X, N);
     } else {
       // input format error
-      throw;
+      std::cout << "ERR" << std::endl;
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'points'");
+      return NULL;
     }
   }
 
@@ -1045,19 +1155,19 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 {
   // Calculate the spectrum given an observation point, and energy range
 
-  char*     SurfacePlane = "";
-  size_t    NX1 = 0;
-  size_t    NX2 = 0;
-  double    Width_X1 = 0;
-  double    Width_X2 = 0;
-  PyObject* List_NPoints= PyList_New(0);
-  PyObject* List_Width= PyList_New(0);
-  PyObject* List_Translation = PyList_New(0);
-  PyObject* List_Rotations = PyList_New(0);
-  PyObject* List_X0X1X2 = PyList_New(0);
-  int       NormalDirection = 0;
-  int       Dim = 2;
-  char*     OutFileName = "";
+  char const* SurfacePlane = "";
+  size_t      NX1 = 0;
+  size_t      NX2 = 0;
+  double      Width_X1 = 0;
+  double      Width_X2 = 0;
+  PyObject*   List_NPoints     = PyList_New(0);
+  PyObject*   List_Width       = PyList_New(0);
+  PyObject*   List_Translation = PyList_New(0);
+  PyObject*   List_Rotations   = PyList_New(0);
+  PyObject*   List_X0X1X2      = PyList_New(0);
+  int         NormalDirection = 0;
+  int         Dim = 2;
+  char*       OutFileName = "";
 
 
   static char *kwlist[] = {"npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "ofile",  NULL};
@@ -1084,14 +1194,15 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
     NX1 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 0));
     NX2 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 1));
   } else {
-    throw;
+    PyErr_SetString(PyExc_ValueError, "'npoints' must be [int, int]");
+    return NULL;
   }
 
 
 
   if (NX1 <= 0 || NX2 <= 0) {
-    std::cerr << "ERROR: NX1,2 < 1" << std::endl;
-    throw;
+    PyErr_SetString(PyExc_ValueError, "an entry in 'npoints' is <= 0");
+    return NULL;
   }
 
   // Vectors for rotations and translations.  Default to 0
@@ -1100,13 +1211,23 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 
   // Check for Rotations in the input
   if (PyList_Size(List_Rotations) != 0) {
-    Rotations = SRS_ListAsTVector3D(List_Rotations);
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
   }
 
 
   // Check for Translation in the input
   if (PyList_Size(List_Translation) != 0) {
-    Translation = SRS_ListAsTVector3D(List_Translation);
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
   }
 
   if (PyList_Size(List_Width) == 2) {
@@ -1132,10 +1253,16 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
       for (int i = 0; i != 3; ++i) {
         PyObject* List_X = PyList_GetItem(List_X0X1X2, i);
 
-        X0X1X2.push_back(SRS_ListAsTVector3D(List_X));
+        try {
+          X0X1X2.push_back(SRS_ListAsTVector3D(List_X));
+        } catch (std::length_error e) {
+          PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0x1x2'");
+          return NULL;
+        }
       }
     } else {
-      throw;
+      PyErr_SetString(PyExc_ValueError, "'x0x1x2' must have 3 XYZ points defined correctly");
+      return NULL;
     }
 
     for (std::vector<TVector3D>::iterator it = X0X1X2.begin(); it != X0X1X2.end(); ++it) {
@@ -1197,20 +1324,20 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
 {
   // Calculate the spectrum given an observation point, and energy range
 
-  char*     SurfacePlane = "";
-  size_t    NX1 = 0;
-  size_t    NX2 = 0;
-  double    Width_X1 = 0;
-  double    Width_X2 = 0;
-  PyObject* List_NPoints= PyList_New(0);
-  PyObject* List_Width= PyList_New(0);
-  PyObject* List_Translation = PyList_New(0);
-  PyObject* List_Rotations = PyList_New(0);
-  PyObject* List_X0X1X2 = PyList_New(0);
-  int       NormalDirection = 0;
-  int       Dim = 2;
-  double    Energy_eV = 0;
-  char*     OutFileName = "";
+  char const* SurfacePlane = "";
+  size_t      NX1 = 0;
+  size_t      NX2 = 0;
+  double      Width_X1 = 0;
+  double      Width_X2 = 0;
+  PyObject*   List_NPoints= PyList_New(0);
+  PyObject*   List_Width= PyList_New(0);
+  PyObject*   List_Translation = PyList_New(0);
+  PyObject*   List_Rotations = PyList_New(0);
+  PyObject*   List_X0X1X2 = PyList_New(0);
+  int         NormalDirection = 0;
+  int         Dim = 2;
+  double      Energy_eV = 0;
+  char const* OutFileName = "";
 
 
   static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "ofile", NULL};
@@ -1238,14 +1365,15 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
     NX1 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 0));
     NX2 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 1));
   } else {
-    throw;
+    PyErr_SetString(PyExc_ValueError, "'npoints' must be [int, int]");
+    return NULL;
   }
 
 
 
   if (NX1 <= 0 || NX2 <= 0) {
-    std::cerr << "ERROR: NX1,2 < 1" << std::endl;
-    throw;
+    PyErr_SetString(PyExc_ValueError, "an entry in 'npoints' is <= 0");
+    return NULL;
   }
 
   // Vectors for rotations and translations.  Default to 0
@@ -1254,13 +1382,23 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
 
   // Check for Rotations in the input
   if (PyList_Size(List_Rotations) != 0) {
-    Rotations = SRS_ListAsTVector3D(List_Rotations);
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
   }
 
 
   // Check for Translation in the input
   if (PyList_Size(List_Translation) != 0) {
-    Translation = SRS_ListAsTVector3D(List_Translation);
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
   }
 
   if (PyList_Size(List_Width) == 2) {
@@ -1286,15 +1424,27 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
       for (int i = 0; i != 3; ++i) {
         PyObject* List_X = PyList_GetItem(List_X0X1X2, i);
 
-        X0X1X2.push_back(SRS_ListAsTVector3D(List_X));
+        try {
+          X0X1X2.push_back(SRS_ListAsTVector3D(List_X));
+        } catch (std::length_error e) {
+          PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0x1x2'");
+          return NULL;
+        }
       }
     } else {
-      throw;
+      PyErr_SetString(PyExc_ValueError, "'x0x1x2' must have 3 XYZ points defined correctly");
+      return NULL;
+    }
+
+    for (std::vector<TVector3D>::iterator it = X0X1X2.begin(); it != X0X1X2.end(); ++it) {
+      it->RotateSelfXYZ(Rotations);
+      *it += Translation;
     }
 
     // UPDATE: Check for orthogonality
     Surface.Init(NX1, NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
   }
+
 
 
   // Container for Point plus scalar
@@ -1333,6 +1483,57 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
 
 
 
+static PyObject* SRS_CalculateElectricFieldTimeDomain (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Calculate the electric field in the proper time domain.
+  // The warning for using this function is that it returns unevenly spaced
+  // time steps in the lab frame.  The calculation is based on the time stamps/steps
+  // in the Trajectory object.  ie don't blindly employ a DFT or FFT.
+
+  PyObject*   List_Obs = PyList_New(0);
+  char const* OutFileName = "";
+
+
+  static char *kwlist[] = {"obs", "ofile", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|O", kwlist,
+                                                        &List_Obs,
+                                                        &OutFileName)) {
+    return NULL;
+  }
+
+
+  // Observation point
+  TVector3D Obs(0, 0, 0);
+  try {
+      Obs = SRS_ListAsTVector3D(List_Obs);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'obs'");
+    return NULL;
+  }
+
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1360,19 +1561,12 @@ static PyMethodDef SRS_methods[] = {
   // We must tell python about the function we allow access as well as give them nice
   // python names, and tell python the method of input parameters.
 
-  {"pi",                       (PyCFunction) SRS_Pi,                      METH_NOARGS,  "do you want some pi?"},
+  {"pi",                                (PyCFunction) SRS_Pi,                              METH_NOARGS,  "do you want some pi?"},
+  {"qe",                                (PyCFunction) SRS_Qe,                              METH_NOARGS,  "elementary charge in [C]"},
+  {"me",                                (PyCFunction) SRS_Me,                              METH_NOARGS,  "electron mass in [kg]"},
 
 
-  {"set_ctstart",                       (PyCFunction) SRS_SetCTStart,                      METH_O,       
-     "set the start time in [m]\n\n\\
-     :param name: the input name and a much longer description of what this function does really\n\\
-     :type name: str\n\\
-     :param last: the input last name\n\\
-     :type last: str\n\\
-     :returns: str -- a string hello\n\\
-     :raises: AttributeError\n"
-  },
-  //{"set_ctstop2",                       (PyCFunction) SRS_SetCTStop2,                      METH_VARARGS | METH_KEYWORDS,       "set the stop time in [m]"},
+  {"set_ctstart",                       (PyCFunction) SRS_SetCTStart,                      METH_O,       "set the start time in [m]"},
   {"get_ctstart",                       (PyCFunction) SRS_GetCTStart,                      METH_NOARGS,  "get the start time in [m]"},
   {"set_ctstop",                        (PyCFunction) SRS_SetCTStop,                       METH_O,       "set the stop time in [m]"},
   {"get_ctstop",                        (PyCFunction) SRS_GetCTStop,                       METH_NOARGS,  "get the stop time in [m]"},
@@ -1404,6 +1598,8 @@ static PyMethodDef SRS_methods[] = {
   {"calculate_power_density_rectangle", (PyCFunction) SRS_CalculatePowerDensityRectangle,  METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_power_density",           (PyCFunction) SRS_CalculatePowerDensity,           METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_flux_rectangle",          (PyCFunction) SRS_CalculateFluxRectangle,          METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
+
+  {"calculate_electric_field",          (PyCFunction) SRS_CalculateElectricFieldTimeDomain,METH_VARARGS | METH_KEYWORDS, "calculate the electric field in the time domain"},
 
   {NULL}  /* Sentinel */
 };

@@ -41,10 +41,11 @@ class SRS
     double    GetBy (double const, double const, double const) const;
     double    GetBz (double const, double const, double const) const;
     TVector3D GetB  (double const, double const, double const) const;
+    TVector3D GetB  (TVector3D const&) const;
 
 
     // Functions related to the particle beam(s)
-    void AddParticleBeam (std::string const&, std::string const&, TVector3D const&, TVector3D const&, double const, double const, double const, double const);
+    void AddParticleBeam (std::string const&, std::string const&, TVector3D const&, TVector3D const&, double const, double const, double const, double const, double const Charge = 0, double const Mass = 0);
     TParticleBeam& GetParticleBeam (std::string const&);
     TParticleA GetNewParticle ();
     void SetNewParticle ();
@@ -84,6 +85,10 @@ class SRS
     void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, std::string const& OutFileName = "");
     void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
     void CalculateFlux (TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
+
+    // Electric Field Calculations
+    void CalculateElectricFieldTimeDomain (TVector3D const& Observer);
+    void CalculateElectricFieldTimeDomain (TVector3D const& Observer, TParticleA& Particle);
 
   private:
     TBFieldContainer fBFieldContainer;
