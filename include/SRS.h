@@ -48,6 +48,7 @@ class SRS
     void AddParticleBeam (std::string const&, std::string const&, TVector3D const&, TVector3D const&, double const, double const, double const, double const, double const Charge = 0, double const Mass = 0);
     TParticleBeam& GetParticleBeam (std::string const&);
     TParticleA GetNewParticle ();
+    TParticleA const&  GetCurrentParticle () const;
     void SetNewParticle ();
     void ClearParticleBeams ();
 
@@ -67,7 +68,8 @@ class SRS
     double GetCTStop  () const;
 
     void CalculateSpectrum ();
-    void CalculateSpectrum (TParticleA&, TVector3D const&, TSpectrumContainer&);
+    void CalculateSpectrum (TVector3D const&, TSpectrumContainer&, double const Weight = 1);
+    void CalculateSpectrum (TParticleA&, TVector3D const&, TSpectrumContainer&, double const Weight = 1);
     void CalculateSpectrum (TParticleA&, TVector3D const&, double const, double const, size_t const, std::string const& OutFileName = "");
     void CalculateSpectrum (TVector3D const&, double const, double const, size_t const);
     void CalculateSpectrum (TVector3D const&, std::vector<double> const&);

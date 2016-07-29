@@ -63,6 +63,28 @@ static PyObject* SRS_new (PyTypeObject* type, PyObject* args, PyObject* kwds)
 
 
 
+static TVector2D SRS_ListAsTVector2D (PyObject* List)
+{
+  TVector2D V;
+  if (PyList_Size(List) == 2) {
+    Py_INCREF(List);
+    V.SetXY(PyFloat_AsDouble(PyList_GetItem(List, 0)),
+             PyFloat_AsDouble(PyList_GetItem(List, 1)));
+    Py_DECREF(List);
+  } else {
+    throw std::length_error("number of elements not 2");
+  }
+
+  // Return the python list
+  return V;
+}
+
+
+
+
+
+
+
 static TVector3D SRS_ListAsTVector3D (PyObject* List)
 {
   TVector3D V;
@@ -676,42 +698,54 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject*
   // Add a particle beam to the experiment
 
   // Lists and variables some with initial values
-  char const* Type             = "";
-  char const* Name             = "";
-  double      Energy_GeV       = 0;
-  double      Sigma_Energy_GeV = 0;
-  double      T0               = 0;
-  double      Current          = 0;
-  double      Weight           = 1;
-  double      Mass             = 0;
-  double      Charge           = 0;
-  PyObject*   List_X0          = PyList_New(0);
-  PyObject*   List_V0          = PyList_New(0);
-  PyObject*   List_Rotations   = PyList_New(0);
-  PyObject*   List_Translation = PyList_New(0);
+  char const* Type                       = "";
+  char const* Name                       = "";
+  double      Energy_GeV                 = 0;
+  double      Sigma_Energy_GeV           = 0;
+  double      T0                         = 0;
+  double      Current                    = 0;
+  double      Weight                     = 1;
+  double      Mass                       = 0;
+  double      Charge                     = 0;
+  PyObject*   List_X0                    = PyList_New(0);
+  PyObject*   List_Direction             = PyList_New(0);
+  PyObject*   List_Rotations             = PyList_New(0);
+  PyObject*   List_Translation           = PyList_New(0);
+  PyObject*   List_Horizontal_Direction  = PyList_New(0);
+  PyObject*   List_Beta                  = PyList_New(0);
+  PyObject*   List_Emittance             = PyList_New(0);
+  PyObject*   List_Lattice_Center        = PyList_New(0);
 
   TVector3D X0;
-  TVector3D V0;
+  TVector3D Direction;
   TVector3D Rotations(0, 0, 0);
   TVector3D Translation(0, 0, 0);
+  TVector3D Horizontal_Direction;
+  TVector2D Beta(0, 0);
+  TVector2D Emittance(0, 0);
+  TVector3D Lattice_Center(0, 0, 0);
 
 
   // Input variables and parsing
-  static char *kwlist[] = {"type", "name", "x0", "v0", "energy_GeV", "sigma_energy_GeV", "t0", "current", "weight", "rotations", "translation", "mass", "charge", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssOO|dddddOOdd", kwlist,
-                                                                   &Type,
-                                                                   &Name,
-                                                                   &List_X0,
-                                                                   &List_V0,
-                                                                   &Energy_GeV,
-                                                                   &Sigma_Energy_GeV,
-                                                                   &T0,
-                                                                   &Current,
-                                                                   &Weight,
-                                                                   &List_Rotations,
-                                                                   &List_Translation,
-                                                                   &Mass,
-                                                                   &Charge)) {
+  static char *kwlist[] = {"type", "name", "x0", "direction", "energy_GeV", "sigma_energy_GeV", "t0", "current", "weight", "rotations", "translation", "horizontal_direction", "beta", "emittance", "lattice_center", "mass", "charge", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssOO|dddddOOOOOOdd", kwlist,
+                                                                       &Type,
+                                                                       &Name,
+                                                                       &List_X0,
+                                                                       &List_Direction,
+                                                                       &Energy_GeV,
+                                                                       &Sigma_Energy_GeV,
+                                                                       &T0,
+                                                                       &Current,
+                                                                       &Weight,
+                                                                       &List_Rotations,
+                                                                       &List_Translation,
+                                                                       &List_Horizontal_Direction,
+                                                                       &List_Beta,
+                                                                       &List_Emittance,
+                                                                       &List_Lattice_Center,
+                                                                       &Mass,
+                                                                       &Charge)) {
     return NULL;
   }
 
@@ -725,14 +759,10 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject*
   // If this is a custom particle
   try {
     X0 = SRS_ListAsTVector3D(List_X0);
-    V0 = SRS_ListAsTVector3D(List_V0);
+    Direction = SRS_ListAsTVector3D(List_Direction);
   } catch (std::length_error e) {
     PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0' or 'v0'");
     return NULL;
-  }
-
-  if (Energy_GeV == 0) {
-    // UPDATE: get energy from V vector
   }
 
   if (Sigma_Energy_GeV == 0) {
@@ -764,9 +794,79 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject*
   }
 
 
+
+  // Check for Horizontal_Direction in the input
+  if (PyList_Size(List_Horizontal_Direction) != 0) {
+    try {
+      Horizontal_Direction = SRS_ListAsTVector3D(List_Horizontal_Direction);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'horizontal_direction'");
+      return NULL;
+    }
+  } else {
+    Horizontal_Direction = Direction.Orthogonal().UnitVector();
+  }
+  Horizontal_Direction = Horizontal_Direction.UnitVector();
+
+
+  // Check for Beta in the input
+  if (PyList_Size(List_Beta) != 0) {
+    try {
+      Beta = SRS_ListAsTVector2D(List_Beta);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'beta'");
+      return NULL;
+    }
+  }
+
+
+  // Check for Emittance in the input
+  if (PyList_Size(List_Emittance) != 0) {
+    try {
+      Emittance = SRS_ListAsTVector2D(List_Emittance);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'emittance'");
+      return NULL;
+    }
+  }
+
+
+  // Check for Lattice Center in the input
+  if (PyList_Size(List_Lattice_Center) != 0) {
+    try {
+      Lattice_Center = SRS_ListAsTVector3D(List_Lattice_Center);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'lattice_center'");
+      return NULL;
+    }
+  }
+
+
+  // If emittance and beta are defined get RMS values
+  TVector2D SigmaU(0, 0);
+  TVector2D SigmaUPrime(0, 0);
+  if (PyList_Size(List_Emittance) != 0 && PyList_Size(List_Beta) != 0) {
+    SigmaU[0]      = sqrt(Emittance[0] * Beta[0]);
+    SigmaU[1]      = sqrt(Emittance[1] * Beta[1]);
+    SigmaUPrime[0] = sqrt(Emittance[0] / Beta[0]);
+    SigmaUPrime[1] = sqrt(Emittance[1] / Beta[1]);
+  }
+
+
+
+
   // Rotate beam parameters
   X0.RotateSelfXYZ(Rotations);
   X0 += Translation;
+
+  // UPDATE: An idea for later, use new variable "velocity"
+  //if (Energy_GeV == 0) {
+  //  if (Direction.Mag() >= 1) {
+  //    throw;
+  //  }
+  //  Energy_GeV = sqrt(1.0 / (1.0 - Direction.Mag2())) * Mass;
+  //}
+
 
   // Add the particle beam
   if (std::string(Type) == "custom") {
@@ -775,10 +875,13 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject*
       return NULL;
     }
     // UPDATE: for custom beams
-    self->obj->AddParticleBeam(Type, Name, X0, V0, Energy_GeV, T0, Current, Weight, Charge, Mass);
+    self->obj->AddParticleBeam(Type, Name, X0, Direction, Energy_GeV, T0, Current, Weight, Charge, Mass);
   } else {
-    self->obj->AddParticleBeam(Type, Name, X0, V0, Energy_GeV, T0, Current, Weight);
+    self->obj->AddParticleBeam(Type, Name, X0, Direction, Energy_GeV, T0, Current, Weight);
   }
+
+  // UPDATE: Change me
+  self->obj->GetParticleBeam(Name).SetSigma(Horizontal_Direction, SigmaU, SigmaUPrime, Lattice_Center, Sigma_Energy_GeV);
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -816,6 +919,33 @@ static PyObject* SRS_SetNewParticle (SRSObject* self)
 }
 
 
+
+
+
+
+static PyObject* SRS_GetParticleX0 (SRSObject* self)
+{
+  // Get the particle position at particle t0
+  return SRS_TVector3DAsList( self->obj->GetCurrentParticle().GetX0() );
+}
+
+
+
+
+static PyObject* SRS_GetParticleBeta0 (SRSObject* self)
+{
+  // Get the particle beta at particle t0
+  return SRS_TVector3DAsList( self->obj->GetCurrentParticle().GetB0() );
+}
+
+
+
+
+static PyObject* SRS_GetParticleE0 (SRSObject* self)
+{
+  // Get the particle beta at particle t0
+  return Py_BuildValue("f", (self->obj->GetCurrentParticle().GetE0()));
+}
 
 
 
@@ -891,8 +1021,43 @@ static PyObject* SRS_GetSpectrum (SRSObject* self)
   // Create a python list
   PyObject *PList = PyList_New(0);
 
-  // Grab trajectory
+  // Grab spectrum
   TSpectrumContainer const& Spectrum = self->obj->GetSpectrum();
+
+  // Number of points in trajectory calculation
+  size_t NSPoints = Spectrum.GetNPoints();
+
+  // Loop over all points in trajectory
+  for (int iS = 0; iS != NSPoints; ++iS) {
+    // Create a python list for X and Beta
+    PyObject *PList2 = PyList_New(0);
+
+    // Add position and Beta to list
+    PyList_Append(PList2, Py_BuildValue("f", Spectrum.GetEnergy(iS)));
+    PyList_Append(PList2, Py_BuildValue("f", Spectrum.GetFlux(iS)));
+    PyList_Append(PList, PList2);
+  }
+
+  // Return the python list
+  return PList;
+}
+
+
+
+
+
+
+
+
+
+
+
+static PyObject* SRS_GetSpectrumAsList (SRSObject* self, TSpectrumContainer const& Spectrum)
+{
+  // Get the Trajectory as 2 3D lists [[x, y, z], [BetaX, BetaY, BetaZ]]
+
+  // Create a python list
+  PyObject *PList = PyList_New(0);
 
   // Number of points in trajectory calculation
   size_t NSPoints = Spectrum.GetNPoints();
@@ -936,6 +1101,7 @@ static PyObject* SRS_GetSpectrum (SRSObject* self)
 
 
 
+
 static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObject* keywds)
 {
   // Calculate the spectrum given an observation point, and energy range
@@ -945,16 +1111,27 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   int NPoints = 0;
   PyObject* List_EnergyRange_eV = PyList_New(0);
   PyObject* List_Points_eV      = PyList_New(0);
+  int NParticles = 0;
+  char* OFile = "";
 
 
 
-  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", NULL};
+  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", "nparticles", "ofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOO", kwlist,
-                                                          &List_Obs,
-                                                          &NPoints,
-                                                          &List_EnergyRange_eV,
-                                                          &List_Points_eV)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOis", kwlist,
+                                                            &List_Obs,
+                                                            &NPoints,
+                                                            &List_EnergyRange_eV,
+                                                            &List_Points_eV,
+                                                            &NParticles,
+                                                            &OFile)) {
+    return NULL;
+  }
+
+
+  // Check number of particles
+  if (NParticles < 0) {
+    PyErr_SetString(PyExc_ValueError, "'nparticles' must be >= 1 (sort of)");
     return NULL;
   }
 
@@ -990,15 +1167,33 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
     return NULL;
   }
 
-  // Actually calculate the spectrum
+
+
+  TSpectrumContainer SpectrumContainer;
+
   if (VPoints_eV.size() == 0) {
-    self->obj->CalculateSpectrum(Obs, EStart, EStop, NPoints);
+    SpectrumContainer.Init(NPoints, EStart, EStop);
   } else {
-    self->obj->CalculateSpectrum(Obs, VPoints_eV);
+    SpectrumContainer.Init(VPoints_eV);
+  }
+
+  // Actually calculate the spectrum
+  if (NParticles == 0) {
+    self->obj->CalculateSpectrum(Obs, SpectrumContainer);
+  } else {
+    double const Weight = 1.0 / (double) NParticles;
+    for (int i = 0; i != NParticles; ++i) {
+      self->obj->SetNewParticle();
+      self->obj->CalculateSpectrum(Obs, SpectrumContainer, Weight);
+    }
+  }
+
+  if (std::string(OFile) != "") {
+    SpectrumContainer.SaveToFile(OFile);
   }
 
   // Return the spectrum
-  return SRS_GetSpectrum(self);
+  return SRS_GetSpectrumAsList(self, SpectrumContainer);
 }
 
 
@@ -1606,6 +1801,9 @@ static PyMethodDef SRS_methods[] = {
   {"clear_particle_beams",              (PyCFunction) SRS_ClearParticleBeams,              METH_NOARGS,  "Clear all existing particle beams from SRS"},
                                                                                           
   {"set_new_particle",                  (PyCFunction) SRS_SetNewParticle,                  METH_NOARGS,  "Set the internal particle to a new random particle"},
+  {"get_particle_x0",                   (PyCFunction) SRS_GetParticleX0,                   METH_NOARGS,  "Get the position at t0"},
+  {"get_particle_beta0",                (PyCFunction) SRS_GetParticleBeta0,                METH_NOARGS,  "Get the beta at t0"},
+  {"get_particle_e0",                   (PyCFunction) SRS_GetParticleE0,                   METH_NOARGS,  "Get the Energy at t0"},
                                                                                           
   {"calculate_trajectory",              (PyCFunction) SRS_CalculateTrajectory,             METH_NOARGS,  "Calclate the trajectory for the current particle"},
   {"get_trajectory",                    (PyCFunction) SRS_GetTrajectory,                   METH_NOARGS,  "Get the trajectory for the current particle as 2 3D lists [[x, y, z], [BetaX, BetaY, BetaZ]]"},

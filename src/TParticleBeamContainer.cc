@@ -44,12 +44,11 @@ void TParticleBeamContainer::AddNewParticleBeam (std::string const& Type, std::s
   }
 
   if (Type == "custom") {
-
     fParticleBeams.push_back( TParticleBeam(Type, X0, D0, E0, T0, Current, Charge, Mass) );
   } else {
     fParticleBeams.push_back( TParticleBeam(Type, X0, D0, E0, T0, Current) );
   }
-  fParticleBeamMap[Name] = fParticleBeams.back();
+  fParticleBeamMap[Name] = fParticleBeams.size() - 1;
 
   return;
 }
@@ -66,6 +65,19 @@ TParticleA TParticleBeamContainer::GetNewParticle ()
 
 
 
+TParticleBeam& TParticleBeamContainer::GetParticleBeam (size_t const i)
+{
+  // Return a reference to the particle beam given its name
+  if (i >= fParticleBeams.size()) {
+    std::cout << "Didn't find" << std::endl;
+    throw;
+  }
+
+  return fParticleBeams[i];
+}
+
+
+
 TParticleBeam& TParticleBeamContainer::GetParticleBeam (std::string const& Name)
 {
   // Return a reference to the particle beam given its name
@@ -74,7 +86,7 @@ TParticleBeam& TParticleBeamContainer::GetParticleBeam (std::string const& Name)
     throw;
   }
 
-  return fParticleBeamMap[Name];
+  return this->GetParticleBeam(fParticleBeamMap[Name]);
 }
 
 

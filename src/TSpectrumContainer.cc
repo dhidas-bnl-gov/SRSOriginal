@@ -63,6 +63,7 @@ void TSpectrumContainer::Init (size_t const N, double const EFirst, double const
   // Clear existing data and resize member to the correct size for input
   fSpectrumPoints.clear();
   fSpectrumPoints.resize(N, std::make_pair(0.0, 0.0));
+  fCompensation.resize(N, 0);
 
 
   // If you have zero elements I don't see the point of this
@@ -95,6 +96,7 @@ void TSpectrumContainer::Init (std::vector<double> const& V)
   // Clear existing data and reserve the correct amount for input
   fSpectrumPoints.clear();
   fSpectrumPoints.reserve(V.size());
+  fCompensation.resize(V.size(), 0);
 
   // Add each input from V to the internal vector
   for (size_t i = 0; i != V.size(); ++i) {
@@ -144,6 +146,29 @@ void TSpectrumContainer::AddPoint (double const Energy)
 {
   // Add an energy point to the end of the vector.  Default flux value is zero
   fSpectrumPoints.push_back( std::make_pair(Energy, 0.0) );
+
+  return;
+}
+
+
+
+
+
+
+void TSpectrumContainer::AddToFlux (size_t const i, double const Flux)
+{
+  // Add to the flux, using compensated summation
+
+  // Simple check
+  if (i >= fSpectrumPoints.size()) {
+    throw;
+  }
+
+  double Sum = fSpectrumPoints[i].second;
+  double y = Flux - fCompensation[i];
+  double t = Sum + y;
+  fCompensation[i] = (t - Sum) - y;
+  fSpectrumPoints[i].second = t;
 
   return;
 }

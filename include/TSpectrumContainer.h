@@ -25,6 +25,7 @@ class TSpectrumContainer
     void   SetFlux   (size_t const, double const);
     void   SetPoint  (size_t const, double const, double const);
     void   AddPoint  (double const);
+    void   AddToFlux (size_t const, double const);
     double GetFlux   (size_t const) const;
     double GetEnergy (size_t const) const;
     double GetAngularFrequency (size_t const) const;
@@ -37,6 +38,7 @@ class TSpectrumContainer
   private:
 
     std::vector< std::pair<double, double> > fSpectrumPoints;
+    std::vector<double> fCompensation;
 
 
 };

@@ -16,6 +16,10 @@
 TParticleBeam::TParticleBeam ()
 {
   // Default constructor
+
+  rd = new std::random_device();
+  e2 = std::mt19937((*rd)());
+  dist = std::normal_distribution<>(0, 1);
 }
 
 
@@ -145,6 +149,31 @@ void TParticleBeam::SetInitialConditions (TVector3D const& X, TVector3D const& D
 
 
 
+
+void TParticleBeam::SetSigma (TVector3D const& HorizontalDirection, TVector2D const& SigmaU, TVector2D const& SigmaUP, TVector3D const& SigmaAt, double const SigmaE)
+{
+  fHorizontalDirection = HorizontalDirection.UnitVector();
+  fSigmaU              = SigmaU;
+  fSigmaUP             = SigmaUP;
+  fSigmaAt             = SigmaAt;
+  fSigmaE              = SigmaE;
+
+  fVerticalDirection = fU0.Cross(fHorizontalDirection).UnitVector();
+
+  if (fabs(fHorizontalDirection.Dot(this->GetU0())) > 0.00000001) {
+    // We're supposed to be doing precision science here!
+    throw;
+  }
+
+  std::cout << "fHorizontalDirection . U0 " << fHorizontalDirection.Dot(this->GetU0()) << std::endl;
+  std::cout << "fVerticalDirection . U0   " << fVerticalDirection.Dot(this->GetU0()) << std::endl;
+
+  return;
+}
+
+
+
+
 TVector3D const& TParticleBeam::GetX0 () const
 {
   // Return const reference to the initial position
@@ -192,20 +221,29 @@ TParticleA TParticleBeam::GetNewParticle ()
   // UPDATE: Needs rand for twiss, or other beam configurations...
   // UPDATE: Could also take a python function
 
+  double    ENew = fE0 + fSigmaE * dist(e2); // correlated with BNew, not sure how to handle this yet
 
-  double const Gamma = this->GetE0() / TSRS::kgToGeV(this->GetM());
+  double const Gamma = ENew / TSRS::kgToGeV(this->GetM());
   double const Beta = sqrt(1.0 - 1.0 / (Gamma * Gamma));
 
-  TVector3D XNew;
-  TVector3D BNew;
-  double    TNew;
-  double    ENew; // correlated with BNew, not sure how to handle this yet
+  // Distance from t0 location to lattice midpoint
+  double const DistanceToMidpoint = (fSigmaAt - fX0).Dot(this->GetU0());
+  // UPDATE: ME
+  TVector3D XNew = this->GetX0();
+  XNew += fHorizontalDirection * fSigmaU[0] * (1 + DistanceToMidpoint) * dist(e2);
+  XNew += fVerticalDirection   * fSigmaU[1] * (1 + DistanceToMidpoint) * dist(e2);
 
+  TVector3D BetaNew = this->GetU0() * Beta;
 
-  TVector3D Beta0 = this->GetU0() * Beta;
+  // UPDATE: Rotate about the horizontal and vertical beam axes (arbitrary)
+  BetaNew.RotateSelfY(fSigmaUP[0] * dist(e2));
+  BetaNew.RotateSelfX(-fSigmaUP[1] * dist(e2));
+
+  double    TNew = fT0;
+
 
   TParticleA NewParticle = (TParticleA) *this;
-  NewParticle.SetInitialParticleConditions(this->GetX0(), Beta0, this->GetT0());
+  NewParticle.SetInitialParticleConditions(XNew, BetaNew, TNew);
 
 
   return NewParticle;

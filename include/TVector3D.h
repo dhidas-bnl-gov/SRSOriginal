@@ -47,7 +47,7 @@ class TVector3D
 
 
     // Operators
-    bool operator < (TVector3D const&) const;
+    bool       operator  < (TVector3D const&) const;
     TVector3D  operator  + (TVector3D const&) const;
     TVector3D  operator  - (TVector3D const&) const;
     TVector3D  operator  / (double const) const;

@@ -285,6 +285,15 @@ TVector3D const& TParticleA::GetB0 () const
 
 
 
+double TParticleA::GetE0 () const
+{
+  // Get initial energy for this particle
+  return TSRS::kgToGeV(fM) * fGamma;
+}
+
+
+
+
 double TParticleA::GetT0 () const
 {
   // Get initial time
@@ -356,6 +365,11 @@ void TParticleA::SetQoverMGamma ()
   }
 
   fQoverMGamma = GetQ() / GetM() / GetGamma();
+
+  std::cout << "Q " << fQ << std::endl;
+  std::cout << "M " << fM << std::endl;
+  std::cout << "g " << fGamma << std::endl;
+  std::cout << "X " << fQoverMGamma << std::endl;
 
   return;
 }

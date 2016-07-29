@@ -13,8 +13,10 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <random>
 
 #include "TVector3D.h"
+#include "TVector2D.h"
 #include "TTwiss.h"
 
 class TParticleBeam : public TParticleA
@@ -34,6 +36,7 @@ class TParticleBeam : public TParticleA
 
     void SetTwissParameters (TTwiss const&);
     void SetTwissParameters (double const&, double const&, double const&, double const&, TVector3D const&);  // UPDATE: for twiss parameters AT a location
+    void SetSigma(TVector3D const&, TVector2D const&, TVector2D const&, TVector3D const&, double const);
 
     TVector3D const& GetX0 () const;
     TVector3D const& GetU0 () const;
@@ -51,6 +54,19 @@ class TParticleBeam : public TParticleA
     TVector3D fU0;  // Direction at fX0 (stored as a unit vector) [unitless]
     double    fE0;  // Energy [GeV]
     double    fT0;  // Time at initial conditions [s]
+
+    TVector2D fSigmaU;
+    TVector2D fSigmaUP;
+    TVector3D fSigmaAt;
+    double    fSigmaE;
+
+    TVector3D fHorizontalDirection;
+    TVector3D fVerticalDirection;
+
+    std::random_device* rd;
+    std::mt19937 e2;
+    std::normal_distribution<> dist;
+
 
 };
 

@@ -46,6 +46,7 @@ class TParticleA
 
     TVector3D const& GetX0 () const;
     TVector3D const& GetB0 () const;
+    double           GetE0 () const;
     double           GetT0 () const;
 
     std::string const& GetType () const;

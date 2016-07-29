@@ -230,6 +230,15 @@ TParticleA SRS::GetNewParticle ()
 
 
 
+TParticleA const& SRS::GetCurrentParticle () const
+{
+  // Get a new particle.  Randomly sampled according to input beam parameters and beam weights
+  return fParticle;
+}
+
+
+
+
 void SRS::SetNewParticle ()
 {
   // Get a new particle.  Randomly sampled according to input beam parameters and beam weights.
@@ -532,7 +541,16 @@ void SRS::RK4 (double y[], double dydx[], int n, double x, double h, double yout
 
 
 
-void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum)
+void SRS::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
+{
+  this->CalculateSpectrum(fParticle, ObservationPoint, Spectrum, Weight);
+  return;
+}
+
+
+
+
+void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -615,7 +633,7 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
     SumE *= C1 * DeltaT;
 
     // Set the flux for this frequency / energy point
-    Spectrum.SetFlux(i, C2 *  SumE.Dot( SumE.CC() ).real());
+    Spectrum.AddToFlux(i, C2 *  SumE.Dot( SumE.CC() ).real() * Weight);
   }
 
 
@@ -989,6 +1007,7 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 
       // UPDATE: with better field avoiding A
       // TVector3DC const ThisEw = ( N.Cross( (N - B).Cross(AoverC) ) ) / ( D * pow(1 - N.Dot(B), 2) ) * std::exp(Exponent) * DeltaT; // FF only
+
       TVector3DC const ThisEw = ( ( (1 - (B).Mag2()) * (N - B) ) / ( D * D * (pow(1 - N.Dot(B), 2)) )
           + ( N.Cross( (N - B).Cross(AoverC) ) ) / ( D * pow(1 - N.Dot(B), 2) ) ) * std::exp(Exponent) * DeltaT; // NF + FF
 
