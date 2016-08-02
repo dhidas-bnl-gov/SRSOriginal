@@ -50,6 +50,7 @@ class SRS
     TParticleA GetNewParticle ();
     TParticleA const&  GetCurrentParticle () const;
     void SetNewParticle ();
+    void SetNewParticle (std::string const&, std::string const&);
     void ClearParticleBeams ();
 
 

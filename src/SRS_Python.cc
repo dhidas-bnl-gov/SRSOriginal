@@ -22,7 +22,7 @@
 #include "TBFieldPythonFunction.h"
 #include "TBField3D_Gaussian.h"
 #include "TBField3D_Uniform.h"
-#include "TBField3D_Idealundulator.h"
+#include "TBField3D_IdealUndulator.h"
 
 #include <iostream>
 #include <vector>
@@ -869,15 +869,20 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject*
 
 
   // Add the particle beam
-  if (std::string(Type) == "custom") {
-    if (Mass == 0 || Charge == 0) {
-      PyErr_SetString(PyExc_ValueError, "'mass' or 'charge' is zero");
-      return NULL;
+  try {
+    if (std::string(Type) == "custom") {
+      if (Mass == 0 || Charge == 0) {
+        PyErr_SetString(PyExc_ValueError, "'mass' or 'charge' is zero");
+        return NULL;
+      }
+      // UPDATE: for custom beams
+      self->obj->AddParticleBeam(Type, Name, X0, Direction, Energy_GeV, T0, Current, Weight, Charge, Mass);
+    } else {
+      self->obj->AddParticleBeam(Type, Name, X0, Direction, Energy_GeV, T0, Current, Weight);
     }
-    // UPDATE: for custom beams
-    self->obj->AddParticleBeam(Type, Name, X0, Direction, Energy_GeV, T0, Current, Weight, Charge, Mass);
-  } else {
-    self->obj->AddParticleBeam(Type, Name, X0, Direction, Energy_GeV, T0, Current, Weight);
+  } catch (std::invalid_argument e) {
+    PyErr_SetString(PyExc_ValueError, "invalid argument in adding particle beam.  possibly 'name' already exists");
+    return NULL;
   }
 
   // UPDATE: Change me
@@ -907,11 +912,43 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject*
 
 
 
-static PyObject* SRS_SetNewParticle (SRSObject* self)
+static PyObject* SRS_SetNewParticle (SRSObject* self, PyObject* args, PyObject* keywds)
 {
   // Set a new particle within the SRS object
 
-  self->obj->SetNewParticle();
+  char const* Beam_IN = "";
+  char const* Particle_IN = "";
+
+  static char *kwlist[] = {"beam", "particle", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "|ss", kwlist, &Beam_IN, &Particle_IN)) {
+    return NULL;
+  }
+
+  std::string Beam = Beam_IN;
+  std::string Particle = Particle_IN;
+
+  std::transform(Beam.begin(), Beam.end(), Beam.begin(), ::tolower);
+  std::transform(Particle.begin(), Particle.end(), Particle.begin(), ::tolower);
+
+  if (Particle != "" && !(Particle == "ideal" || Particle == "random")) {
+    PyErr_SetString(PyExc_ValueError, "'particle' must be 'ideal' or 'random'");
+    return NULL;
+  }
+
+  try {
+    if ((Beam) == "" && (Particle) == "") {
+      self->obj->SetNewParticle();
+    } else if (Beam != "" && Particle != "") {
+      self->obj->SetNewParticle(Beam, Particle);
+    } else if (Beam == "" && Particle != "") {
+      self->obj->SetNewParticle(Beam, Particle);
+    } else if (Beam != "" && Particle == "") {
+      self->obj->SetNewParticle(Beam, Particle);
+    }
+  } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, "'beam' name not found");
+    return NULL;
+  }
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -1243,6 +1280,12 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
   }
 
 
+  // Check requested dimension
+  if (Dim != 2 & Dim != 3) {
+    PyErr_SetString(PyExc_ValueError, "'dim' must be 2 or 3");
+    return NULL;
+  }
+
 
   // Vectors for rotations and translations.  Default to 0
   TVector3D Rotations(0, 0, 0);
@@ -1375,6 +1418,12 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
                                                                &List_Translation,
                                                                &List_X0X1X2,
                                                                &OutFileName)) {
+    return NULL;
+  }
+
+  // Check requested dimension
+  if (Dim != 2 & Dim != 3) {
+    PyErr_SetString(PyExc_ValueError, "'dim' must be 2 or 3");
     return NULL;
   }
 
@@ -1546,6 +1595,12 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
                                                                 &List_Translation,
                                                                 &List_X0X1X2,
                                                                 &OutFileName)) {
+    return NULL;
+  }
+
+  // Check requested dimension
+  if (Dim != 2 & Dim != 3) {
+    PyErr_SetString(PyExc_ValueError, "'dim' must be 2 or 3");
     return NULL;
   }
 
@@ -1800,7 +1855,7 @@ static PyMethodDef SRS_methods[] = {
   {"add_particle_beam",                 (PyCFunction) SRS_AddParticleBeam,                 METH_VARARGS | METH_KEYWORDS, "add a particle beam"},
   {"clear_particle_beams",              (PyCFunction) SRS_ClearParticleBeams,              METH_NOARGS,  "Clear all existing particle beams from SRS"},
                                                                                           
-  {"set_new_particle",                  (PyCFunction) SRS_SetNewParticle,                  METH_NOARGS,  "Set the internal particle to a new random particle"},
+  {"set_new_particle",                  (PyCFunction) SRS_SetNewParticle,                  METH_VARARGS | METH_KEYWORDS,  "Set the internal particle to a new random particle"},
   {"get_particle_x0",                   (PyCFunction) SRS_GetParticleX0,                   METH_NOARGS,  "Get the position at t0"},
   {"get_particle_beta0",                (PyCFunction) SRS_GetParticleBeta0,                METH_NOARGS,  "Get the beta at t0"},
   {"get_particle_e0",                   (PyCFunction) SRS_GetParticleE0,                   METH_NOARGS,  "Get the Energy at t0"},

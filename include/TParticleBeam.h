@@ -45,6 +45,7 @@ class TParticleBeam : public TParticleA
 
 
     TParticleA GetNewParticle ();
+    TParticleA GetNewParticle (std::string const&);
 
   private:
 

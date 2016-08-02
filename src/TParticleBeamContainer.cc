@@ -34,7 +34,7 @@ void TParticleBeamContainer::AddNewParticleBeam (std::string const& Type, std::s
 {
   if (fParticleBeamMap.count(Name) != 0) {
     std::cerr << "fParticleBeamMap.count(Name) != 0" << std::endl;
-    throw;
+    throw std::invalid_argument("beam with this name already exists");
   }
 
   if (fParticleBeamWeightSums.size() == 0) {
@@ -69,8 +69,7 @@ TParticleBeam& TParticleBeamContainer::GetParticleBeam (size_t const i)
 {
   // Return a reference to the particle beam given its name
   if (i >= fParticleBeams.size()) {
-    std::cout << "Didn't find" << std::endl;
-    throw;
+    throw std::length_error("beam index out of range");
   }
 
   return fParticleBeams[i];
@@ -80,14 +79,28 @@ TParticleBeam& TParticleBeamContainer::GetParticleBeam (size_t const i)
 
 TParticleBeam& TParticleBeamContainer::GetParticleBeam (std::string const& Name)
 {
-  // Return a reference to the particle beam given its name
+  // Return a reference to the particle beam given its name.  If "" is given returns
+  // a random beam beased on weights
+
+  if (Name == "") {
+    return this->GetRandomBeam();
+  }
+
   if (fParticleBeamMap.count(Name) == 0) {
-    std::cout << "Didn't find" << std::endl;
-    throw;
+    throw std::out_of_range("beam name not in map");
   }
 
   return this->GetParticleBeam(fParticleBeamMap[Name]);
 }
+
+
+
+
+TParticleBeam& TParticleBeamContainer::GetRandomBeam ()
+{
+  return this->GetParticleBeam(this->GetRandomBeamIndexByWeight());
+}
+
 
 
 
@@ -100,7 +113,7 @@ size_t TParticleBeamContainer::GetRandomBeamIndexByWeight () const
 
   // If it's zero we don't really know what we are doing here..
   if (N == 0) {
-    throw;
+    throw std::length_error("no beams defined");
   }
 
   // If we're 1, that's easy
@@ -120,7 +133,8 @@ size_t TParticleBeamContainer::GetRandomBeamIndexByWeight () const
   }
 
   // Just in case you don't find it, something is seriously wrong..
-  throw;
+  std::cerr << "ERROR: TParticleBeamContainer::GetRandomBeamIndexByWeight did not find a beam for this weight" << std::endl;
+  throw std::out_of_range("random weight out of range");
 
   return 0;
 }

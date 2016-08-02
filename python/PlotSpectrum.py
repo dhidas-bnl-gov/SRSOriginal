@@ -5,32 +5,32 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def PlotSpectrum (fileName) :
-  f = open(fileName, 'r')
+def PlotSpectrum (ifiles):
 
-  x = []
-  y = []
+  for ifile in ifiles:
+    with open(ifile, 'r') as f:
 
-  with open(fileName, 'r') as f:
-    for line in f:
-      v = line.split()
-      if (len(v) > 0 and v[0].startswith('#')):
-        continue
+      x = []
+      y = []
+
+      for line in f:
+        v = line.split()
+        if (len(v) > 0 and v[0].startswith('#')):
+          continue
   
-      if (len(v) < 2) :
-        continue
+        if (len(v) < 2) :
+          continue
   
-      x.append(float(v[0]))
-      y.append(float(v[1]))
+        x.append(float(v[0]))
+        y.append(float(v[1]))
 
-
-
-  plt.plot(x, y)
+      plt.plot(x, y)
 
   plt.xlabel('Photon Energy [$eV$]')
   plt.ylabel('$\gamma / mm^2 / 0.1\%bw / s$')
   plt.title('Photon Spectrum')
-  #plt.yscale('log')
+  plt.yscale('log')
+#  plt.xscale('log')
 
   plt.show()
 
@@ -38,8 +38,8 @@ def PlotSpectrum (fileName) :
 
 
 if __name__ == "__main__":
-  if len(sys.argv) is not 2:
-    print 'Usage: ', sys.argv[1], ' [InFile]'
+  if len(sys.argv) < 2:
+    print 'Usage: ', sys.argv[1], ' [ifile]s'
     exit(0)
 
-  PlotSpectrum(sys.argv[1])
+  PlotSpectrum(sys.argv[1:])

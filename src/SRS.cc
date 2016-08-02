@@ -251,6 +251,19 @@ void SRS::SetNewParticle ()
 
 
 
+void SRS::SetNewParticle (std::string const& BeamName, std::string const& IdealOrRandom)
+{
+  // Get a new particle.  Randomly sampled according to input beam parameters and beam weights.
+  // Set this new particle as *the* particle in SRS fParticle
+
+  fParticle = fParticleBeamContainer.GetParticleBeam(BeamName).GetNewParticle(IdealOrRandom);
+
+  return;
+}
+
+
+
+
 void SRS::ClearParticleBeams ()
 {
   // Clear the contents of the particle beam container
@@ -360,6 +373,9 @@ void SRS::CalculateTrajectory (TParticleA& P)
   if (this->GetCTStart() > P.GetT0()) {
     throw;
   }
+
+  P.GetTrajectory().Clear();
+
 
   // Calculate the total DeltaT in seconds
   double const DeltaT = ((this->GetCTStop() - this->GetCTStart()) / TSRS::C() / (fNPointsTrajectory - 1));
@@ -806,6 +822,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
     Sum /= 1e6; // m^2 to mm^2
 
     // If you don't care about the direction of the normal vector
+    // UPDATE: Check
     if (!Directional) {
       if (Sum < 0) {
         Sum *= -1;

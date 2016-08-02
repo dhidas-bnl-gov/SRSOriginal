@@ -43,7 +43,7 @@ static PyObject* SRS_AddMagneticFieldGaussian (SRSObject* self, PyObject* args, 
 static PyObject* SRS_ClearMagneticFields (SRSObject* self);
 static PyObject* SRS_GetBField (SRSObject* self, PyObject* args);
 static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject* keywds);
-static PyObject* SRS_SetNewParticle (SRSObject* self);
+static PyObject* SRS_SetNewParticle (SRSObject* self, PyObject* args, PyObject* keywds);
 static PyObject* SRS_ClearParticleBeams (SRSObject* self);
 static PyObject* SRS_CalculateTrajectory (SRSObject* self);
 static PyObject* SRS_GetTrajectory (SRSObject* self);

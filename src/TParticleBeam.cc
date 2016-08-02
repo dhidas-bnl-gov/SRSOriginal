@@ -152,12 +152,16 @@ void TParticleBeam::SetInitialConditions (TVector3D const& X, TVector3D const& D
 
 void TParticleBeam::SetSigma (TVector3D const& HorizontalDirection, TVector2D const& SigmaU, TVector2D const& SigmaUP, TVector3D const& SigmaAt, double const SigmaE)
 {
+  // Set beam parameters.  This function likely to be updated with better twiss functions
+  // UPDATE: Twiss?
+
   fHorizontalDirection = HorizontalDirection.UnitVector();
   fSigmaU              = SigmaU;
   fSigmaUP             = SigmaUP;
   fSigmaAt             = SigmaAt;
   fSigmaE              = SigmaE;
 
+  // The vertical direction has to be orthogonal to the two other directions
   fVerticalDirection = fU0.Cross(fHorizontalDirection).UnitVector();
 
   if (fabs(fHorizontalDirection.Dot(this->GetU0())) > 0.00000001) {
@@ -165,8 +169,6 @@ void TParticleBeam::SetSigma (TVector3D const& HorizontalDirection, TVector2D co
     throw;
   }
 
-  std::cout << "fHorizontalDirection . U0 " << fHorizontalDirection.Dot(this->GetU0()) << std::endl;
-  std::cout << "fVerticalDirection . U0   " << fVerticalDirection.Dot(this->GetU0()) << std::endl;
 
   return;
 }
@@ -206,6 +208,35 @@ double TParticleBeam::GetT0 () const
   // Return initial time
   return fT0;
 }
+
+
+
+
+
+TParticleA TParticleBeam::GetNewParticle (std::string const& IdealOrRandom)
+{
+  // If you want the ideal particle from the beam definition, otherwise return a random
+
+  // I'll take either case
+  std::string idor = IdealOrRandom;
+  std::transform(idor.begin(), idor.end(), idor.begin(), ::tolower);
+
+  // The ideal trajectory
+  if (idor == "ideal") {
+    // Calculate Beta from original beam E0
+    double const Gamma = fE0 / TSRS::kgToGeV(this->GetM());
+    double const Beta = sqrt(1.0 - 1.0 / (Gamma * Gamma));
+
+    // Copy this particle and set ideal conditions
+    TParticleA NewParticle = (TParticleA) *this;
+    NewParticle.SetInitialParticleConditions(fX0, Beta * fU0, fT0);
+    return NewParticle;
+  }
+
+  // If it's not above, return the default
+  return GetNewParticle();
+}
+
 
 
 
