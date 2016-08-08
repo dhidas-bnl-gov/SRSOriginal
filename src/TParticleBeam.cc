@@ -11,6 +11,7 @@
 #include "TSRS.h"
 
 #include <cmath>
+#include <algorithm>
 
 
 TParticleBeam::TParticleBeam ()

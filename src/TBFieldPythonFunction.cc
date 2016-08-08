@@ -1,5 +1,7 @@
 #include "TBFieldPythonFunction.h"
 
+#include <stdexcept>
+
 // UPDATE: exceptions
 
 TBFieldPythonFunction::TBFieldPythonFunction (PyObject* Function)
