@@ -187,7 +187,7 @@ void TSurfacePoints_Rectangle::Init (std::string const& Plane, int const NX1, in
     fX2Vector.SetXYZ(0, fX1StepSize, 0);
     fX1Vector.SetXYZ(0, 0, fX2StepSize);
   } else {
-    throw;
+    throw std::invalid_argument("not a valid surface string: XY YX XZ ZX YZ ZY");
   }
 
   // Rotate and translate the arms of our rectangle
@@ -203,7 +203,7 @@ void TSurfacePoints_Rectangle::Init (std::string const& Plane, int const NX1, in
   if (fNormal == -1) {
     fNormalVector *= -1;
   } else if (fNormal != 0 && fNormal != 1) {
-    throw;
+    throw std::invalid_argument("normal must be -1, 0, or 1");
   }
 
   return;

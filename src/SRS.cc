@@ -23,6 +23,9 @@ SRS::SRS ()
 {
   // Default constructor
   //fParticle.SetParticleType("");
+  fCTStart = 0;
+  fCTStop  = 0;
+  fNPointsTrajectory = 0;
 }
 
 
@@ -72,7 +75,7 @@ void SRS::AddMagneticField (std::string const FileName, std::string const Format
       ++BDIM;
     } else {
       std::cerr << "ERROR: Incorrect format" << std::endl;
-      throw;
+      throw std::invalid_argument("only excepts X Y Z Bx By Bz");
     }
 
     ++i;
@@ -81,7 +84,7 @@ void SRS::AddMagneticField (std::string const FileName, std::string const Format
 
   if (XDIM > 3 || BDIM > 3) {
     std::cerr << "ERROR: spatial or B-field dimensions are too large(>3)" << std::endl;
-    throw;
+    throw std::out_of_range("spatial or B-field dimensions are too large");
   }
 
   std::vector<size_t> PrefOrder;
@@ -97,20 +100,20 @@ void SRS::AddMagneticField (std::string const FileName, std::string const Format
 
   if (XDIM == 1) {
     if (BDIM == 1) {
-      throw;
+      throw std::invalid_argument("Not implemented yet");
       //this->fBFieldContainer.AddField( new TBField1DZRegularized(FileName) );
       //this->fBFieldContainer.AddField( new TBField1DZRegularized(FileName, Rotation, Translation, Scaling) );
     } else if (BDIM == 2) {
-      throw;
+      throw std::invalid_argument("Not implemented yet");
     } else if (BDIM == 3) {
       this->fBFieldContainer.AddField( new TBField3DZRegularized(FileName, Rotation, Translation, Scaling) );
     }
   } else if (XDIM == 2) {
-      throw;
+    throw std::invalid_argument("Not implemented yet");
   } else if (XDIM == 3) {
-      throw;
+    throw std::invalid_argument("Not implemented yet");
   } else {
-    throw;
+    throw std::invalid_argument("Not implemented yet");
   }
 
 
@@ -221,6 +224,15 @@ TParticleBeam& SRS::GetParticleBeam (std::string const& Name)
 
 
 
+size_t SRS::GetNParticleBeams () const
+{
+  // Return the number of particle beams defined
+  return fParticleBeamContainer.GetNParticleBeams();
+}
+
+
+
+
 TParticleA SRS::GetNewParticle ()
 {
   // Get a new particle.  Randomly sampled according to input beam parameters and beam weights
@@ -256,7 +268,11 @@ void SRS::SetNewParticle (std::string const& BeamName, std::string const& IdealO
   // Get a new particle.  Randomly sampled according to input beam parameters and beam weights.
   // Set this new particle as *the* particle in SRS fParticle
 
-  fParticle = fParticleBeamContainer.GetParticleBeam(BeamName).GetNewParticle(IdealOrRandom);
+  if (BeamName == "") {
+    fParticle = fParticleBeamContainer.GetRandomBeam().GetNewParticle(IdealOrRandom);
+  } else {
+    fParticle = fParticleBeamContainer.GetParticleBeam(BeamName).GetNewParticle(IdealOrRandom);
+  }
 
   return;
 }
@@ -308,6 +324,12 @@ void SRS::SetCTStop (double const X)
 void SRS::SetCTStartStop (double const Start, double const Stop)
 {
   // Set the start and stop time in units of m (where v = c)
+
+  // If npoints is zero set this to some default value
+  if (fNPointsTrajectory == 0) {
+    fNPointsTrajectory = 10001 * (Stop - Start);
+  }
+
   this->SetCTStart(Start);
   this->SetCTStop(Stop);
   return;
@@ -371,9 +393,16 @@ void SRS::CalculateTrajectory (TParticleA& P)
 
   // Check that CTStart is not after T0 of particle
   if (this->GetCTStart() > P.GetT0()) {
-    throw;
+    std::cerr << "ERROR: start time is greater than T0" << std::endl;
+    throw std::out_of_range("start time is greater than T0");
   }
 
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (P.GetType() == "") {
+    throw std::out_of_range("particle not initialized.  make sure you have a particle or beam defined");
+  }
+
+  // Clear any current trajectory
   P.GetTrajectory().Clear();
 
 
@@ -559,6 +588,15 @@ void SRS::RK4 (double y[], double dydx[], int n, double x, double h, double yout
 
 void SRS::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
 {
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
   this->CalculateSpectrum(fParticle, ObservationPoint, Spectrum, Weight);
   return;
 }
@@ -576,13 +614,17 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
   // ObservationPoint - Observation Point
   // Spectrum - Spectrum container
 
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    throw std::out_of_range("no particle defined");
+  }
+
+  // Calculate trajectory
+  this->CalculateTrajectory(Particle);
 
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
 
-  if (T.GetNPoints() == 0) {
-    this->CalculateTrajectory(Particle);
-  }
 
   // Time step.  Expecting it to be constant throughout calculation
   double const DeltaT = T.GetDeltaT();
@@ -590,6 +632,10 @@ void SRS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationP
 
   // Number of points in the trajectory
   size_t const NTPoints = T.GetNPoints();
+
+  if (NTPoints < 1) {
+    throw std::length_error("no points in trajectory.  Is particle or beam defined?");
+  }
 
   // Number of points in the spectrum container
   size_t const NEPoints = Spectrum.GetNPoints();
@@ -689,6 +735,15 @@ void SRS::CalculateSpectrum (TVector3D const& ObservationPoint, double const ESt
   // A spectrum object for return values
   fSpectrum.Init(N, EStart, EStop);
 
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
   this->CalculateSpectrum(fParticle, ObservationPoint, fSpectrum);
 
   return;
@@ -707,6 +762,15 @@ void SRS::CalculateSpectrum (TVector3D const& ObservationPoint, std::vector<doub
 
   // A spectrum object for return values
   fSpectrum.Init(V);
+
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
 
   this->CalculateSpectrum(fParticle, ObservationPoint, fSpectrum);
 
@@ -743,16 +807,20 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
   // Particle - Particle, contains trajectory (or if not, calculate it)
   // Surface - Observation Point
 
+
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    throw std::out_of_range("no particle defined");
+  }
+
   // Are we writing to a file?
   bool const WriteToFile = OutFileName != "" ? true : false;
 
+  // Calculate the trajectory from scratch
+  this->CalculateTrajectory(Particle);
+
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
-
-  // If trajectory is empty, calculate it
-  if (T.GetNPoints() == 0) {
-    this->CalculateTrajectory(Particle);
-  }
 
   // Number of points in Trajectory
   size_t const NTPoints = T.GetNPoints();
@@ -769,11 +837,11 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
   if (WriteToFile) {
     of.open(OutFileName.c_str());
     if (!of.is_open()) {
-      throw;
+      throw std::ofstream::failure("cannot open output file");
     }
     of << std::scientific;
   }
-  std::cout << "Directional: " << Directional << std::endl;
+  //std::cout << "Directional: " << Directional << std::endl;
 
   // Loop over all points in the given surface
   for (size_t io = 0; io < Surface.GetNPoints(); ++io) {
@@ -842,7 +910,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
         PowerDensityContainer.AddPoint(Obs, Sum);
       }
     } else {
-      throw;
+      throw std::out_of_range("incorrect dimensions");
     }
 
   }
@@ -864,6 +932,15 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
   //
   // Surface - Observation Point
 
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
   this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional, OutFileName);
 
   return;
@@ -876,6 +953,16 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
 double SRS::CalculateTotalPower ()
 {
   // UPDATE: commet
+
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
   return this->CalculateTotalPower(fParticle);
 }
 
@@ -887,13 +974,16 @@ double SRS::CalculateTotalPower (TParticleA& Particle)
 {
   // Calculate total power out
 
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    throw std::out_of_range("no particle defined");
+  }
+
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
 
-  // If trajectory is empty, calculate it
-  if (T.GetNPoints() == 0) {
-    this->CalculateTrajectory(Particle);
-  }
+  // Calculate Trajectory from scratch
+  this->CalculateTrajectory(Particle);
 
   // Number of points in Trajectory
   size_t const NTPoints = T.GetNPoints();
@@ -907,7 +997,6 @@ double SRS::CalculateTotalPower (TParticleA& Particle)
 
   // Loop over all points in trajectory
   for (int i = 0; i != NTPoints; ++i) {
-    TVector3D const& X = T.GetX(i);
     TVector3D const& B = T.GetB(i);
     TVector3D const& AoverC = T.GetAoverC(i);
 
@@ -951,19 +1040,22 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
   // Current - beam current
   // Energy - beam energy in eV
 
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    throw std::out_of_range("no particle defined");
+  }
+
   int const Dimension = 2;
 
   // Write to a file?
   bool const WriteToFile = OutFileName != "" ? true : false;
 
 
+  // Calculate trajectory
+  this->CalculateTrajectory(Particle);
+
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
-
-  // If trajectory is empty, calculate it
-  if (T.GetNPoints() == 0) {
-    this->CalculateTrajectory(Particle);
-  }
 
   // Number of points in trajectory
   size_t const NTPoints = T.GetNPoints();
@@ -992,7 +1084,7 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
   if (WriteToFile) {
     of.open(OutFileName.c_str());
     if (!of.is_open()) {
-      throw;
+      throw std::ofstream::failure("cannot open output file");
     }
     of << std::scientific;
   }
@@ -1062,7 +1154,7 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
         FluxContainer.AddPoint(Obs, ThisFlux);
       }
     } else {
-      throw;
+      throw std::out_of_range("incorrect dimensions");
     }
 
   }
@@ -1083,6 +1175,15 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 
 void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
 {
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
   this->CalculateFlux(fParticle, Surface, Energy_eV, FluxContainer);
   return;
 }
@@ -1093,6 +1194,15 @@ void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, 
 
 void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer& XYZT)
 {
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
   this->CalculateElectricFieldTimeDomain(Observer, XYZT, fParticle);
   return;
 }
@@ -1103,14 +1213,17 @@ void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalar
 
 void SRS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer& XYZT,  TParticleA& Particle)
 {
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    throw std::out_of_range("no beam defined");
+  }
+
+  // Calculate Trajectory
+  this->CalculateTrajectory(Particle);
+
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
   size_t const NTPoints = T.GetNPoints();
-
-  // If trajectory is empty, calculate it
-  if (T.GetNPoints() == 0) {
-    this->CalculateTrajectory(Particle);
-  }
 
   double const DeltaT = T.GetDeltaT();
 

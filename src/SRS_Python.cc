@@ -334,7 +334,12 @@ static PyObject* SRS_AddMagneticField (SRSObject* self, PyObject* args, PyObject
   }
 
   // Add the magnetic field to the SRS object
-  self->obj->AddMagneticField(FileName, FileFormat, Rotations, Translation, Scaling);
+  try {
+    self->obj->AddMagneticField(FileName, FileFormat, Rotations, Translation, Scaling);
+  } catch (...) {
+    PyErr_SetString(PyExc_ValueError, "Could not import magnetic field.  Check 'ifile' and 'iformat' are correct");
+    return NULL;
+  }
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -362,7 +367,12 @@ static PyObject* SRS_AddMagneticFieldFunction (SRSObject* self, PyObject* args)
   Py_INCREF(Function);
 
   // Add the function as a field to the SRS object
-  self->obj->AddMagneticField( (TBField*) new TBFieldPythonFunction(Function));
+  try {
+    self->obj->AddMagneticField( (TBField*) new TBFieldPythonFunction(Function));
+  } catch (std::invalid_argument e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  }
 
   // Decrement reference to function for python
   Py_DECREF(Function);
@@ -482,7 +492,7 @@ static PyObject* SRS_AddMagneticFieldUniform (SRSObject* self, PyObject* args, P
 
   // Input variables and parsing
   static char *kwlist[] = {"bfield", "width", "rotations", "translation", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "OO|OO", kwlist,
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|OOO", kwlist,
                                                           &List_BField,
                                                           &List_Width,
                                                           &List_Rotations,
@@ -500,11 +510,13 @@ static PyObject* SRS_AddMagneticFieldUniform (SRSObject* self, PyObject* args, P
   }
 
   // Check Width
-  try {
-    Width = SRS_ListAsTVector3D(List_Width);
-  } catch (std::length_error e) {
-    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'width'");
-    return NULL;
+  if (PyList_Size(List_Width) != 0) {
+    try {
+      Width = SRS_ListAsTVector3D(List_Width);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'width'");
+      return NULL;
+    }
   }
 
   // Check for Rotations in the input
@@ -688,6 +700,20 @@ static PyObject* SRS_GetBField (SRSObject* self, PyObject* args)
 
 
 
+static PyObject* SRS_SetParticleBeam (SRSObject* self, PyObject* args, PyObject* keywds)
+{
+  // Clear all particle beams, add this beam, and set a new particle
+
+  self->obj->ClearParticleBeams();
+
+  SRS_AddParticleBeam(self, args, keywds);
+
+  self->obj->SetNewParticle("", "ideal");
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
 
 
 
@@ -761,7 +787,7 @@ static PyObject* SRS_AddParticleBeam (SRSObject* self, PyObject* args, PyObject*
     X0 = SRS_ListAsTVector3D(List_X0);
     Direction = SRS_ListAsTVector3D(List_Direction);
   } catch (std::length_error e) {
-    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0' or 'v0'");
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0' or 'direction'");
     return NULL;
   }
 
@@ -924,6 +950,12 @@ static PyObject* SRS_SetNewParticle (SRSObject* self, PyObject* args, PyObject* 
     return NULL;
   }
 
+  // Check if a beam is at least defined
+  if (self->obj->GetNParticleBeams() < 1) {
+    PyErr_SetString(PyExc_ValueError, "No particle beam defined");
+    return NULL;
+  }
+
   std::string Beam = Beam_IN;
   std::string Particle = Particle_IN;
 
@@ -1007,7 +1039,15 @@ static PyObject* SRS_CalculateTrajectory (SRSObject* self)
 {
   // Get the CTStop variable from SRS
 
-  self->obj->CalculateTrajectory();
+  try {
+    self->obj->CalculateTrajectory();
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  }
 
   // Return the trajectory
   return SRS_GetTrajectory(self);
@@ -1166,6 +1206,13 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   }
 
 
+  // Check if a beam is at least defined
+  //if (self->obj->GetNParticleBeams() < 1) {
+  //  PyErr_SetString(PyExc_ValueError, "No particle beam defined");
+  //  return NULL;
+  //}
+
+
   // Check number of particles
   if (NParticles < 0) {
     PyErr_SetString(PyExc_ValueError, "'nparticles' must be >= 1 (sort of)");
@@ -1215,15 +1262,24 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   }
 
   // Actually calculate the spectrum
-  if (NParticles == 0) {
-    self->obj->CalculateSpectrum(Obs, SpectrumContainer);
-  } else {
-    double const Weight = 1.0 / (double) NParticles;
-    for (int i = 0; i != NParticles; ++i) {
-      self->obj->SetNewParticle();
-      self->obj->CalculateSpectrum(Obs, SpectrumContainer, Weight);
+  try {
+    if (NParticles == 0) {
+      self->obj->CalculateSpectrum(Obs, SpectrumContainer);
+    } else {
+      double const Weight = 1.0 / (double) NParticles;
+      for (int i = 0; i != NParticles; ++i) {
+        self->obj->SetNewParticle();
+        self->obj->CalculateSpectrum(Obs, SpectrumContainer, Weight);
+      }
     }
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
   }
+
 
   if (std::string(OFile) != "") {
     SpectrumContainer.SaveToFile(OFile);
@@ -1245,8 +1301,27 @@ static PyObject* SRS_CalculateTotalPower (SRSObject* self)
 {
   // Calculate the total power radiated by the current particle
 
+  double Power = 0;
+
+  // Check if a beam is at least defined
+  if (self->obj->GetNParticleBeams() < 1) {
+    PyErr_SetString(PyExc_ValueError, "No particle beam defined");
+    return NULL;
+  }
+
   // Return the total power
-  return Py_BuildValue("f", self->obj->CalculateTotalPower());
+  // UPDATE: This does not fail when no beam defined
+  try {
+    Power = self->obj->CalculateTotalPower();
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  }
+
+  return Py_BuildValue("f", Power);
 }
 
 
@@ -1276,6 +1351,12 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
                                                            &List_Rotations,
                                                            &List_Translation,
                                                            &OutFileName)) {
+    return NULL;
+  }
+
+  // Check if a beam is at least defined
+  if (self->obj->GetNParticleBeams() < 1) {
+    PyErr_SetString(PyExc_ValueError, "No particle beam defined");
     return NULL;
   }
 
@@ -1421,6 +1502,13 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
     return NULL;
   }
 
+  // Check if a beam is at least defined
+  if (self->obj->GetNParticleBeams() < 1) {
+    PyErr_SetString(PyExc_ValueError, "No particle beam defined");
+    return NULL;
+  }
+
+
   // Check requested dimension
   if (Dim != 2 & Dim != 3) {
     PyErr_SetString(PyExc_ValueError, "'dim' must be 2 or 3");
@@ -1482,7 +1570,12 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 
   // If you are requesting a simple surface plane, check that you have widths
   if (SurfacePlane != "" && Width_X1 > 0 && Width_X2 > 0) {
-    Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
+    try {
+      Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
+    } catch (std::invalid_argument e) {
+      PyErr_SetString(PyExc_ValueError, e.what());
+      return NULL;
+    }
   }
 
 
@@ -1598,6 +1691,13 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
     return NULL;
   }
 
+  // Check if a beam is at least defined
+  if (self->obj->GetNParticleBeams() < 1) {
+    PyErr_SetString(PyExc_ValueError, "No particle beam defined");
+    return NULL;
+  }
+
+
   // Check requested dimension
   if (Dim != 2 & Dim != 3) {
     PyErr_SetString(PyExc_ValueError, "'dim' must be 2 or 3");
@@ -1659,7 +1759,12 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
 
   // If you are requesting a simple surface plane, check that you have widths
   if (SurfacePlane != "" && Width_X1 > 0 && Width_X2 > 0) {
-    Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
+    try {
+      Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
+    } catch (std::invalid_argument e) {
+      PyErr_SetString(PyExc_ValueError, e.what());
+      return NULL;
+    }
   }
 
 
@@ -1747,6 +1852,12 @@ static PyObject* SRS_CalculateElectricFieldTimeDomain (SRSObject* self, PyObject
   if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|O", kwlist,
                                                         &List_Obs,
                                                         &OutFileName)) {
+    return NULL;
+  }
+
+  // Check if a beam is at least defined
+  if (self->obj->GetNParticleBeams() < 1) {
+    PyErr_SetString(PyExc_ValueError, "No particle beam defined");
     return NULL;
   }
 
@@ -1839,19 +1950,20 @@ static PyMethodDef SRS_methods[] = {
   {"get_ctstart",                       (PyCFunction) SRS_GetCTStart,                      METH_NOARGS,  "get the start time in [m]"},
   {"set_ctstop",                        (PyCFunction) SRS_SetCTStop,                       METH_O,       "set the stop time in [m]"},
   {"get_ctstop",                        (PyCFunction) SRS_GetCTStop,                       METH_NOARGS,  "get the stop time in [m]"},
+  {"set_ctstartstop",                   (PyCFunction) SRS_SetCTStartStop,                  METH_VARARGS, "set the start and stop time in [m]"},
   {"set_npoints_trajectory",            (PyCFunction) SRS_SetNPointsTrajectory,            METH_O,       "set the total number of points for the trajectory"},
   {"get_npoints_trajectory",            (PyCFunction) SRS_GetNPointsTrajectory,            METH_NOARGS,  "get the total number of points for the trajectory"},
-  {"set_ctstartstop",                   (PyCFunction) SRS_SetCTStartStop,                  METH_VARARGS, "set the start and stop time in [m]"},
                                                                                           
   {"add_magnetic_field",                (PyCFunction) SRS_AddMagneticField,                METH_VARARGS | METH_KEYWORDS, "add a magnetic field from a file"},
   {"add_magnetic_field_function",       (PyCFunction) SRS_AddMagneticFieldFunction,        METH_VARARGS, "add a magnetic field in form of python function"},
   {"add_magnetic_field_gaussian",       (PyCFunction) SRS_AddMagneticFieldGaussian,        METH_VARARGS | METH_KEYWORDS, "add a magnetic field in form of 3D gaussian"},
-  {"clear_magnetic_fields",             (PyCFunction) SRS_ClearMagneticFields,             METH_NOARGS,  "clear all internal magnetic fields"},
   {"add_magnetic_field_uniform",        (PyCFunction) SRS_AddMagneticFieldUniform,         METH_VARARGS | METH_KEYWORDS, "add a uniform magnetic field in 3D"},
   {"add_undulator",                     (PyCFunction) SRS_AddMagneticFieldIdealUndulator,  METH_VARARGS | METH_KEYWORDS, "add magnetic field from ideal undulator in 3D"},
   {"get_bfield",                        (PyCFunction) SRS_GetBField,                       METH_VARARGS, "get the magnetic field at a given position in space (and someday time?)"},
+  {"clear_magnetic_fields",             (PyCFunction) SRS_ClearMagneticFields,             METH_NOARGS,  "clear all internal magnetic fields"},
                                                                                           
                                                                                           
+  {"set_particle_beam",                 (PyCFunction) SRS_SetParticleBeam,                 METH_VARARGS | METH_KEYWORDS, "add a particle beam"},
   {"add_particle_beam",                 (PyCFunction) SRS_AddParticleBeam,                 METH_VARARGS | METH_KEYWORDS, "add a particle beam"},
   {"clear_particle_beams",              (PyCFunction) SRS_ClearParticleBeams,              METH_NOARGS,  "Clear all existing particle beams from SRS"},
                                                                                           

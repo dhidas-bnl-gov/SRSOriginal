@@ -113,7 +113,7 @@ size_t TParticleBeamContainer::GetRandomBeamIndexByWeight () const
 
   // If it's zero we don't really know what we are doing here..
   if (N == 0) {
-    throw std::length_error("no beams defined");
+    throw std::length_error("no beam defined");
   }
 
   // If we're 1, that's easy
@@ -134,10 +134,20 @@ size_t TParticleBeamContainer::GetRandomBeamIndexByWeight () const
 
   // Just in case you don't find it, something is seriously wrong..
   std::cerr << "ERROR: TParticleBeamContainer::GetRandomBeamIndexByWeight did not find a beam for this weight" << std::endl;
-  throw std::out_of_range("random weight out of range");
+  throw std::out_of_range("random weight out of range.  SERIOUS ERROR");
 
   return 0;
 }
+
+
+
+
+size_t TParticleBeamContainer::GetNParticleBeams () const
+{
+  // Return the number of particle beams
+  return fParticleBeams.size();
+}
+
 
 
 

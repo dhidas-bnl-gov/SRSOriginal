@@ -91,11 +91,11 @@ bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotat
 
   // UPDATE: CRITICAL - implement rotation
 
-  // Open the input file.  If !f return a false
+  // Open the input file.  If !f, throw
   std::ifstream f(InFileName.c_str());
   if (!f) {
     std::cerr << "ERROR: TBField3DZ::ReadFile cannot open file: " << InFileName << std::endl;
-    return false;
+    throw std::ifstream::failure("TBField3DZ::ReadFile cannot open file");
   }
 
   // Because we are reading a file this is not necessairly sorted data
@@ -135,7 +135,7 @@ bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotat
           Bz *= Scaling[3];
           break;
         default:
-          throw;
+          throw std::ifstream::failure("TBField3DZ::ReadFile scaling is incorrect");
       }
     }
 
@@ -148,7 +148,7 @@ bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotat
     // Check the stream to see if it is not good
     if (Iine.fail()) {
       std::cerr << "ERROR: TBField3DZ::ReadFile: data format error on this line: " << Line << std::endl;
-      throw;
+      throw std::ifstream::failure("TBField3DZ::ReadFile read error");
     }
 
     // Save in field vector
@@ -213,7 +213,7 @@ bool TBField3DZ::Regularize (std::vector<std::array<double, 3> >& oV, double& oF
   // Check to see there are at least 2 data points
   if (fBField.size() < 2) {
     std::cerr << "ERROR: TBField3DZ::Regularize: not enough data points" << std::endl;
-    throw;
+    throw std::length_error("TBField3DZ::Regularize not enough points");
   }
 
   // Grab the first and last Z

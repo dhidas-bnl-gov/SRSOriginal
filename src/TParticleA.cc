@@ -75,18 +75,23 @@ void TParticleA::SetParticleType (std::string const& Type)
     this->SetQM( -TSRS::Qe(), TSRS::Me() );
   } else if (type == "positron" || type == "anti-electron") {
     this->SetQM(  TSRS::Qe(), TSRS::Me() );
+
   } else if (type == "muon") {
-    this->SetQM( -TSRS::Qe(), TSRS::Me() );
+    this->SetQM( -TSRS::Qe(), TSRS::GeVTokg(0.1056583715) );
   } else if (type == "anti-muon") {
-    this->SetQM(  TSRS::Qe(), TSRS::Me() );
+    this->SetQM(  TSRS::Qe(), TSRS::GeVTokg(0.1056583715) );
 
 
   } else if (type == "proton") {
-    this->SetQM(  TSRS::Qe(), TSRS::Me() );
+    this->SetQM(  TSRS::Qe(), TSRS::GeVTokg(0.938272046) );
   } else if (type == "anti-proton") {
-    this->SetQM( -TSRS::Qe(), TSRS::Me() );
-  } else if (type == "neutron") {
-    this->SetQM(           0, TSRS::Me() );
+    this->SetQM( -TSRS::Qe(), TSRS::GeVTokg(0.938272046) );
+
+  } else if (type == "pi+") {
+    this->SetQM(  TSRS::Qe(), TSRS::GeVTokg(0.13957018) );
+  } else if (type == "pi-") {
+    this->SetQM( -TSRS::Qe(), TSRS::GeVTokg(0.13957018) );
+
   } else if (type == "custom") {
     // Don't do anything.  Q and M are set elsewhere for custom particles
   } else {
@@ -365,11 +370,6 @@ void TParticleA::SetQoverMGamma ()
   }
 
   fQoverMGamma = GetQ() / GetM() / GetGamma();
-
-  std::cout << "Q " << fQ << std::endl;
-  std::cout << "M " << fM << std::endl;
-  std::cout << "g " << fGamma << std::endl;
-  std::cout << "X " << fQoverMGamma << std::endl;
 
   return;
 }

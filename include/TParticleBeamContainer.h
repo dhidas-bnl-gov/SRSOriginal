@@ -31,6 +31,7 @@ class TParticleBeamContainer
     TParticleBeam& GetParticleBeam (std::string const&);
     TParticleBeam& GetRandomBeam ();
     size_t GetRandomBeamIndexByWeight () const;
+    size_t GetNParticleBeams () const;
     void Clear ();
 
 

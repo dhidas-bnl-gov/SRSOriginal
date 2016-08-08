@@ -47,6 +47,7 @@ class SRS
     // Functions related to the particle beam(s)
     void AddParticleBeam (std::string const&, std::string const&, TVector3D const&, TVector3D const&, double const, double const, double const, double const, double const Charge = 0, double const Mass = 0);
     TParticleBeam& GetParticleBeam (std::string const&);
+    size_t GetNParticleBeams () const;
     TParticleA GetNewParticle ();
     TParticleA const&  GetCurrentParticle () const;
     void SetNewParticle ();

@@ -72,17 +72,6 @@ void TBField3D_IdealUndulator::Init (TVector3D const& BField, TVector3D const& P
   // Length is 2 periods longer than NPeriods to account for terminating fields
   fUndulatorLength = fPeriod.Mag() * (fNPeriods + 2);
 
-  // UPDATE: Remove printing, try fNPeriods as double
-  std::cout << "BField " << fBField << std::endl;
-  std::cout << "Period " << fPeriod << std::endl;
-  std::cout << "NPeriods " << fNPeriods << std::endl;
-  std::cout << "Center " << fCenter << std::endl;
-  std::cout << "Phase " << fPhase << std::endl;
-  std::cout << "UndulatorLength " << fUndulatorLength << std::endl;
-  std::cout << "PeriodLength " << fPeriodLength << std::endl;
-  std::cout << "PeriodUnitVector " << fPeriodUnitVector << std::endl;
-
-
   return;
 }
 
