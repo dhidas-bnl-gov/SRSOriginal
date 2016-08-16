@@ -31,7 +31,7 @@ mma: bin/SRS_MMA
 wstp/%_tm.cc : wstp/%.tm
 	$(WSPREP) $< -o $@
 
-lib/SRS.so : lib/SRS_Python.o lib/SRS.o
+lib/SRS.so : $(OBJS) $(WSTPCCS) $(WSTPOBJS)
 	$(LD) -Wall -shared $(LIBS) $(WSTPOBJS) $(OBJS) -o $@
 
 lib/%.o : src/%.cc
@@ -52,5 +52,5 @@ bin/% : $(WSTPOBJS) $(OBJS) lib/%.o
 
 
 clean:
-	rm -f $(EXECS) lib/*.o $(SOLIB)
+	rm -f $(EXECS) lib/*.o $(SOLIB) $(WSTPOBJS) $(WSTPCCS)
 

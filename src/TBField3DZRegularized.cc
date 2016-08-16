@@ -170,7 +170,9 @@ bool TBField3DZRegularized::ReadFileRegularized (std::string const& InFileName)
     }
 
     // Save in field vector
-    fBField.push_back({ {Bx, By, Bz} });
+    //fBField.push_back({ {Bx, By, Bz} });
+    std::array<double, 3> myarray = { {Bx, By, Bz} };
+    fBField.push_back(myarray);
 
 
   }

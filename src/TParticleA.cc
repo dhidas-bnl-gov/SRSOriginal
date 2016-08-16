@@ -254,7 +254,12 @@ double TParticleA::GetQoverMGamma () const
 void TParticleA::SetCurrent (double const Current)
 {
   // Set the current.  This is mostly utilized by TParticleBeam
-  fCurrent = Current;
+  // UPDATE: Check for negative current
+  if (fCurrent != 0) {
+    fCurrent = Current;
+  } else {
+    fCurrent = this->GetQ();
+  }
   return;
 }
 
