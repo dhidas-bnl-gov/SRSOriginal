@@ -49,7 +49,7 @@ setup(
   description = 'This is an example of how to create a new type in a python extension',
   author = 'Dean Andrew Hidas',
   author_email = 'dhidas@bnl.gov',
-  url = 'https://github.com/dhidas',
-  long_description = '''This creates a new pythong type using the python-C extensions.''',
+  url = 'https://github.com/dhidas/SRS',
+  long_description = '''This creates a new python type using python-C extensions.''',
   ext_modules = [moduleSRS]
 )
