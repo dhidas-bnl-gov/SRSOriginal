@@ -15,6 +15,7 @@
 
 #include <string>
 
+#include "SRS_Cuda.h"
 #include "TBFieldContainer.h"
 #include "TParticleBeamContainer.h"
 #include "TSurfacePoints.h"
@@ -81,8 +82,8 @@ class SRS
     // Power Density calculation
     void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, int const Dimension = 3, bool const Directional = true, std::string const& OutFileName = "");
     void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, std::string const& OutFileName = "");
-    void CalculatePowerDensityGPU (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, std::string const& OutFileName = "");
     void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, std::string const& OutFileName = "");
+    void CalculatePowerDensityGPU (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, std::string const& OutFileName = "");
     void CalculatePowerDensityGPU (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, std::string const& OutFileName = "");
     double CalculateTotalPower ();
     double CalculateTotalPower (TParticleA&);

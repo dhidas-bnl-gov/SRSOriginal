@@ -33,7 +33,11 @@ TBField3DZ::~TBField3DZ ()
 bool TBField3DZ::Add (double const Z, double const Bx, double const By, double const Bz)
 {
   // Add an element to the array and mark that it is now not necessairly sorted
-  fBField.push_back( std::array<double, 4>{ {Z, Bx, By, Bz} } );
+  //fBField.push_back( std::array<double, 4>{ {Z, Bx, By, Bz} } );
+  // For compatibility with nvcc
+  std::array<double, 4> a = { {Z, Bx, By, Bz} };
+  fBField.push_back(a);
+
   fIsSorted = false;
 
   return true;
@@ -152,7 +156,10 @@ bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotat
     }
 
     // Save in field vector
-    fBField.push_back(std::array<double, 4>{ {Z, Bx, By, Bz} });
+    //fBField.push_back(std::array<double, 4>{ {Z, Bx, By, Bz} });
+    // Compatibility with nvcc
+    std::array<double, 4> a = { {Z, Bx, By, Bz} };
+    fBField.push_back(a);
 
   }
 
@@ -269,7 +276,9 @@ bool TBField3DZ::Regularize (std::vector<std::array<double, 3> >& oV, double& oF
     NewBz = fBField[BeforeBin][3] + (ThisZ - fBField[BeforeBin][0]) * SlopeZ;
 
     // Append the new BxByBz to the output vector
-    oV.push_back(std::array<double, 3>{ {NewBx, NewBy, NewBz} });
+    //oV.push_back(std::array<double, 3>{ {NewBx, NewBy, NewBz} });
+    std::array<double, 3> a = { {NewBx, NewBy, NewBz} };
+    oV.push_back(a);
 
   }
 

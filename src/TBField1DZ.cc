@@ -33,7 +33,9 @@ TBField1DZ::~TBField1DZ ()
 bool TBField1DZ::Add (double const Z, double const By)
 {
   // Add an element to the array and mark that it is now not necessairly sorted
-  fBField.push_back( std::array<double, 2>{ {Z, By} } );
+  //fBField.push_back( std::array<double, 2>{ {Z, By} } );
+  std::array<double, 2> a = { {Z, By} };
+  fBField.push_back(a);
   fIsSorted = false;
 
   return true;
@@ -124,7 +126,9 @@ bool TBField1DZ::ReadFile (std::string const& InFileName)
     }
 
     // Save in field vector
-    fBField.push_back(std::array<double, 2>{ {Z, By} });
+    //fBField.push_back(std::array<double, 2>{ {Z, By} });
+    std::array<double, 2> a = { {Z, By} };
+    fBField.push_back(a);
 
   }
 

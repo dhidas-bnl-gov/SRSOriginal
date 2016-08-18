@@ -1764,7 +1764,12 @@ static PyObject* SRS_CalculatePowerDensityRectangleGPU (SRSObject* self, PyObjec
 
   // Actually calculate the spectrum
   bool const Directional = NormalDirection == 0 ? false : true;
-  self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, OutFileName);
+  try {
+    self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, OutFileName);
+  } catch (std::invalid_argument e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  }
 
 
   // Build the output list of: [[[x, y, z], PowerDensity], [...]]

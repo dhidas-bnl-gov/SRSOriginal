@@ -25,6 +25,7 @@ WSPREP = $(WSTPDIR)/wsprep
 
 all: $(WSTPCCS) $(WSTPOBJS) $(OBJS) $(EXEOBJS) $(EXECS) $(SOLIB)
 
+
 mma: bin/SRS_MMA
 
 
@@ -36,6 +37,7 @@ lib/SRS.so : $(OBJS) $(WSTPCCS) $(WSTPOBJS)
 
 lib/%.o : src/%.cc
 	$(CC) -Wall $(CFLAGS) $(INCLUDE) -c $< -o $@
+
 
 lib/%.o : exe/%.cc
 	$(CC) -Wall $(CFLAGS) $(INCLUDE) -c $< -o $@

@@ -171,19 +171,17 @@ __global__ void SRS_Cuda_PowerDensityGPU (double *x, double *y, double *z, doubl
 
 
 
-  //__shared__ double temp[*nt];
-  __shared__ double temp[6144];
-  if (threadIdx.x == 0) {
-    for (int i = 0; i < *nt; ++i) {
-      if (i <= 6144) {
-        break;
-      }
-      temp[i] = x[i];
-    }
-  }
-
-   __syncthreads();
-
+  // If you could copy int ultra-fast memory, something like this:
+  //__shared__ double temp[6144];
+  //if (threadIdx.x == 0) {
+  //  for (int i = 0; i < *nt; ++i) {
+  //    if (i <= 6144) {
+  //      break;
+  //    }
+  //    temp[i] = x[i];
+  //  }
+  //}
+  // __syncthreads();
 
 
 
