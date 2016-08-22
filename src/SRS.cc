@@ -965,6 +965,14 @@ void SRS::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& 
 {
   // If you compile for Cuda use the GPU in this function, else throw
 
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    throw std::out_of_range("no particle defined");
+  }
+
+  // Calculate the trajectory from scratch
+  this->CalculateTrajectory(Particle);
+
   #ifdef CUDA
   return SRS_Cuda_CalculatePowerDensityGPU (Particle, Surface, PowerDensityContainer, Dimension, Directional, OutFileName);
   #else
