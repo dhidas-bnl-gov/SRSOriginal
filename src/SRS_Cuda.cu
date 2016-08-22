@@ -164,11 +164,6 @@ __global__ void SRS_Cuda_PowerDensityGPU (double *x, double *y, double *z, doubl
   }
 
 
-  for (int i = 0; i < *nt; ++i) {
-    power_density[is] = is;
-
-  }
-
 
 
   // If you could copy int ultra-fast memory, something like this:
@@ -296,7 +291,7 @@ void SRS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints con
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
 
   // Number of points in Trajectory
-  size_t const NTPoints = T.GetNPoints();
+  int const NTPoints = (int) T.GetNPoints();
 
   // Timestep from trajectory
   double const DeltaT = T.GetDeltaT();
@@ -311,7 +306,7 @@ void SRS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints con
   double *aocy  = new double[NTPoints];
   double *aocz  = new double[NTPoints];
 
-  size_t const NSPoints = PowerDensityContainer.GetNPoints();
+  int const NSPoints = (int) Surface.GetNPoints();
 
   double *sx     = new double[NSPoints];
   double *sy     = new double[NSPoints];
@@ -392,25 +387,25 @@ void SRS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints con
   cudaMalloc((void **) &d_ns, sizeof(int));
 
 
-  cudaMemcpy(d_x, &x, size_x, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_y, &y, size_x, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_z, &z, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_x, x, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_y, y, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_z, z, size_x, cudaMemcpyHostToDevice);
 
-  cudaMemcpy(d_bx, &bx, size_x, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_by, &by, size_x, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_bz, &bz, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_bx, bx, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_by, by, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_bz, bz, size_x, cudaMemcpyHostToDevice);
 
-  cudaMemcpy(d_aocx, &aocx, size_x, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_aocy, &aocy, size_x, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_aocz, &aocz, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_aocx, aocx, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_aocy, aocy, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_aocz, aocz, size_x, cudaMemcpyHostToDevice);
 
-  cudaMemcpy(d_sx, &sx, size_s, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_sy, &sy, size_s, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_sz, &sz, size_s, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_sx, sx, size_s, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_sy, sy, size_s, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_sz, sz, size_s, cudaMemcpyHostToDevice);
 
-  cudaMemcpy(d_snx, &snx, size_s, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_sny, &sny, size_s, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_snz, &snz, size_s, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_snx, snx, size_s, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_sny, sny, size_s, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_snz, snz, size_s, cudaMemcpyHostToDevice);
 
   cudaMemcpy(d_dt, &DeltaT, sizeof(double), cudaMemcpyHostToDevice);
 
@@ -419,18 +414,18 @@ void SRS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints con
 
 
   // Send computation to gpu
-  int const NThreadsPerBlock = 512;
+  int const NThreadsPerBlock = 64;
   int const NBlocks = NSPoints / NThreadsPerBlock + 1;
   SRS_Cuda_PowerDensityGPU<<<NBlocks, NThreadsPerBlock>>>(d_x, d_y, d_z, d_bx, d_by, d_bz, d_aocx, d_aocy, d_aocz, d_sx, d_sy, d_sz, d_snx, d_sny, d_snz, d_dt, d_nt, d_ns, d_power_density);
 
   // Copy result back from GPU
-  cudaMemcpy(&power_density, d_power_density, size_s, cudaMemcpyDeviceToHost);
+  cudaMemcpy(power_density, d_power_density, size_s, cudaMemcpyDeviceToHost);
 
 
 
   // Add result to power density container
   for (size_t i = 0; i < NSPoints; ++i) {
-    PowerDensityContainer.AddPoint(TVector3D(sx[i], sy[i], sz[i]), power_density[i] * fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TSRS::Pi2() * TSRS::Epsilon0() * TSRS::C()));
+    PowerDensityContainer.AddPoint(TVector3D(sx[i], sy[i], sz[i]), power_density[i] * fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TSRS::Pi2() * TSRS::Epsilon0() * TSRS::C()) / 1e6);
   }
 
 
