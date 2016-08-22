@@ -6,12 +6,13 @@
 //
 ////////////////////////////////////////////////////////////////////
 
+#include <cuComplex.h>
+
 #include "SRS_Cuda.h"
 
 #include "SRS.h"
 
 #include <cmath>
-#include <complex>
 #include <fstream>
 #include <sstream>
 
@@ -23,6 +24,20 @@
 
 
 
+
+
+__global__ void ComplexTest()
+{
+  double cr = 1;
+  double ci = 2;
+  double r = 3;
+  cuDoubleComplex c = make_cuDoubleComplex(cr, ci);
+  cuDoubleComplex result = cuCmul(c, make_cuDoubleComplex(r, 0));
+
+  result = cuCadd(c, make_cuDoubleComplex(r, 0));
+  result = cuCsub(c, make_cuDoubleComplex(r, 0));
+  result = cuCdiv(c, make_cuDoubleComplex(r, 0));
+}
 
 
 __global__ void Orthogonal(double *a, double *b)
