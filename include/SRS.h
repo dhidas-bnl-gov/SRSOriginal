@@ -70,6 +70,7 @@ class SRS
     double GetCTStart () const;
     double GetCTStop  () const;
 
+    void CalculateSpectrumGPU (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight = 1);
     void CalculateSpectrum ();
     void CalculateSpectrum (TVector3D const&, TSpectrumContainer&, double const Weight = 1);
     void CalculateSpectrum (TParticleA&, TVector3D const&, TSpectrumContainer&, double const Weight = 1);

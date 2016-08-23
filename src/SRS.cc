@@ -586,6 +586,34 @@ void SRS::RK4 (double y[], double dydx[], int n, double x, double h, double yout
 
 
 
+
+void SRS::CalculateSpectrumGPU (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
+{
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
+  #ifdef CUDA
+  return SRS_Cuda_CalculateSpectrumGPU (fParticle, ObservationPoint, Spectrum, Weight);
+  #else
+  throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
+  #endif
+
+  return;
+}
+
+
+
+
+
+
+
+
 void SRS::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
 {
   // Check that particle has been set yet.  If fType is "" it has not been set yet
@@ -978,6 +1006,8 @@ void SRS::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& 
   #else
   throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
   #endif
+
+  return;
 }
 
 
