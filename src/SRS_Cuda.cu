@@ -132,8 +132,8 @@ __global__ void SRS_Cuda_SpectrumGPU (double *x, double *y, double *z, double *b
     cuDoubleComplex Y1 = make_cuDoubleComplex((by[i] - NY) / D, -(*C) * NY / (Omega * D * D));
     cuDoubleComplex Z1 = make_cuDoubleComplex((bz[i] - NZ) / D, -(*C) * NZ / (Omega * D * D));
 
-    //cuDoubleComplex MyEXP = cuCexp(Exponent);
-    cuDoubleComplex MyEXP = make_cuDoubleComplex( exp(Exponent.x) * cos(Exponent.y), exp(Exponent.x) * sin(Exponent.y));
+    cuDoubleComplex MyEXP = cuCexp(Exponent);
+    //cuDoubleComplex MyEXP = make_cuDoubleComplex( exp(Exponent.x) * cos(Exponent.y), exp(Exponent.x) * sin(Exponent.y));
 
     cuDoubleComplex X2 = cuCmul(X1, MyEXP);
     cuDoubleComplex Y2 = cuCmul(Y1, MyEXP);
@@ -324,7 +324,7 @@ void SRS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& Obser
 
   // Add result to power density container
   for (size_t i = 0; i < NSPoints; ++i) {
-    Spectrum.SetFlux(i, sf[i] * Weight);
+    Spectrum.AddToFlux(i, sf[i] * Weight);
   }
 
 

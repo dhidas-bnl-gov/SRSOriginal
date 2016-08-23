@@ -1354,7 +1354,9 @@ static PyObject* SRS_CalculateSpectrumGPU (SRSObject* self, PyObject* args, PyOb
     } else {
       double const Weight = 1.0 / (double) NParticles;
       for (int i = 0; i != NParticles; ++i) {
+        std::cout << i << std::endl;
         self->obj->SetNewParticle();
+        self->obj->CalculateTrajectory();
         self->obj->CalculateSpectrumGPU(Obs, SpectrumContainer, Weight);
       }
     }
