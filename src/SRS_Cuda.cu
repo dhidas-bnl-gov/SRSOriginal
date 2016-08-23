@@ -108,7 +108,7 @@ __global__ void SRS_Cuda_SpectrumGPU (double *x, double *y, double *z, double *b
   cuDoubleComplex ICoverOmega = make_cuDoubleComplex(0, (*C) / Omega);
 
 
-  // E-field omponents sum
+  // E-field components sum
   cuDoubleComplex SumEX = make_cuDoubleComplex(0, 0);
   cuDoubleComplex SumEY = make_cuDoubleComplex(0, 0);
   cuDoubleComplex SumEZ = make_cuDoubleComplex(0, 0);
@@ -118,32 +118,31 @@ __global__ void SRS_Cuda_SpectrumGPU (double *x, double *y, double *z, double *b
   for (int i = 0; i < *nt; ++i) {
 
     // Distance to observer
-    double const D = sqrt( pow(ox[i] - x[i], 2) + pow(oy[i] - y[i], 2) + pow(oz[i] - z[i], 2) );
+    double const D = sqrt( pow( (*ox) - x[i], 2) + pow( (*oy) - y[i], 2) + pow((*oz) - z[i], 2) );
 
     // Normal in direction of observer
-    double const NX = (ox[i] - x[i]) / D;
-    double const NY = (oy[i] - y[i]) / D;
-    double const NZ = (oz[i] - z[i]) / D;
+    double const NX = ((*ox) - x[i]) / D;
+    double const NY = ((*oy) - y[i]) / D;
+    double const NZ = ((*oz) - z[i]) / D;
 
     // Exponent for fourier transformed field
     cuDoubleComplex Exponent = make_cuDoubleComplex(0, Omega * ((*dt) * i + D / (*C)));
 
+    cuDoubleComplex X1 = make_cuDoubleComplex((bx[i] - NX) / D, -(*C) * NX / (Omega * D * D));
+    cuDoubleComplex Y1 = make_cuDoubleComplex((by[i] - NY) / D, -(*C) * NY / (Omega * D * D));
+    cuDoubleComplex Z1 = make_cuDoubleComplex((bz[i] - NZ) / D, -(*C) * NZ / (Omega * D * D));
 
-    cuDoubleComplex BXMinusNXTimesICOverOmegaOverDOverD = make_cuDoubleComplex(bx[i] - NX / D, -NX * Omega * ((*dt) * i + D / (*C)) / D);
-    cuDoubleComplex BYMinusNYTimesICOverOmegaOverDOverD = make_cuDoubleComplex(by[i] - NY / D, -NY * Omega * ((*dt) * i + D / (*C)) / D);
-    cuDoubleComplex BZMinusNZTimesICOverOmegaOverDOverD = make_cuDoubleComplex(bz[i] - NZ / D, -NZ * Omega * ((*dt) * i + D / (*C)) / D);
-    
+    //cuDoubleComplex MyEXP = cuCexp(Exponent);
+    cuDoubleComplex MyEXP = make_cuDoubleComplex( exp(Exponent.x) * cos(Exponent.y), exp(Exponent.x) * sin(Exponent.y));
 
-    cuDoubleComplex MyEXP = cuCexp(Exponent);
-
-    cuDoubleComplex X = cuCmul(BXMinusNXTimesICOverOmegaOverDOverD, MyEXP);
-    cuDoubleComplex Y = cuCmul(BYMinusNYTimesICOverOmegaOverDOverD, MyEXP);
-    cuDoubleComplex Z = cuCmul(BZMinusNZTimesICOverOmegaOverDOverD, MyEXP);
+    cuDoubleComplex X2 = cuCmul(X1, MyEXP);
+    cuDoubleComplex Y2 = cuCmul(Y1, MyEXP);
+    cuDoubleComplex Z2 = cuCmul(Z1, MyEXP);
 
 
-    SumEX = cuCadd(SumEX, X);
-    SumEY = cuCadd(SumEY, Y);
-    SumEZ = cuCadd(SumEZ, Z);
+    SumEX = cuCadd(SumEX, X2);
+    SumEY = cuCadd(SumEY, Y2);
+    SumEZ = cuCadd(SumEZ, Z2);
 
     // Sum in fourier transformed field (integral)
     //SumEX += (TVector3DC(B) - (N *     (One + (ICoverOmega / (D)))     )) / D * std::exp(Exponent);
@@ -154,9 +153,9 @@ __global__ void SRS_Cuda_SpectrumGPU (double *x, double *y, double *z, double *b
   SumEZ = cuCmul(make_cuDoubleComplex(0, (*C0) * Omega * (*dt)), SumEZ);
 
 
-  double const EX = (*C2) * (SumEX.x * SumEX.x + SumEX.y * SumEX.y);
-  double const EY = (*C2) * (SumEY.x * SumEY.x + SumEY.y * SumEY.y);
-  double const EZ = (*C2) * (SumEZ.x * SumEZ.x + SumEZ.y * SumEZ.y);
+  double const EX = SumEX.x * SumEX.x + SumEX.y * SumEX.y;
+  double const EY = SumEY.x * SumEY.x + SumEY.y * SumEY.y;
+  double const EZ = SumEZ.x * SumEZ.x + SumEZ.y * SumEZ.y;
 
   // Multiply field by Constant C1 and time step
   //SumE *= C1 * DeltaT;
@@ -164,7 +163,7 @@ __global__ void SRS_Cuda_SpectrumGPU (double *x, double *y, double *z, double *b
   // Set the flux for this frequency / energy point
   //Spectrum.AddToFlux(i, C2 *  SumE.Dot( SumE.CC() ).real() * Weight);
 
-  sf[is] = EX + EY + EZ;
+  sf[is] = (*C2) * (EX + EY + EZ);
 
 }
 
@@ -267,8 +266,8 @@ void SRS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& Obser
   cudaMalloc((void **) &d_nt, sizeof(int));
   cudaMalloc((void **) &d_ns, sizeof(int));
 
-  cudaMalloc((void **) &d_se, sizeof(double));
-  cudaMalloc((void **) &d_sf, sizeof(double));
+  cudaMalloc((void **) &d_se, size_s);
+  cudaMalloc((void **) &d_sf, size_s);
 
 
   cudaMemcpy(d_x, x, size_x, cudaMemcpyHostToDevice);
