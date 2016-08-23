@@ -1131,6 +1131,146 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 
 
 
+void SRS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+{
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  // Save this in the spectrum container.
+  //
+  // Particle - the Particle.. with a Trajectory structure hopefully
+  // ObservationPoint - Observation Point
+  // Spectrum - Spectrum container
+
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    throw std::out_of_range("no particle defined");
+  }
+
+  // Calculate trajectory
+  this->CalculateTrajectory(Particle);
+
+  // Grab the Trajectory
+  TParticleTrajectoryPoints& T = Particle.GetTrajectory();
+
+  // Write to a file?
+  bool const WriteToFile = OutFileName != "" ? true : false;
+
+  // UPDATE: Dimension is hard coded
+  int const Dimension = 2;
+
+  // Time step.  Expecting it to be constant throughout calculation
+  double const DeltaT = T.GetDeltaT();
+
+
+  // Number of points in the trajectory
+  size_t const NTPoints = T.GetNPoints();
+
+  if (NTPoints < 1) {
+    throw std::length_error("no points in trajectory.  Is particle or beam defined?");
+  }
+
+  // Number of points in the spectrum container
+  size_t const NSPoints = Surface.GetNPoints();
+
+  // Constant C0 for calculation
+  double const C0 = Particle.GetQ() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
+
+  // Constant for flux calculation at the end
+  double const C2 = TSRS::FourPi() * Particle.GetCurrent() / (TSRS::H() * fabs(Particle.GetQ()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
+
+  // Imaginary "i" and complxe 1+0i
+  std::complex<double> const I(0, 1);
+  std::complex<double> const One(1, 0);
+
+
+  // Angular frequency
+  double const Omega = TSRS::EvToAngularFrequency(Energy_eV);;
+
+  // Constant for field calculation
+  std::complex<double> ICoverOmega = I * TSRS::C() / Omega;
+
+  // Constant for calculation
+  std::complex<double> const C1(0, C0 * Omega);
+
+  // If writing to a file, open it and set to scientific output
+  std::ofstream of;
+  if (WriteToFile) {
+    of.open(OutFileName.c_str());
+    if (!of.is_open()) {
+      throw std::ofstream::failure("cannot open output file");
+    }
+    of << std::scientific;
+  }
+
+  // Loop over all points in the spectrum container
+  for (size_t i = 0; i != NSPoints; ++i) {
+
+    // Obs point
+    TVector3D ObservationPoint = Surface.GetPoint(i).GetPoint();
+
+    // Electric field summation in frequency space
+    TVector3DC SumE(0, 0, 0);
+
+    // Loop over all points in trajectory
+    for (int iT = 0; iT != NTPoints; ++iT) {
+
+      // Particle position
+      TVector3D const& X = T.GetX(iT);
+
+      // Particle "Beta" (velocity over speed of light)
+      TVector3D const& B = T.GetB(iT);
+
+      // Vector pointing from particle to observer
+      TVector3D const R = ObservationPoint - X;
+
+      // Unit vector pointing from particl to observer
+      TVector3D const N = R.UnitVector();
+
+      // Distance from particle to observer
+      double const D = R.Mag();
+
+      // Exponent for fourier transformed field
+      std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TSRS::C()));
+
+      // Sum in fourier transformed field (integral)
+      SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
+    }
+
+    // Multiply field by Constant C1 and time step
+    SumE *= C1 * DeltaT;
+
+    // Set the flux for this frequency / energy point
+    double const ThisFlux = C2 *  SumE.Dot( SumE.CC() ).real();// * Weight;
+
+    if (Dimension == 2) {
+      if (WriteToFile) {
+        of << Surface.GetX1(i) << " " << Surface.GetX2(i) << " " << ThisFlux << "\n";
+      } else {
+        FluxContainer.AddPoint(TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), ThisFlux);
+      }
+    } else if (Dimension == 3) {
+      if (WriteToFile) {
+        of << ObservationPoint.GetX() << " " << ObservationPoint.GetY() << " " << ObservationPoint.GetZ() << " " << ThisFlux << "\n";
+      } else {
+        FluxContainer.AddPoint(ObservationPoint, ThisFlux);
+      }
+    } else {
+      throw std::out_of_range("incorrect dimensions");
+    }
+  }
+
+  if (WriteToFile) {
+    of.close();
+  }
+
+
+
+  return;
+}
+
+
+
+
 void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
@@ -1146,6 +1286,7 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
     throw std::out_of_range("no particle defined");
   }
 
+  // UPDATE: Dimension is hard coded
   int const Dimension = 2;
 
   // Write to a file?
@@ -1285,7 +1426,7 @@ void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, 
     }
   }
 
-  this->CalculateFlux(fParticle, Surface, Energy_eV, FluxContainer);
+  this->CalculateFlux2(fParticle, Surface, Energy_eV, FluxContainer);
   return;
 }
 
