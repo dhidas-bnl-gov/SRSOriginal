@@ -91,8 +91,11 @@ class SRS
 
     // Flux Calculations
     void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, std::string const& OutFileName = "");
+    void CalculateFlux2 (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
     void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
     void CalculateFlux (TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
+    void CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName = "");
+    void CalculateFluxGPU (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName = "");
 
     // Electric Field Calculations
     void CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer&);

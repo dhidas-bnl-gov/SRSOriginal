@@ -1014,18 +1014,6 @@ void SRS::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 void SRS::CalculatePowerDensityGPU (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
@@ -1111,20 +1099,6 @@ double SRS::CalculateTotalPower (TParticleA& Particle)
 
   return TotalPower;
 }
-
-
-
-
-
-void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, std::string const& OutFileName)
-{
-  T3DScalarContainer FluxContainer;
-  this->CalculateFlux(Particle, Surface, Energy_eV, FluxContainer);
-
-  return;
-}
-
-
 
 
 
@@ -1415,6 +1389,17 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 
 
 
+void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, std::string const& OutFileName)
+{
+  T3DScalarContainer FluxContainer;
+  this->CalculateFlux2(Particle, Surface, Energy_eV, FluxContainer);
+
+  return;
+}
+
+
+
+
 void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
 {
   // Check that particle has been set yet.  If fType is "" it has not been set yet
@@ -1429,6 +1414,62 @@ void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, 
   this->CalculateFlux2(fParticle, Surface, Energy_eV, FluxContainer);
   return;
 }
+
+
+
+
+
+
+
+
+
+void SRS::CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+{
+  // If you compile for Cuda use the GPU in this function, else throw
+
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    throw std::out_of_range("no particle defined");
+  }
+
+  // Calculate the trajectory from scratch
+  this->CalculateTrajectory(Particle);
+
+  #ifdef CUDA
+  return SRS_Cuda_CalculateFluxGPU(Particle, Surface, Energy_eV, FluxContainer, OutFileName);
+  #else
+  throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
+  #endif
+
+  return;
+}
+
+
+
+
+
+void SRS::CalculateFluxGPU (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+{
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // Surface - Observation Point
+
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
+  this->CalculateFluxGPU(fParticle, Surface, Energy_eV, FluxContainer, OutFileName);
+
+  return;
+}
+
+
 
 
 

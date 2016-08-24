@@ -53,7 +53,7 @@ __global__ void ComplexTest()
 }
 
 
-__global__ void Orthogonal(double *a, double *b)
+__device__ static __inline__ void Orthogonal(double *a, double *b)
 {
   // Return a vector which is orthogonal vector a
   double xx = a[0] < 0.0 ? -a[0] : a[0];
@@ -89,6 +89,347 @@ __host__ __device__ static __inline__ cuDoubleComplex cuCexp(cuDoubleComplex x)
   double factor = exp(x.x);
   return make_cuDoubleComplex(factor * cos(x.y), factor * sin(x.y));
 }
+
+
+
+
+
+
+
+
+
+
+__global__ void SRS_Cuda_FluxGPU (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
+{
+  // Check that this is within the number of spectrum points requested
+  int is = threadIdx.x + blockIdx.x * blockDim.x;
+  if (is >= *ns) {
+    return;
+  }
+
+  // Complex i
+  cuDoubleComplex I = make_cuDoubleComplex(0, 1);
+
+  cuDoubleComplex ICoverOmega = make_cuDoubleComplex(0, (*C) / (*Omega));
+
+  double const ox = sx[is];
+  double const oy = sy[is];
+  double const oz = sz[is];
+
+  // E-field components sum
+  cuDoubleComplex SumEX = make_cuDoubleComplex(0, 0);
+  cuDoubleComplex SumEY = make_cuDoubleComplex(0, 0);
+  cuDoubleComplex SumEZ = make_cuDoubleComplex(0, 0);
+
+
+  // Loop over all points in trajectory
+  for (int i = 0; i < *nt; ++i) {
+
+    // Distance to observer
+    double const D = sqrt( pow( (ox) - x[i], 2) + pow( (oy) - y[i], 2) + pow((oz) - z[i], 2) );
+
+    // Normal in direction of observer
+    double const NX = ((ox) - x[i]) / D;
+    double const NY = ((oy) - y[i]) / D;
+    double const NZ = ((oz) - z[i]) / D;
+
+    // Exponent for fourier transformed field
+    cuDoubleComplex Exponent = make_cuDoubleComplex(0, (*Omega) * ((*dt) * i + D / (*C)));
+
+    cuDoubleComplex X1 = make_cuDoubleComplex((bx[i] - NX) / D, -(*C) * NX / ((*Omega) * D * D));
+    cuDoubleComplex Y1 = make_cuDoubleComplex((by[i] - NY) / D, -(*C) * NY / ((*Omega) * D * D));
+    cuDoubleComplex Z1 = make_cuDoubleComplex((bz[i] - NZ) / D, -(*C) * NZ / ((*Omega) * D * D));
+
+    cuDoubleComplex MyEXP = cuCexp(Exponent);
+    //cuDoubleComplex MyEXP = make_cuDoubleComplex( exp(Exponent.x) * cos(Exponent.y), exp(Exponent.x) * sin(Exponent.y));
+
+    cuDoubleComplex X2 = cuCmul(X1, MyEXP);
+    cuDoubleComplex Y2 = cuCmul(Y1, MyEXP);
+    cuDoubleComplex Z2 = cuCmul(Z1, MyEXP);
+
+
+    SumEX = cuCadd(SumEX, X2);
+    SumEY = cuCadd(SumEY, Y2);
+    SumEZ = cuCadd(SumEZ, Z2);
+
+    // Sum in fourier transformed field (integral)
+    //SumEX += (TVector3DC(B) - (N *     (One + (ICoverOmega / (D)))     )) / D * std::exp(Exponent);
+  }
+
+  SumEX = cuCmul(make_cuDoubleComplex(0, (*C0) * (*Omega) * (*dt)), SumEX);
+  SumEY = cuCmul(make_cuDoubleComplex(0, (*C0) * (*Omega) * (*dt)), SumEY);
+  SumEZ = cuCmul(make_cuDoubleComplex(0, (*C0) * (*Omega) * (*dt)), SumEZ);
+
+
+  double const EX = SumEX.x * SumEX.x + SumEX.y * SumEX.y;
+  double const EY = SumEY.x * SumEY.x + SumEY.y * SumEY.y;
+  double const EZ = SumEZ.x * SumEZ.x + SumEZ.y * SumEZ.y;
+
+  // Multiply field by Constant C1 and time step
+  //SumE *= C1 * DeltaT;
+
+  // Set the flux for this frequency / energy point
+  //Spectrum.AddToFlux(i, C2 *  SumE.Dot( SumE.CC() ).real() * Weight);
+
+  flux[is] = (*C2) * (EX + EY + EZ);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void SRS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+{
+
+  int ngpu = 0;
+  cudaGetDeviceCount(&ngpu);
+  if (ngpu == 0) {
+    throw std::invalid_argument("No GPU found");
+  }
+
+  std::cout << "ngpu " << ngpu << std::endl;
+
+
+
+
+  // Grab the Trajectory
+  TParticleTrajectoryPoints& T = Particle.GetTrajectory();
+
+  // Number of points in Trajectory
+  int const NTPoints = (int) T.GetNPoints();
+
+  // Timestep from trajectory
+  double const DeltaT = T.GetDeltaT();
+
+  double *x     = new double[NTPoints];
+  double *y     = new double[NTPoints];
+  double *z     = new double[NTPoints];
+  double *bx    = new double[NTPoints];
+  double *by    = new double[NTPoints];
+  double *bz    = new double[NTPoints];
+
+
+  int const NSPoints = (int) Surface.GetNPoints();
+
+  // Observer
+  double *sx     = new double[NSPoints];
+  double *sy     = new double[NSPoints];
+  double *sz     = new double[NSPoints];
+
+  // Constants
+  double const C = TSRS::C();
+  double const Omega = TSRS::EvToAngularFrequency(Energy_eV);
+
+  // Flux
+  double *flux = new double[NSPoints];
+
+
+  // Set trajectory
+  for (size_t i = 0; i < NTPoints; ++i) {
+    x[i] = T.GetX(i).GetX();
+    y[i] = T.GetX(i).GetY();
+    z[i] = T.GetX(i).GetZ();
+
+    bx[i] = T.GetB(i).GetX();
+    by[i] = T.GetB(i).GetY();
+    bz[i] = T.GetB(i).GetZ();
+  }
+
+  // Set the surface points
+  for (size_t i = 0; i < NSPoints; ++i) {
+    sx[i] = Surface.GetPoint(i).GetX();
+    sy[i] = Surface.GetPoint(i).GetY();
+    sz[i] = Surface.GetPoint(i).GetZ();
+  }
+
+
+
+
+  double *d_x, *d_y, *d_z;
+  double *d_bx, *d_by, *d_bz;
+  double *d_sx, *d_sy, *d_sz;
+  double *d_flux;
+  double *d_dt;
+  int    *d_nt, *d_ns;
+
+  int const size_x = NTPoints * sizeof(double);
+  int const size_s = NSPoints * sizeof(double);
+
+  cudaMalloc((void **) &d_x, size_x);
+  cudaMalloc((void **) &d_y, size_x);
+  cudaMalloc((void **) &d_z, size_x);
+
+  cudaMalloc((void **) &d_bx, size_x);
+  cudaMalloc((void **) &d_by, size_x);
+  cudaMalloc((void **) &d_bz, size_x);
+
+  cudaMalloc((void **) &d_sx, size_s);
+  cudaMalloc((void **) &d_sy, size_s);
+  cudaMalloc((void **) &d_sz, size_s);
+
+
+  cudaMalloc((void **) &d_dt, sizeof(double));
+  cudaMalloc((void **) &d_nt, sizeof(int));
+  cudaMalloc((void **) &d_ns, sizeof(int));
+
+  cudaMalloc((void **) &d_flux, size_s);
+
+
+  cudaMemcpy(d_x, x, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_y, y, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_z, z, size_x, cudaMemcpyHostToDevice);
+
+  cudaMemcpy(d_bx, bx, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_by, by, size_x, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_bz, bz, size_x, cudaMemcpyHostToDevice);
+
+  cudaMemcpy(d_sx, sx, size_s, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_sy, sy, size_s, cudaMemcpyHostToDevice);
+  cudaMemcpy(d_sz, sz, size_s, cudaMemcpyHostToDevice);
+
+
+
+  cudaMemcpy(d_dt, &DeltaT, sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_nt, &NTPoints, sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_ns, &NSPoints, sizeof(int), cudaMemcpyHostToDevice);
+
+
+
+  // Constant C0 for calculation
+  double const C0 = Particle.GetQ() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
+
+  // Constant for flux calculation at the end
+  double const C2 = TSRS::FourPi() * Particle.GetCurrent() / (TSRS::H() * fabs(Particle.GetQ()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
+
+  // Constants to send in to GPU
+  double *d_C0, *d_C2, *d_Omega, *d_C;
+
+  // Allocate memory for constants
+  cudaMalloc((void **) &d_C0,        sizeof(double));
+  cudaMalloc((void **) &d_C2,        sizeof(double));
+  cudaMalloc((void **) &d_Omega,     sizeof(double));
+  cudaMalloc((void **) &d_C,         sizeof(double));
+
+  // Copy constants to GPU
+  cudaMemcpy(d_C0,        &C0,        sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_C2,        &C2,        sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_Omega,     &Omega,     sizeof(double), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_C,         &C,         sizeof(double), cudaMemcpyHostToDevice);
+
+
+  // Send computation to gpu
+  int const NThreadsPerBlock = 64;
+  int const NBlocks = NSPoints / NThreadsPerBlock + 1;
+  SRS_Cuda_FluxGPU<<<NBlocks, NThreadsPerBlock>>>(d_x, d_y, d_z, d_bx, d_by, d_bz, d_sx, d_sy, d_sz, d_dt, d_nt, d_ns, d_C0, d_C2, d_C, d_Omega, d_flux);
+
+  // Copy result back from GPU
+  cudaMemcpy(flux, d_flux, size_s, cudaMemcpyDeviceToHost);
+
+
+
+  double const Weight = 1;
+  // Add result to power density container
+  for (size_t i = 0; i < NSPoints; ++i) {
+    FluxContainer.AddPoint( TVector3D(sx[i], sy[i], sz[i]), flux[i] * Weight);
+  }
+
+
+  // Free all gpu memory
+  cudaFree(d_x);
+  cudaFree(d_y);
+  cudaFree(d_z);
+
+  cudaFree(d_bx);
+  cudaFree(d_by);
+  cudaFree(d_bz);
+
+  cudaFree(d_sx);
+  cudaFree(d_sy);
+  cudaFree(d_sz);
+
+  cudaFree(d_dt);
+  cudaFree(d_nt);
+  cudaFree(d_ns);
+
+  cudaFree(d_flux);
+
+  cudaFree(d_C0);
+  cudaFree(d_C2);
+  cudaFree(d_Omega);
+  cudaFree(d_C);
+
+
+  // Free all heap memory
+  delete [] x;
+  delete [] y;
+  delete [] z;
+
+  delete [] bx;
+  delete [] by;
+  delete [] bz;
+
+  delete [] sx;
+  delete [] sy;
+  delete [] sz;
+
+
+  delete [] flux;
+
+
+  return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -2111,6 +2111,198 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
 
 
 
+
+
+
+
+
+
+
+
+static PyObject* SRS_CalculateFluxRectangleGPU (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Calculate the spectrum given an observation point, and energy range
+
+  char const* SurfacePlane = "";
+  size_t      NX1 = 0;
+  size_t      NX2 = 0;
+  double      Width_X1 = 0;
+  double      Width_X2 = 0;
+  PyObject*   List_NPoints= PyList_New(0);
+  PyObject*   List_Width= PyList_New(0);
+  PyObject*   List_Translation = PyList_New(0);
+  PyObject*   List_Rotations = PyList_New(0);
+  PyObject*   List_X0X1X2 = PyList_New(0);
+  int         NormalDirection = 0;
+  int         Dim = 2;
+  double      Energy_eV = 0;
+  char const* OutFileName = "";
+
+
+  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "ofile", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOs", kwlist,
+                                                                &Energy_eV,
+                                                                &List_NPoints,
+                                                                &SurfacePlane,
+                                                                &NormalDirection,
+                                                                &Dim,
+                                                                &List_Width,
+                                                                &List_Rotations,
+                                                                &List_Translation,
+                                                                &List_X0X1X2,
+                                                                &OutFileName)) {
+    return NULL;
+  }
+
+  // Check if a beam is at least defined
+  if (self->obj->GetNParticleBeams() < 1) {
+    PyErr_SetString(PyExc_ValueError, "No particle beam defined");
+    return NULL;
+  }
+
+
+  // Check requested dimension
+  if (Dim != 2 & Dim != 3) {
+    PyErr_SetString(PyExc_ValueError, "'dim' must be 2 or 3");
+    return NULL;
+  }
+
+
+  // The rectangular surface object we'll use
+  TSurfacePoints_Rectangle Surface;
+
+  if (PyList_Size(List_NPoints) == 2) {
+    // NPoints in [m]
+    NX1 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 0));
+    NX2 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 1));
+  } else {
+    PyErr_SetString(PyExc_ValueError, "'npoints' must be [int, int]");
+    return NULL;
+  }
+
+
+
+  if (NX1 <= 0 || NX2 <= 0) {
+    PyErr_SetString(PyExc_ValueError, "an entry in 'npoints' is <= 0");
+    return NULL;
+  }
+
+  // Vectors for rotations and translations.  Default to 0
+  TVector3D Rotations(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
+  }
+
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
+  }
+
+  if (PyList_Size(List_Width) == 2) {
+    // Width in [m]
+    Width_X1 = PyFloat_AsDouble(PyList_GetItem(List_Width, 0));
+    Width_X2 = PyFloat_AsDouble(PyList_GetItem(List_Width, 1));
+  }
+
+
+
+  // If you are requesting a simple surface plane, check that you have widths
+  if (SurfacePlane != "" && Width_X1 > 0 && Width_X2 > 0) {
+    try {
+      Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
+    } catch (std::invalid_argument e) {
+      PyErr_SetString(PyExc_ValueError, e.what());
+      return NULL;
+    }
+  }
+
+
+
+  // If X0X1X2 defined
+  std::vector<TVector3D> X0X1X2;
+
+  if (PyList_Size(List_X0X1X2) != 0) {
+    if (PyList_Size(List_X0X1X2) == 3) {
+      for (int i = 0; i != 3; ++i) {
+        PyObject* List_X = PyList_GetItem(List_X0X1X2, i);
+
+        try {
+          X0X1X2.push_back(SRS_ListAsTVector3D(List_X));
+        } catch (std::length_error e) {
+          PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0x1x2'");
+          return NULL;
+        }
+      }
+    } else {
+      PyErr_SetString(PyExc_ValueError, "'x0x1x2' must have 3 XYZ points defined correctly");
+      return NULL;
+    }
+
+    for (std::vector<TVector3D>::iterator it = X0X1X2.begin(); it != X0X1X2.end(); ++it) {
+      it->RotateSelfXYZ(Rotations);
+      *it += Translation;
+    }
+
+    // UPDATE: Check for orthogonality
+    Surface.Init(NX1, NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
+  }
+
+
+
+  // Container for Point plus scalar
+  T3DScalarContainer FluxContainer;
+
+
+  // Actually calculate the spectrum
+  bool const Directional = NormalDirection == 0 ? false : true;
+  //self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, Directional);
+  self->obj->CalculateFluxGPU(Surface, Energy_eV, FluxContainer);
+
+
+  // Build the output list of: [[[x, y, z], Flux], [...]]
+  // Create a python list
+  PyObject *PList = PyList_New(0);
+
+  size_t const NPoints = FluxContainer.GetNPoints();
+
+  for (size_t i = 0; i != NPoints; ++i) {
+    T3DScalar P = FluxContainer.GetPoint(i);
+
+    // Inner list for each point
+    PyObject *PList2 = PyList_New(0);
+
+
+    // Add position and value to list
+    PyList_Append(PList2, SRS_TVector3DAsList(P.GetX()));
+    PyList_Append(PList2, Py_BuildValue("f", P.GetV()));
+    PyList_Append(PList, PList2);
+
+  }
+
+  return PList;
+}
+
+
+
+
+
+
+
 static PyObject* SRS_CalculateElectricFieldTimeDomain (SRSObject* self, PyObject* args, PyObject *keywds)
 {
   // Calculate the electric field in the proper time domain.
@@ -2258,6 +2450,7 @@ static PyMethodDef SRS_methods[] = {
   {"calculate_power_density_rectangle_gpu", (PyCFunction) SRS_CalculatePowerDensityRectangleGPU,  METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_power_density",           (PyCFunction) SRS_CalculatePowerDensity,           METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_flux_rectangle",          (PyCFunction) SRS_CalculateFluxRectangle,          METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
+  {"calculate_flux_rectangle_gpu",      (PyCFunction) SRS_CalculateFluxRectangleGPU,       METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
 
   {"calculate_electric_field",          (PyCFunction) SRS_CalculateElectricFieldTimeDomain,METH_VARARGS | METH_KEYWORDS, "calculate the electric field in the time domain"},
 
