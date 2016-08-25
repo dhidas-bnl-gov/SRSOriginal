@@ -97,6 +97,251 @@ __host__ __device__ static __inline__ cuDoubleComplex cuCexp(cuDoubleComplex x)
 
 
 
+
+
+
+__global__ void SRS_Cuda_FluxGPU4 (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
+{
+  // Check that this is within the number of spectrum points requested
+  int is = threadIdx.x + blockIdx.x * blockDim.x;
+  // Max number for shared memory
+  int const NSHAREDMAX = 1000;
+
+  // Number for each thread to copy from global to shared memory
+  int const NToCopyPerThread = (int) NSHAREDMAX / NTHREADS_PER_BLOCK;
+
+  // Actual number of elements in shared memory to use
+  int const NSHARED = NToCopyPerThread * NTHREADS_PER_BLOCK;
+
+  // Define the shared memory
+  __shared__ double sh_x[NSHARED];
+  __shared__ double sh_y[NSHARED];
+  __shared__ double sh_z[NSHARED];
+  __shared__ double sh_bx[NSHARED];
+  __shared__ double sh_by[NSHARED];
+  __shared__ double sh_bz[NSHARED];
+
+
+  // observer
+  double const ox = sx[is];
+  double const oy = sy[is];
+  double const oz = sz[is];
+
+  // E-field components sum
+  cuDoubleComplex SumEX = make_cuDoubleComplex(0, 0);
+  cuDoubleComplex SumEY = make_cuDoubleComplex(0, 0);
+  cuDoubleComplex SumEZ = make_cuDoubleComplex(0, 0);
+
+
+
+  // Total number of copies
+  int const NTotalCopies = *nt / NSHARED + 1;
+
+  // Local offset for this thread in shared memory
+  int const ThreadOffset = NToCopyPerThread * threadIdx.x;
+
+  // icp is Copy Number
+  for (int icp = 0; icp < NTotalCopies; ++icp) {
+
+    // Offset instarting point in global array
+    int const GlobalOffset = icp * NSHARED;
+
+
+    __syncthreads();
+
+    // icpth is the copy number in a thread
+    for (int icpth = 0; icpth < NToCopyPerThread; ++icpth) {
+
+      // index of *this* shared memory
+      int const ThisThreadSharedIndex = ThreadOffset + icpth;
+
+      // Global index of *this*
+      int const GlobalIndex = GlobalOffset + ThisThreadSharedIndex;
+
+      // Check if we are within the nt bound
+      if (GlobalIndex >= *nt) {
+        break;
+      }
+
+      // Copy global memory to shared bank
+      sh_x[ThisThreadSharedIndex]  = x[GlobalIndex];
+    }
+    for (int icpth = 0; icpth < NToCopyPerThread; ++icpth) {
+
+      // index of *this* shared memory
+      int const ThisThreadSharedIndex = ThreadOffset + icpth;
+
+      // Global index of *this*
+      int const GlobalIndex = GlobalOffset + ThisThreadSharedIndex;
+
+      // Check if we are within the nt bound
+      if (GlobalIndex >= *nt) {
+        break;
+      }
+
+      // Copy global memory to shared bank
+      sh_y[ThisThreadSharedIndex]  = y[GlobalIndex];
+    }
+    for (int icpth = 0; icpth < NToCopyPerThread; ++icpth) {
+
+      // index of *this* shared memory
+      int const ThisThreadSharedIndex = ThreadOffset + icpth;
+
+      // Global index of *this*
+      int const GlobalIndex = GlobalOffset + ThisThreadSharedIndex;
+
+      // Check if we are within the nt bound
+      if (GlobalIndex >= *nt) {
+        break;
+      }
+
+      // Copy global memory to shared bank
+      sh_z[ThisThreadSharedIndex]  = z[GlobalIndex];
+    }
+    for (int icpth = 0; icpth < NToCopyPerThread; ++icpth) {
+
+      // index of *this* shared memory
+      int const ThisThreadSharedIndex = ThreadOffset + icpth;
+
+      // Global index of *this*
+      int const GlobalIndex = GlobalOffset + ThisThreadSharedIndex;
+
+      // Check if we are within the nt bound
+      if (GlobalIndex >= *nt) {
+        break;
+      }
+
+      // Copy global memory to shared bank
+      sh_bx[ThisThreadSharedIndex] = bx[GlobalIndex];
+    }
+    for (int icpth = 0; icpth < NToCopyPerThread; ++icpth) {
+
+      // index of *this* shared memory
+      int const ThisThreadSharedIndex = ThreadOffset + icpth;
+
+      // Global index of *this*
+      int const GlobalIndex = GlobalOffset + ThisThreadSharedIndex;
+
+      // Check if we are within the nt bound
+      if (GlobalIndex >= *nt) {
+        break;
+      }
+
+      // Copy global memory to shared bank
+      sh_by[ThisThreadSharedIndex] = by[GlobalIndex];
+    }
+    for (int icpth = 0; icpth < NToCopyPerThread; ++icpth) {
+
+      // index of *this* shared memory
+      int const ThisThreadSharedIndex = ThreadOffset + icpth;
+
+      // Global index of *this*
+      int const GlobalIndex = GlobalOffset + ThisThreadSharedIndex;
+
+      // Check if we are within the nt bound
+      if (GlobalIndex >= *nt) {
+        break;
+      }
+
+      // Copy global memory to shared bank
+      sh_bz[ThisThreadSharedIndex] = bz[GlobalIndex];
+    }
+
+
+    __syncthreads();
+
+    if (is >= *ns) {
+      continue;
+    }
+
+    for (int ish = 0; ish < NSHARED; ++ish) {
+      int const i = GlobalOffset + ish;
+
+      if (i >= *nt) {
+        break;
+      }
+
+
+
+      // Distance to observer
+      double const D = sqrt( pow( (ox) - sh_x[ish], 2) + pow( (oy) - sh_y[ish], 2) + pow((oz) - sh_z[ish], 2) );
+
+      // Normal in direction of observer
+      double const NX = ((ox) - sh_x[ish]) / D;
+      double const NY = ((oy) - sh_y[ish]) / D;
+      double const NZ = ((oz) - sh_z[ish]) / D;
+
+      // Exponent for fourier transformed field
+      cuDoubleComplex Exponent = make_cuDoubleComplex(0, (*Omega) * ((*dt) * i + D / (*C)));
+
+      cuDoubleComplex X1 = make_cuDoubleComplex((sh_bx[ish] - NX) / D, -(*C) * NX / ((*Omega) * D * D));
+      cuDoubleComplex Y1 = make_cuDoubleComplex((sh_by[ish] - NY) / D, -(*C) * NY / ((*Omega) * D * D));
+      cuDoubleComplex Z1 = make_cuDoubleComplex((sh_bz[ish] - NZ) / D, -(*C) * NZ / ((*Omega) * D * D));
+
+      cuDoubleComplex MyEXP = cuCexp(Exponent);
+
+      cuDoubleComplex X2 = cuCmul(X1, MyEXP);
+      cuDoubleComplex Y2 = cuCmul(Y1, MyEXP);
+      cuDoubleComplex Z2 = cuCmul(Z1, MyEXP);
+
+
+      SumEX = cuCadd(SumEX, X2);
+      SumEY = cuCadd(SumEY, Y2);
+      SumEZ = cuCadd(SumEZ, Z2);
+
+
+
+
+
+
+
+
+    }
+  }
+
+  SumEX = cuCmul(make_cuDoubleComplex(0, (*C0) * (*Omega) * (*dt)), SumEX);
+  SumEY = cuCmul(make_cuDoubleComplex(0, (*C0) * (*Omega) * (*dt)), SumEY);
+  SumEZ = cuCmul(make_cuDoubleComplex(0, (*C0) * (*Omega) * (*dt)), SumEZ);
+
+
+  double const EX = SumEX.x * SumEX.x + SumEX.y * SumEX.y;
+  double const EY = SumEY.x * SumEY.x + SumEY.y * SumEY.y;
+  double const EZ = SumEZ.x * SumEZ.x + SumEZ.y * SumEZ.y;
+
+
+  flux[is] = (*C2) * (EX + EY + EZ);
+  //flux[is] = NToCopyPerThread;
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 __global__ void SRS_Cuda_FluxGPU3 (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
 {
   // Check that this is within the number of spectrum points requested
@@ -621,7 +866,7 @@ void SRS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surf
 
   // Send computation to gpu
   int const NBlocks = NSPoints / NTHREADS_PER_BLOCK + 1;
-  SRS_Cuda_FluxGPU2<<<NBlocks, NTHREADS_PER_BLOCK>>>(d_x, d_y, d_z, d_bx, d_by, d_bz, d_sx, d_sy, d_sz, d_dt, d_nt, d_ns, d_C0, d_C2, d_C, d_Omega, d_flux);
+  SRS_Cuda_FluxGPU4<<<NBlocks, NTHREADS_PER_BLOCK>>>(d_x, d_y, d_z, d_bx, d_by, d_bz, d_sx, d_sy, d_sz, d_dt, d_nt, d_ns, d_C0, d_C2, d_C, d_Omega, d_flux);
 
   // Copy result back from GPU
   cudaMemcpy(flux, d_flux, size_s, cudaMemcpyDeviceToHost);
