@@ -9,18 +9,20 @@
 #include "TParticleBeam.h"
 
 #include "TSRS.h"
+#include "TRandomA.h"
 
 #include <cmath>
 #include <algorithm>
 
 
+// External global random generator
+extern TRandomA* gRandomA;
+
+
+
 TParticleBeam::TParticleBeam ()
 {
   // Default constructor
-
-  rd = new std::random_device();
-  e2 = std::mt19937((*rd)());
-  dist = std::normal_distribution<>(0, 1);
 }
 
 
@@ -253,7 +255,7 @@ TParticleA TParticleBeam::GetNewParticle ()
   // UPDATE: Needs rand for twiss, or other beam configurations...
   // UPDATE: Could also take a python function
 
-  double    ENew = fE0 + fSigmaE * dist(e2); // correlated with BNew, not sure how to handle this yet
+  double    ENew = fE0 + fSigmaE * gRandomA->Normal(); // correlated with BNew, not sure how to handle this yet
 
   double const Gamma = ENew / TSRS::kgToGeV(this->GetM());
   double const Beta = sqrt(1.0 - 1.0 / (Gamma * Gamma));
@@ -262,14 +264,14 @@ TParticleA TParticleBeam::GetNewParticle ()
   double const DistanceToMidpoint = (fSigmaAt - fX0).Dot(this->GetU0());
   // UPDATE: ME
   TVector3D XNew = this->GetX0();
-  XNew += fHorizontalDirection * fSigmaU[0] * (1 + DistanceToMidpoint) * dist(e2);
-  XNew += fVerticalDirection   * fSigmaU[1] * (1 + DistanceToMidpoint) * dist(e2);
+  XNew += fHorizontalDirection * fSigmaU[0] * (1 + DistanceToMidpoint) * gRandomA->Normal();
+  XNew += fVerticalDirection   * fSigmaU[1] * (1 + DistanceToMidpoint) * gRandomA->Normal();
 
   TVector3D BetaNew = this->GetU0() * Beta;
 
   // UPDATE: Rotate about the horizontal and vertical beam axes (arbitrary)
-  BetaNew.RotateSelfY(fSigmaUP[0] * dist(e2));
-  BetaNew.RotateSelfX(-fSigmaUP[1] * dist(e2));
+  BetaNew.RotateSelfY(fSigmaUP[0] * gRandomA->Normal());
+  BetaNew.RotateSelfX(-fSigmaUP[1] * gRandomA->Normal());
 
   double    TNew = fT0;
 

@@ -19,6 +19,13 @@
 #include "TSpectrumContainer.h"
 
 
+
+// External global random generator
+extern TRandomA* gRandomA;
+
+
+
+
 SRS::SRS ()
 {
   // Default constructor
@@ -360,6 +367,31 @@ double SRS::GetCTStop () const
 {
   // Return the stop time in units of m (where v = c)
   return fCTStop;
+}
+
+
+
+
+void SRS::SetSeed (int const Seed) const
+{
+  gRandomA->SetSeed(Seed);
+  return;
+}
+
+
+
+
+double SRS::GetRandomNormal () const
+{
+  return gRandomA->Normal();
+}
+
+
+
+
+double SRS::GetRandomUniform () const
+{
+  return gRandomA->Uniform();
 }
 
 
@@ -1105,7 +1137,11 @@ double SRS::CalculateTotalPower (TParticleA& Particle)
 
 
 
-void SRS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+
+
+
+
+void SRS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1125,12 +1161,6 @@ void SRS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface, d
 
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
-
-  // Write to a file?
-  bool const WriteToFile = OutFileName != "" ? true : false;
-
-  // UPDATE: Dimension is hard coded
-  int const Dimension = 2;
 
   // Time step.  Expecting it to be constant throughout calculation
   double const DeltaT = T.GetDeltaT();
@@ -1165,16 +1195,6 @@ void SRS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface, d
 
   // Constant for calculation
   std::complex<double> const C1(0, C0 * Omega);
-
-  // If writing to a file, open it and set to scientific output
-  std::ofstream of;
-  if (WriteToFile) {
-    of.open(OutFileName.c_str());
-    if (!of.is_open()) {
-      throw std::ofstream::failure("cannot open output file");
-    }
-    of << std::scientific;
-  }
 
   // Loop over all points in the spectrum container
   for (size_t i = 0; i != NSPoints; ++i) {
@@ -1213,31 +1233,23 @@ void SRS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface, d
     // Multiply field by Constant C1 and time step
     SumE *= C1 * DeltaT;
 
+    double const EXSquared = (SumE.GetX() * std::conj(SumE.GetX())).real();
+    double const EYSquared = (SumE.GetY() * std::conj(SumE.GetY())).real();
+    double const EX2PlusEY2 = EXSquared + EYSquared;
+    double LinearFraction = EXSquared / EX2PlusEY2;// - EYSquared / EX2PlusEY2;
+
     // Set the flux for this frequency / energy point
-    double const ThisFlux = C2 *  SumE.Dot( SumE.CC() ).real();// * Weight;
+    double const ThisFlux = C2 *  SumE.Dot( SumE.CC() ).real() * Weight;
+    //double const ThisFlux = LinearFraction;
 
     if (Dimension == 2) {
-      if (WriteToFile) {
-        of << Surface.GetX1(i) << " " << Surface.GetX2(i) << " " << ThisFlux << "\n";
-      } else {
-        FluxContainer.AddPoint(TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), ThisFlux);
-      }
+      FluxContainer.AddToPoint(i, ThisFlux);
     } else if (Dimension == 3) {
-      if (WriteToFile) {
-        of << ObservationPoint.GetX() << " " << ObservationPoint.GetY() << " " << ObservationPoint.GetZ() << " " << ThisFlux << "\n";
-      } else {
-        FluxContainer.AddPoint(ObservationPoint, ThisFlux);
-      }
+      FluxContainer.AddToPoint(i, ThisFlux);
     } else {
       throw std::out_of_range("incorrect dimensions");
     }
   }
-
-  if (WriteToFile) {
-    of.close();
-  }
-
-
 
   return;
 }
@@ -1344,8 +1356,6 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
     // Multiply by constant factor
     SumE *= C0;
 
-    //of << Surface.GetX1(ip) << "  " << Surface.GetX2(ip) << "  " <<  C2 * SumE.Dot( SumE.CC() ).real() << std::endl;
-    //FluxContainer.AddPoint(Obs, C2 * SumE.Dot( SumE.CC() ).real());
 
     double const ThisFlux = C2 * SumE.Dot( SumE.CC() ).real();
 
@@ -1361,13 +1371,13 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
       if (WriteToFile) {
         of << Surface.GetX1(ip) << " " << Surface.GetX2(ip) << " " << ThisFlux << "\n";
       } else {
-        FluxContainer.AddPoint(TVector3D(Surface.GetX1(ip), Surface.GetX2(ip), 0), ThisFlux);
+        FluxContainer.AddToPoint(ip, ThisFlux);
       }
     } else if (Dimension == 3) {
       if (WriteToFile) {
         of << Obs.GetX() << " " << Obs.GetY() << " " << Obs.GetZ() << " " << ThisFlux << "\n";
       } else {
-        FluxContainer.AddPoint(Obs, ThisFlux);
+        FluxContainer.AddToPoint(ip, ThisFlux);
       }
     } else {
       throw std::out_of_range("incorrect dimensions");
@@ -1389,10 +1399,19 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 
 
 
-void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, std::string const& OutFileName)
+
+void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   T3DScalarContainer FluxContainer;
-  this->CalculateFlux2(Particle, Surface, Energy_eV, FluxContainer);
+  for (size_t i = 0; i != Surface.GetNPoints(); ++i) {
+    FluxContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+  }
+
+  this->CalculateFlux2(Particle, Surface, Energy_eV, FluxContainer, Weight);
+
+  if (OutFileName != "") {
+    FluxContainer.WriteToFileText(OutFileName, Dimension);
+  }
 
   return;
 }
@@ -1400,7 +1419,7 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 
 
 
-void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   // Check that particle has been set yet.  If fType is "" it has not been set yet
   if (fParticle.GetType() == "") {
@@ -1411,7 +1430,16 @@ void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, 
     }
   }
 
-  this->CalculateFlux2(fParticle, Surface, Energy_eV, FluxContainer);
+  for (size_t i = 0; i != Surface.GetNPoints(); ++i) {
+    FluxContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+  }
+
+  this->CalculateFlux2(fParticle, Surface, Energy_eV, FluxContainer, Dimension, Weight);
+
+  if (OutFileName != "") {
+    FluxContainer.WriteToFileText(OutFileName, Dimension);
+  }
+
   return;
 }
 

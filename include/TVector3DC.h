@@ -38,6 +38,8 @@ class TVector3DC
     std::complex<double> Dot(TVector3DC const&) const;
     TVector3DC Cross (TVector3DC const&) const;
     TVector3DC CC () const;
+    double Mag2 () const;
+    double Mag () const;
 
 
     // Operators

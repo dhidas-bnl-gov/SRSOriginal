@@ -23,10 +23,15 @@
 #include "TBField3D_Gaussian.h"
 #include "TBField3D_Uniform.h"
 #include "TBField3D_IdealUndulator.h"
+#include "TRandomA.h"
 
 #include <iostream>
 #include <vector>
 #include <algorithm>
+
+
+// External global random generator
+extern TRandomA* gRandomA;
 
 
 
@@ -156,6 +161,30 @@ static PyObject* SRS_Me (SRSObject* self, PyObject* arg)
 
 
 
+static PyObject* SRS_Random (SRSObject* self, PyObject* arg)
+{
+  return Py_BuildValue("d", gRandomA->Uniform());
+}
+
+static PyObject* SRS_RandomNormal (SRSObject* self, PyObject* arg)
+{
+  return Py_BuildValue("d", gRandomA->Normal());
+}
+
+static PyObject* SRS_SetSeed (SRSObject* self, PyObject* arg)
+{
+  // Grab the value from input
+  double Seed = PyFloat_AsDouble(arg);
+
+  gRandomA->SetSeed(Seed);
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
 
 
 
@@ -225,6 +254,7 @@ static PyObject* SRS_SetCTStartStop (SRSObject* self, PyObject* args)
   // Grab the values
   double Start, Stop;
   if (!PyArg_ParseTuple(args, "dd", &Start, &Stop)) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format");
     return NULL;
   }
 
@@ -1947,22 +1977,26 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
   int         NormalDirection = 0;
   int         Dim = 2;
   double      Energy_eV = 0;
+  char const* Polarization = "";
+  int         NParticles = 0;
   char const* OutFileName = "";
 
 
-  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "ofile", NULL};
+  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "nparticles", "polarization", "ofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOs", kwlist,
-                                                                &Energy_eV,
-                                                                &List_NPoints,
-                                                                &SurfacePlane,
-                                                                &NormalDirection,
-                                                                &Dim,
-                                                                &List_Width,
-                                                                &List_Rotations,
-                                                                &List_Translation,
-                                                                &List_X0X1X2,
-                                                                &OutFileName)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOiss", kwlist,
+                                                                  &Energy_eV,
+                                                                  &List_NPoints,
+                                                                  &SurfacePlane,
+                                                                  &NormalDirection,
+                                                                  &Dim,
+                                                                  &List_Width,
+                                                                  &List_Rotations,
+                                                                  &List_Translation,
+                                                                  &List_X0X1X2,
+                                                                  &NParticles,
+                                                                  &Polarization,
+                                                                  &OutFileName)) {
     return NULL;
   }
 
@@ -2074,6 +2108,13 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
   }
 
 
+  // Check number of particles
+  if (NParticles < 0) {
+    PyErr_SetString(PyExc_ValueError, "'nparticles' must be >= 1 (sort of)");
+    return NULL;
+  }
+
+
 
   // Container for Point plus scalar
   T3DScalarContainer FluxContainer;
@@ -2081,8 +2122,31 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
 
   // Actually calculate the spectrum
   bool const Directional = NormalDirection == 0 ? false : true;
-  //self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, Directional);
-  self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer);
+
+
+  try {
+    if (NParticles == 0) {
+      self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, 1);
+    } else {
+      double const Weight = 1.0 / (double) NParticles;
+      for (int i = 0; i != NParticles; ++i) {
+        std::cout << Weight << std::endl;
+        self->obj->SetNewParticle();
+        self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, Weight);
+      }
+    }
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  }
+
+  // Write output file?
+  if (OutFileName != "") {
+    FluxContainer.WriteToFileText(OutFileName, Dim);
+  }
 
 
   // Build the output list of: [[[x, y, z], Flux], [...]]
@@ -2136,22 +2200,24 @@ static PyObject* SRS_CalculateFluxRectangleGPU (SRSObject* self, PyObject* args,
   int         NormalDirection = 0;
   int         Dim = 2;
   double      Energy_eV = 0;
+  char const* Polarization = "";
   char const* OutFileName = "";
 
 
-  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "ofile", NULL};
+  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "polarization", "ofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOs", kwlist,
-                                                                &Energy_eV,
-                                                                &List_NPoints,
-                                                                &SurfacePlane,
-                                                                &NormalDirection,
-                                                                &Dim,
-                                                                &List_Width,
-                                                                &List_Rotations,
-                                                                &List_Translation,
-                                                                &List_X0X1X2,
-                                                                &OutFileName)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOss", kwlist,
+                                                                 &Energy_eV,
+                                                                 &List_NPoints,
+                                                                 &SurfacePlane,
+                                                                 &NormalDirection,
+                                                                 &Dim,
+                                                                 &List_Width,
+                                                                 &List_Rotations,
+                                                                 &List_Translation,
+                                                                 &List_X0X1X2,
+                                                                 &Polarization,
+                                                                 &OutFileName)) {
     return NULL;
   }
 
@@ -2411,6 +2477,9 @@ static PyMethodDef SRS_methods[] = {
   {"pi",                                (PyCFunction) SRS_Pi,                              METH_NOARGS,  "do you want some pi?"},
   {"qe",                                (PyCFunction) SRS_Qe,                              METH_NOARGS,  "elementary charge in [C]"},
   {"me",                                (PyCFunction) SRS_Me,                              METH_NOARGS,  "electron mass in [kg]"},
+  {"rand",                              (PyCFunction) SRS_Random,                          METH_NOARGS,  "uniformally distributed random number [0, 1)"},
+  {"norm",                              (PyCFunction) SRS_RandomNormal,                    METH_NOARGS,  "Normally distributed random number"},
+  {"set_seed",                          (PyCFunction) SRS_SetSeed,                         METH_O,       "Set the random seed"},
 
 
   {"set_ctstart",                       (PyCFunction) SRS_SetCTStart,                      METH_O,       "set the start time in [m]"},
@@ -2532,6 +2601,7 @@ PyMODINIT_FUNC initSRS ()
 
   Py_INCREF(&SRSType);
   PyModule_AddObject(m, "SRS", (PyObject *)&SRSType);
+
 }
 
 

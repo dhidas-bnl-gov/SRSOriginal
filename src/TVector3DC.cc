@@ -148,6 +148,24 @@ TVector3DC TVector3DC::CC () const
 
 
 
+double TVector3DC::Mag2 () const
+{
+  // Magnitude squared of 3DC vector
+  return this->Dot(this->CC()).real();
+}
+
+
+
+
+double TVector3DC::Mag () const
+{
+  // Magnitude squared of 3DC vector
+  return sqrt(this->Mag2());
+}
+
+
+
+
 
 
 

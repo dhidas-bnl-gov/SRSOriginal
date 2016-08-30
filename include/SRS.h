@@ -21,6 +21,7 @@
 #include "TSurfacePoints.h"
 #include "TSpectrumContainer.h"
 #include "T3DScalarContainer.h"
+#include "TRandomA.h"
 
 
 class SRS
@@ -70,6 +71,11 @@ class SRS
     double GetCTStart () const;
     double GetCTStop  () const;
 
+    // Random seed setting and random numbers
+    void SetSeed (int const) const;
+    double GetRandomNormal () const;
+    double GetRandomUniform () const;
+
     void CalculateSpectrumGPU (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight = 1);
     void CalculateSpectrum ();
     void CalculateSpectrum (TVector3D const&, TSpectrumContainer&, double const Weight = 1);
@@ -90,10 +96,11 @@ class SRS
     double CalculateTotalPower (TParticleA&);
 
     // Flux Calculations
-    void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, std::string const& OutFileName = "");
-    void CalculateFlux2 (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
+    //void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, std::string const& OutFileName = "");
+    void CalculateFlux2 (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, int const Dimension = 3, double const Weight = 1);
+    void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, int const Dimension = 3, double const Weight = 1, std::string const& OutFileName = "");
     void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
-    void CalculateFlux (TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
+    void CalculateFlux (TSurfacePoints const&, double const, T3DScalarContainer&, int const Dimension = 3, double const Weight = 1, std::string const& OutFileName = "");
     void CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName = "");
     void CalculateFluxGPU (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName = "");
 

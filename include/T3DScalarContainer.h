@@ -10,7 +10,9 @@
 
 #include "TVector3D.h"
 
+#include <fstream>
 #include <vector>
+#include <string>
 
 class T3DScalar
 {
@@ -35,6 +37,12 @@ class T3DScalar
       return fV;
     }
 
+    void SetV (double const V)
+    {
+      fV = V;
+      return;
+    }
+
   private:
     TVector3D fX;
     double    fV;
@@ -51,13 +59,17 @@ class T3DScalarContainer
     ~T3DScalarContainer ();
 
     void AddPoint (TVector3D const&, double const);
+    void AddToPoint (size_t const, double const);
 
     size_t GetNPoints () const;
 
     T3DScalar const& GetPoint (size_t const) const;
 
+    void WriteToFileText (std::string const&, int const);
+
   private:
     std::vector<T3DScalar> fValues;
+    std::vector<double> fCompensation;
 };
 
 
