@@ -24,7 +24,7 @@
 #include "TSurfacePoints.h"
 #include "T3DScalarContainer.h"
 
-void SRS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName = "");
+void SRS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension = 3, double const Weight = 1, std::string const& OutFileName = "");
 void SRS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight = 1);
 void SRS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, std::string const& OutFileName = "");
 

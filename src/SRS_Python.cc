@@ -2130,7 +2130,6 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
     } else {
       double const Weight = 1.0 / (double) NParticles;
       for (int i = 0; i != NParticles; ++i) {
-        std::cout << Weight << std::endl;
         self->obj->SetNewParticle();
         self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, Weight);
       }

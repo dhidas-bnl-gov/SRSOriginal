@@ -1257,7 +1257,7 @@ void SRS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface, d
 
 
 
-void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+void SRS::CalculateFlux1 (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1396,6 +1396,26 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 
 
 
+void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
+{
+  // Final stop for entry to calculation
+
+  for (size_t i = 0; i != Surface.GetNPoints(); ++i) {
+    FluxContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+  }
+
+  this->CalculateFlux2(Particle, Surface, Energy_eV, FluxContainer, Dimension, Weight);
+
+  if (OutFileName != "") {
+    FluxContainer.WriteToFileText(OutFileName, Dimension);
+  }
+
+  return;
+}
+
+
+
+
 
 
 
@@ -1403,15 +1423,8 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   T3DScalarContainer FluxContainer;
-  for (size_t i = 0; i != Surface.GetNPoints(); ++i) {
-    FluxContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
-  }
 
-  this->CalculateFlux2(Particle, Surface, Energy_eV, FluxContainer, Weight);
-
-  if (OutFileName != "") {
-    FluxContainer.WriteToFileText(OutFileName, Dimension);
-  }
+  this->CalculateFlux(Particle, Surface, Energy_eV, FluxContainer, Dimension, Weight, OutFileName);
 
   return;
 }
@@ -1430,15 +1443,8 @@ void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, 
     }
   }
 
-  for (size_t i = 0; i != Surface.GetNPoints(); ++i) {
-    FluxContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
-  }
+  this->CalculateFlux(fParticle, Surface, Energy_eV, FluxContainer, Dimension, Weight, OutFileName);
 
-  this->CalculateFlux2(fParticle, Surface, Energy_eV, FluxContainer, Dimension, Weight);
-
-  if (OutFileName != "") {
-    FluxContainer.WriteToFileText(OutFileName, Dimension);
-  }
 
   return;
 }
@@ -1451,9 +1457,14 @@ void SRS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, 
 
 
 
-void SRS::CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+void SRS::CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   // If you compile for Cuda use the GPU in this function, else throw
+
+  // Add points to flux container
+  for (size_t i = 0; i != Surface.GetNPoints(); ++i) {
+    FluxContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+  }
 
   // Check that particle has been set yet.  If fType is "" it has not been set yet
   if (Particle.GetType() == "") {
@@ -1464,7 +1475,7 @@ void SRS::CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface,
   this->CalculateTrajectory(Particle);
 
   #ifdef CUDA
-  return SRS_Cuda_CalculateFluxGPU(Particle, Surface, Energy_eV, FluxContainer, OutFileName);
+  return SRS_Cuda_CalculateFluxGPU(Particle, Surface, Energy_eV, FluxContainer, Dimension, Weight, OutFileName);
   #else
   throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
   #endif
@@ -1476,7 +1487,7 @@ void SRS::CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface,
 
 
 
-void SRS::CalculateFluxGPU (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+void SRS::CalculateFluxGPU (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1492,7 +1503,7 @@ void SRS::CalculateFluxGPU (TSurfacePoints const& Surface, double const Energy_e
     }
   }
 
-  this->CalculateFluxGPU(fParticle, Surface, Energy_eV, FluxContainer, OutFileName);
+  this->CalculateFluxGPU(fParticle, Surface, Energy_eV, FluxContainer, Dimension, Weight, OutFileName);
 
   return;
 }

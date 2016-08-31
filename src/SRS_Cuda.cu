@@ -26,32 +26,6 @@
 
 
 
-__device__ __forceinline__ cuComplex my_cexpf (cuComplex& z)
-{
-
-  cuComplex res;
-  float t = exp(z.x);
-  sincos (z.y, &res.y, &res.x);
-  res.x *= t;
-  res.y *= t;
-
-  return res;
-}
-
-
-
-__global__ void ComplexTest()
-{
-  double cr = 1;
-  double ci = 2;
-  double r = 3;
-  cuDoubleComplex c = make_cuDoubleComplex(cr, ci);
-  cuDoubleComplex result = cuCmul(c, make_cuDoubleComplex(r, 0));
-
-  result = cuCadd(c, make_cuDoubleComplex(r, 0));
-  result = cuCsub(c, make_cuDoubleComplex(r, 0));
-  result = cuCdiv(c, make_cuDoubleComplex(r, 0));
-}
 
 
 __device__ static __inline__ void Orthogonal(double *a, double *b)
@@ -81,6 +55,7 @@ __device__ static __inline__ void Orthogonal(double *a, double *b)
       b[2] = 0;
     }
   }
+  return;
 }
 
 
@@ -310,11 +285,8 @@ __global__ void SRS_Cuda_FluxGPU4 (double *x, double *y, double *z, double *bx, 
 
 
   flux[is] = (*C2) * (EX + EY + EZ);
-  //flux[is] = NToCopyPerThread;
 
-
-
-
+  return;
 }
 
 
@@ -419,8 +391,6 @@ __global__ void SRS_Cuda_FluxGPU3 (double *x, double *y, double *z, double *bx, 
         break;
       }
 
-
-
       // Distance to observer
       double const D = sqrt( pow( (ox) - sh_x[ish], 2) + pow( (oy) - sh_y[ish], 2) + pow((oz) - sh_z[ish], 2) );
 
@@ -446,14 +416,6 @@ __global__ void SRS_Cuda_FluxGPU3 (double *x, double *y, double *z, double *bx, 
       SumEX = cuCadd(SumEX, X2);
       SumEY = cuCadd(SumEY, Y2);
       SumEZ = cuCadd(SumEZ, Z2);
-
-
-
-
-
-
-
-
     }
   }
 
@@ -468,11 +430,8 @@ __global__ void SRS_Cuda_FluxGPU3 (double *x, double *y, double *z, double *bx, 
 
 
   flux[is] = (*C2) * (EX + EY + EZ);
-  //flux[is] = NToCopyPerThread;
 
-
-
-
+  return;
 }
 
 
@@ -618,11 +577,8 @@ __global__ void SRS_Cuda_FluxGPU2 (double *x, double *y, double *z, double *bx, 
 
 
   flux[is] = (*C2) * (EX + EY + EZ);
-  //flux[is] = NToCopyPerThread;
 
-
-
-
+  return;
 }
 
 
@@ -706,6 +662,7 @@ __global__ void SRS_Cuda_FluxGPU (double *x, double *y, double *z, double *bx, d
 
   flux[is] = (*C2) * (EX + EY + EZ);
 
+  return;
 }
 
 
@@ -725,8 +682,9 @@ __global__ void SRS_Cuda_FluxGPU (double *x, double *y, double *z, double *bx, d
 
 
 
-void SRS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+void SRS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
 {
+  // Do the setup for and call the GPU calculation of flux.  Your limitation here is only GPU memory.
 
   int ngpu = 0;
   cudaGetDeviceCount(&ngpu);
@@ -873,10 +831,10 @@ void SRS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surf
 
 
 
-  double const Weight = 1;
   // Add result to power density container
   for (size_t i = 0; i < NSPoints; ++i) {
-    FluxContainer.AddPoint( TVector3D(sx[i], sy[i], sz[i]), flux[i] * Weight);
+    //FluxContainer.AddPoint( TVector3D(sx[i], sy[i], sz[i]), flux[i] * Weight);
+    FluxContainer.AddToPoint(i, flux[i] * Weight);
   }
 
 
@@ -1038,6 +996,7 @@ __global__ void SRS_Cuda_SpectrumGPU (double *x, double *y, double *z, double *b
 
   sf[is] = (*C2) * (EX + EY + EZ);
 
+  return;
 }
 
 
