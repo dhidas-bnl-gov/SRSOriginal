@@ -2270,24 +2270,26 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
   double      Energy_eV = 0;
   char const* Polarization = "";
   int         NParticles = 0;
+  int         GPU = 0;
   char const* OutFileName = "";
 
 
-  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "nparticles", "polarization", "ofile", NULL};
+  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "nparticles", "polarization", "gpu", "ofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOiss", kwlist,
-                                                                  &Energy_eV,
-                                                                  &List_NPoints,
-                                                                  &SurfacePlane,
-                                                                  &NormalDirection,
-                                                                  &Dim,
-                                                                  &List_Width,
-                                                                  &List_Rotations,
-                                                                  &List_Translation,
-                                                                  &List_X0X1X2,
-                                                                  &NParticles,
-                                                                  &Polarization,
-                                                                  &OutFileName)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOisis", kwlist,
+                                                                   &Energy_eV,
+                                                                   &List_NPoints,
+                                                                   &SurfacePlane,
+                                                                   &NormalDirection,
+                                                                   &Dim,
+                                                                   &List_Width,
+                                                                   &List_Rotations,
+                                                                   &List_Translation,
+                                                                   &List_X0X1X2,
+                                                                   &NParticles,
+                                                                   &Polarization,
+                                                                   &GPU,
+                                                                   &OutFileName)) {
     return NULL;
   }
 
@@ -2406,6 +2408,11 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
   }
 
 
+  // Check GPU parameter
+  if (GPU != 0 && GPU != 1) {
+    PyErr_SetString(PyExc_ValueError, "'gpu' must be 0 or 1");
+    return NULL;
+  }
 
   // Container for Point plus scalar
   T3DScalarContainer FluxContainer;
@@ -2417,12 +2424,20 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
 
   try {
     if (NParticles == 0) {
-      self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, 1);
+      if (GPU == 0) {
+        self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
+      } else if (GPU == 1) {
+        self->obj->CalculateFluxGPU(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
+      }
     } else {
       double const Weight = 1.0 / (double) NParticles;
       for (int i = 0; i != NParticles; ++i) {
         self->obj->SetNewParticle();
-        self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, Weight);
+        if (GPU == 0) {
+          self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
+        } else if (GPU == 1) {
+          self->obj->CalculateFluxGPU(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
+        }
       }
     }
   } catch (std::length_error e) {
