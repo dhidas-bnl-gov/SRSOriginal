@@ -848,10 +848,10 @@ TSpectrumContainer const& SRS::GetSpectrum () const
 
 
 
-void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, int const Dimension, bool const Directional, std::string const& OutFileName)
+void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   T3DScalarContainer PowerDensityContainer;
-  this->CalculatePowerDensity(Particle, Surface, PowerDensityContainer, Dimension, Directional, OutFileName);
+  this->CalculatePowerDensity(Particle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
 
   return;
 }
@@ -865,7 +865,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
 
 
 
-void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, std::string const& OutFileName)
+void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -967,13 +967,13 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
       if (WriteToFile) {
         of << Surface.GetX1(io) << " " << Surface.GetX2(io) << " " << Sum << "\n";
       } else {
-        PowerDensityContainer.AddPoint(TVector3D(Surface.GetX1(io), Surface.GetX2(io), 0), Sum);
+        PowerDensityContainer.AddToPoint(io, Sum);
       }
     } else if (Dimension == 3) {
       if (WriteToFile) {
         of << Obs.GetX() << " " << Obs.GetY() << " " << Obs.GetZ() << " " << Sum << "\n";
       } else {
-        PowerDensityContainer.AddPoint(Obs, Sum);
+        PowerDensityContainer.AddToPoint(io, Sum);
       }
     } else {
       throw std::out_of_range("incorrect dimensions");
@@ -991,7 +991,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
 
 
 
-void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, std::string const& OutFileName)
+void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1007,7 +1007,11 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
     }
   }
 
-  this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional, OutFileName);
+  for (int i = 0; i != Surface.GetNPoints(); ++i) {
+    PowerDensityContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+  }
+
+  this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
 
   return;
 }
@@ -1021,7 +1025,7 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
 
 
 
-void SRS::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, std::string const& OutFileName)
+void SRS::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   // If you compile for Cuda use the GPU in this function, else throw
 
@@ -1030,11 +1034,15 @@ void SRS::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& 
     throw std::out_of_range("no particle defined");
   }
 
+  for (int i = 0; i != Surface.GetNPoints(); ++i) {
+    PowerDensityContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+  }
+
   // Calculate the trajectory from scratch
   this->CalculateTrajectory(Particle);
 
   #ifdef CUDA
-  return SRS_Cuda_CalculatePowerDensityGPU (Particle, Surface, PowerDensityContainer, Dimension, Directional, OutFileName);
+  return SRS_Cuda_CalculatePowerDensityGPU (Particle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
   #else
   throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
   #endif
@@ -1046,7 +1054,7 @@ void SRS::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& 
 
 
 
-void SRS::CalculatePowerDensityGPU (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, std::string const& OutFileName)
+void SRS::CalculatePowerDensityGPU (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1062,7 +1070,7 @@ void SRS::CalculatePowerDensityGPU (TSurfacePoints const& Surface, T3DScalarCont
     }
   }
 
-  this->CalculatePowerDensityGPU(fParticle, Surface, PowerDensityContainer, Dimension, Directional, OutFileName);
+  this->CalculatePowerDensityGPU(fParticle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
 
   return;
 }

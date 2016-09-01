@@ -1338,7 +1338,7 @@ __global__ void SRS_Cuda_PowerDensityGPU (double *x, double *y, double *z, doubl
 
 
 
-void SRS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, std::string const& OutFileName)
+void SRS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
 
   int ngpu = 0;
@@ -1489,7 +1489,7 @@ void SRS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints con
 
   // Add result to power density container
   for (size_t i = 0; i < NSPoints; ++i) {
-    PowerDensityContainer.AddPoint(TVector3D(sx[i], sy[i], sz[i]), power_density[i] * fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TSRS::Pi2() * TSRS::Epsilon0() * TSRS::C()) / 1e6);
+    PowerDensityContainer.AddToPoint(i, power_density[i] * fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TSRS::Pi2() * TSRS::Epsilon0() * TSRS::C()) / 1e6 * Weight);
   }
 
 

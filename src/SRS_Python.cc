@@ -1190,19 +1190,21 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   PyObject* List_EnergyRange_eV = PyList_New(0);
   PyObject* List_Points_eV      = PyList_New(0);
   int NParticles = 0;
+  int GPU = 0;
   char* OFile = "";
 
 
 
-  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", "nparticles", "ofile", NULL};
+  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", "nparticles", "gpu", "ofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOis", kwlist,
-                                                            &List_Obs,
-                                                            &NPoints,
-                                                            &List_EnergyRange_eV,
-                                                            &List_Points_eV,
-                                                            &NParticles,
-                                                            &OFile)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOiis", kwlist,
+                                                             &List_Obs,
+                                                             &NPoints,
+                                                             &List_EnergyRange_eV,
+                                                             &List_Points_eV,
+                                                             &NParticles,
+                                                             &GPU,
+                                                             &OFile)) {
     return NULL;
   }
 
@@ -1253,6 +1255,14 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   }
 
 
+  // Check GPU parameter
+  if (GPU != 0 && GPU != 1) {
+    PyErr_SetString(PyExc_ValueError, "'gpu' must be 0 or 1");
+    return NULL;
+  }
+
+
+
 
   TSpectrumContainer SpectrumContainer;
 
@@ -1265,12 +1275,20 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   // Actually calculate the spectrum
   try {
     if (NParticles == 0) {
-      self->obj->CalculateSpectrum(Obs, SpectrumContainer);
+      if (GPU == 0) {
+        self->obj->CalculateSpectrum(Obs, SpectrumContainer);
+      } else if (GPU == 1) {
+        self->obj->CalculateSpectrumGPU(Obs, SpectrumContainer);
+      }
     } else {
       double const Weight = 1.0 / (double) NParticles;
       for (int i = 0; i != NParticles; ++i) {
         self->obj->SetNewParticle();
-        self->obj->CalculateSpectrum(Obs, SpectrumContainer, Weight);
+        if (GPU == 0) {
+          self->obj->CalculateSpectrum(Obs, SpectrumContainer, Weight);
+        } else if (GPU == 1) {
+          self->obj->CalculateSpectrumGPU(Obs, SpectrumContainer, Weight);
+        }
       }
     }
   } catch (std::length_error e) {
@@ -1453,24 +1471,28 @@ static PyObject* SRS_CalculateTotalPower (SRSObject* self)
 
 static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyObject *keywds)
 {
-  // Calculate the spectrum given an observation point, and energy range
+  // Calculate the power density given a list of points
 
   PyObject*   List_Translation = PyList_New(0);
   PyObject*   List_Rotations   = PyList_New(0);
   PyObject*   List_Points      = PyList_New(0);
   int         NormalDirection = 0;
   int const   Dim = 3;
+  int         NParticles = 0;
+  int         GPU = 0;
   char const* OutFileName = "";
 
 
-  static char *kwlist[] = {"points", "normal", "rotations", "translation", "ofile", NULL};
+  static char *kwlist[] = {"points", "normal", "rotations", "translation", "nparticles", "gpu", "ofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOs", kwlist,
-                                                           &List_Points,
-                                                           &NormalDirection,
-                                                           &List_Rotations,
-                                                           &List_Translation,
-                                                           &OutFileName)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOiis", kwlist,
+                                                             &List_Points,
+                                                             &NormalDirection,
+                                                             &List_Rotations,
+                                                             &List_Translation,
+                                                             &NParticles,
+                                                             &GPU,
+                                                             &OutFileName)) {
     return NULL;
   }
 
@@ -1514,6 +1536,8 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
     }
   }
 
+  std::cout << "Translation " << Translation << std::endl;
+
 
   // Look for arbitrary shape 3D points
   TSurfacePoints_3D Surface;
@@ -1546,6 +1570,18 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
     }
   }
 
+  // Check number of particles
+  if (NParticles < 0) {
+    PyErr_SetString(PyExc_ValueError, "'nparticles' must be >= 1 (sort of)");
+    return NULL;
+  }
+
+
+  // Check GPU parameter
+  if (GPU != 0 && GPU != 1) {
+    PyErr_SetString(PyExc_ValueError, "'gpu' must be 0 or 1");
+    return NULL;
+  }
 
 
   // Container for Point plus scalar
@@ -1555,7 +1591,32 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
   // Actually calculate the spectrum
   bool const Directional = NormalDirection == 0 ? false : true;
 
-  self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, OutFileName);
+  try {
+    if (NParticles == 0) {
+      if (GPU == 0) {
+        self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
+      } else if (GPU == 1) {
+        self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
+      }
+    } else {
+      double const Weight = 1.0 / (double) NParticles;
+      for (int i = 0; i != NParticles; ++i) {
+        self->obj->SetNewParticle();
+        if (GPU == 0) {
+          self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, Weight, OutFileName);
+        } else if (GPU == 1) {
+          self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, Weight, OutFileName);
+        }
+      }
+    }
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  }
+
 
   // Build the output list of: [[[x, y, z], PowerDensity], [...]]
   // Create a python list
@@ -1603,22 +1664,26 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
   PyObject*   List_Rotations   = PyList_New(0);
   PyObject*   List_X0X1X2      = PyList_New(0);
   int         NormalDirection = 0;
+  int         NParticles = 0;
+  int         GPU = 0;
   int         Dim = 2;
   char*       OutFileName = "";
 
 
-  static char *kwlist[] = {"npoints", "plane", "width", "x0x1x2", "rotations", "translation", "ofile", "normal", "dim",  NULL};
+  static char *kwlist[] = {"npoints", "plane", "width", "x0x1x2", "rotations", "translation", "ofile", "normal", "nparticles", "gpu", "dim",  NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|sOOOOsii", kwlist,
-                                                               &List_NPoints,
-                                                               &SurfacePlane,
-                                                               &List_Width,
-                                                               &List_X0X1X2,
-                                                               &List_Rotations,
-                                                               &List_Translation,
-                                                               &OutFileName,
-                                                               &NormalDirection,
-                                                               &Dim)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|sOOOOsiiii", kwlist,
+                                                                 &List_NPoints,
+                                                                 &SurfacePlane,
+                                                                 &List_Width,
+                                                                 &List_X0X1X2,
+                                                                 &List_Rotations,
+                                                                 &List_Translation,
+                                                                 &OutFileName,
+                                                                 &NormalDirection,
+                                                                 &NParticles,
+                                                                 &GPU,
+                                                                 &Dim)) {
     return NULL;
   }
 
@@ -1730,13 +1795,55 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
   }
 
 
+  // Check number of particles
+  if (NParticles < 0) {
+    PyErr_SetString(PyExc_ValueError, "'nparticles' must be >= 1 (sort of)");
+    return NULL;
+  }
+
+
+  // Check GPU parameter
+  if (GPU != 0 && GPU != 1) {
+    PyErr_SetString(PyExc_ValueError, "'gpu' must be 0 or 1");
+    return NULL;
+  }
+
+
+
+
+
   // Container for Point plus scalar
   T3DScalarContainer PowerDensityContainer;
 
 
   // Actually calculate the spectrum
   bool const Directional = NormalDirection == 0 ? false : true;
-  self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, OutFileName);
+  try {
+    if (NParticles == 0) {
+      if (GPU == 0) {
+        self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
+      } else if (GPU == 1) {
+        self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
+      }
+    } else {
+      double const Weight = 1.0 / (double) NParticles;
+      for (int i = 0; i != NParticles; ++i) {
+        self->obj->SetNewParticle();
+        if (GPU == 0) {
+          self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, Weight, OutFileName);
+        } else if (GPU == 1) {
+          self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, Weight, OutFileName);
+        }
+      }
+    }
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  }
+
 
 
   // Build the output list of: [[[x, y, z], PowerDensity], [...]]
@@ -1914,7 +2021,7 @@ static PyObject* SRS_CalculatePowerDensityRectangleGPU (SRSObject* self, PyObjec
   // Actually calculate the spectrum
   bool const Directional = NormalDirection == 0 ? false : true;
   try {
-    self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, OutFileName);
+    self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
   } catch (std::invalid_argument e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
@@ -1948,6 +2055,190 @@ static PyObject* SRS_CalculatePowerDensityRectangleGPU (SRSObject* self, PyObjec
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+static PyObject* SRS_CalculateFlux (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Calculate the flux on a surface given an energy and list of points in 3D
+
+  double      Energy_eV = 0;
+  PyObject*   List_Translation = PyList_New(0);
+  PyObject*   List_Rotations   = PyList_New(0);
+  PyObject*   List_Points      = PyList_New(0);
+  int         NormalDirection = 0;
+  int         Dim = 3;
+  int         NParticles = 0;
+  int         GPU = 0;
+  char const* OutFileName = "";
+
+
+  static char *kwlist[] = {"energy_eV", "points", "normal", "rotations", "translation", "nparticles", "gpu", "ofile", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|iOOiis", kwlist,
+                                                              &Energy_eV,
+                                                              &List_Points,
+                                                              &NormalDirection,
+                                                              &List_Rotations,
+                                                              &List_Translation,
+                                                              &NParticles,
+                                                              &GPU,
+                                                              &OutFileName)) {
+    return NULL;
+  }
+
+  // Check if a beam is at least defined
+  if (self->obj->GetNParticleBeams() < 1) {
+    PyErr_SetString(PyExc_ValueError, "No particle beam defined");
+    return NULL;
+  }
+
+
+  // Check requested dimension
+  if (Dim != 2 & Dim != 3) {
+    PyErr_SetString(PyExc_ValueError, "'dim' must be 2 or 3");
+    return NULL;
+  }
+
+
+  // Vectors for rotations and translations.  Default to 0
+  TVector3D Rotations(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
+  }
+
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
+  }
+
+  std::cout << "Translation " << Translation << std::endl;
+
+
+  // Look for arbitrary shape 3D points
+  TSurfacePoints_3D Surface;
+  for (int i = 0; i < PyList_Size(List_Points); ++i) {
+    PyObject* LXN = PyList_GetItem(List_Points, i);
+    TVector3D X;
+    TVector3D N;
+    if (PyList_Size(LXN) == 2) {
+
+      try {
+        X = SRS_ListAsTVector3D(PyList_GetItem(LXN, 0));
+        N = SRS_ListAsTVector3D(PyList_GetItem(LXN, 1));
+      } catch (std::length_error e) {
+        PyErr_SetString(PyExc_ValueError, "Incorrect format in 'points': Point or Normal does not have 3 elements");
+        return NULL;
+      }
+
+      // Rotate point and normal
+      X.RotateSelfXYZ(Rotations);
+      N.RotateSelfXYZ(Rotations);
+
+      // Translate point, normal does not get translated
+      X += Translation;
+
+      Surface.AddPoint(X, N);
+    } else {
+      // input format error
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'points'");
+      return NULL;
+    }
+  }
+
+  // Check number of particles
+  if (NParticles < 0) {
+    PyErr_SetString(PyExc_ValueError, "'nparticles' must be >= 1 (sort of)");
+    return NULL;
+  }
+
+  // Check GPU parameter
+  if (GPU != 0 && GPU != 1) {
+    PyErr_SetString(PyExc_ValueError, "'gpu' must be 0 or 1");
+    return NULL;
+  }
+
+
+
+
+
+  // Container for Point plus scalar
+  T3DScalarContainer FluxContainer;
+
+  bool const Directional = NormalDirection == 0 ? false : true;
+
+  try {
+    if (NParticles == 0) {
+      if (GPU == 0) {
+        self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
+      } else if (GPU == 1) {
+        self->obj->CalculateFluxGPU(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
+      }
+    } else {
+      double const Weight = 1.0 / (double) NParticles;
+      for (int i = 0; i != NParticles; ++i) {
+        self->obj->SetNewParticle();
+        if (GPU == 0) {
+          self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, Weight, OutFileName);
+        } else if (GPU == 1) {
+          self->obj->CalculateFluxGPU(Surface, Energy_eV, FluxContainer, Dim, Weight, OutFileName);
+        }
+      }
+    }
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  }
+
+  // Build the output list of: [[[x, y, z], Flux], [...]]
+  // Create a python list
+  PyObject *PList = PyList_New(0);
+
+  size_t const NPoints = FluxContainer.GetNPoints();
+
+  for (size_t i = 0; i != NPoints; ++i) {
+    T3DScalar P = FluxContainer.GetPoint(i);
+
+    // Inner list for each point
+    PyObject *PList2 = PyList_New(0);
+
+
+    // Add position and value to list
+    PyList_Append(PList2, SRS_TVector3DAsList(P.GetX()));
+    PyList_Append(PList2, Py_BuildValue("f", P.GetV()));
+    PyList_Append(PList, PList2);
+
+  }
+
+  return PList;
+}
 
 
 
@@ -2517,6 +2808,7 @@ static PyMethodDef SRS_methods[] = {
   {"calculate_power_density_rectangle", (PyCFunction) SRS_CalculatePowerDensityRectangle,  METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_power_density_rectangle_gpu", (PyCFunction) SRS_CalculatePowerDensityRectangleGPU,  METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_power_density",           (PyCFunction) SRS_CalculatePowerDensity,           METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
+  {"calculate_flux",                    (PyCFunction) SRS_CalculateFlux,                   METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
   {"calculate_flux_rectangle",          (PyCFunction) SRS_CalculateFluxRectangle,          METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
   {"calculate_flux_rectangle_gpu",      (PyCFunction) SRS_CalculateFluxRectangleGPU,       METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
 
