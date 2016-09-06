@@ -29,7 +29,7 @@ class TRandomA
     std::mt19937* fMT;
 
     std::normal_distribution<double> fNormalDist;
-    //std::uniform_distribution<double> fUniformDist;
+    std::uniform_real_distribution<double> fUniformDist;
 
 
 };

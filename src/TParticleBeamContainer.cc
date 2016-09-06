@@ -8,8 +8,10 @@
 ////////////////////////////////////////////////////////////////////
 
 #include "TParticleBeamContainer.h"
+#include "TRandomA.h"
 
-
+// Random number defined elsewhere
+extern TRandomA* gRandomA;
 
 
 TParticleBeamContainer::TParticleBeamContainer ()
@@ -122,7 +124,7 @@ size_t TParticleBeamContainer::GetRandomBeamIndexByWeight () const
   }
 
   // Get a random double [0, SumOfWeights)
-  double const Random = ((double) rand() / (RAND_MAX)) * fParticleBeamWeightSums[N - 1];
+  double const Random = gRandomA->Uniform() * fParticleBeamWeightSums[N - 1];
 
   // Not the fastest algorithm, but I guess you don't have thousands of different beams...
   // If you do, let's update this search...
