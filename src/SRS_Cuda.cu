@@ -1017,9 +1017,6 @@ void SRS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& Obser
 
   std::cout << "ngpu " << ngpu << std::endl;
 
-
-
-
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
 

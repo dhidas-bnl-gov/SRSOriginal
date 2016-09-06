@@ -630,6 +630,9 @@ void SRS::CalculateSpectrumGPU (TVector3D const& ObservationPoint, TSpectrumCont
     }
   }
 
+  // Calculate trajectory
+  this->CalculateTrajectory(fParticle);
+
   #ifdef CUDA
   return SRS_Cuda_CalculateSpectrumGPU (fParticle, ObservationPoint, Spectrum, Weight);
   #else
