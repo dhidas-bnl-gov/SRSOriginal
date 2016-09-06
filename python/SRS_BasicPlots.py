@@ -48,7 +48,7 @@ def add_power_densities(A, B):
 
 
 
-def plot_trajectory_position(trajectory, show=True, ofname=''):
+def plot_trajectory_position(trajectory, show=True, ofile=''):
     """Plot the trajectory"""
 
     # Get coordinate lists
@@ -77,8 +77,8 @@ def plot_trajectory_position(trajectory, show=True, ofname=''):
     plt.title('Particle Trajectory')
 
 
-    if ofname != '':
-        plt.savefig(ofname)
+    if ofile != '':
+        plt.savefig(ofile, bbox_inches='tight')
 
     if show == True:
         plt.show()
@@ -86,7 +86,7 @@ def plot_trajectory_position(trajectory, show=True, ofname=''):
     return plt
 
 
-def plot_trajectory_velocity(trajectory, show=True, ofname=''):
+def plot_trajectory_velocity(trajectory, show=True, ofile=''):
     """Plot the trajectory"""
 
     # Get coordinate lists
@@ -115,8 +115,8 @@ def plot_trajectory_velocity(trajectory, show=True, ofname=''):
     plt.ylabel('BZ []')
     plt.title('Particle Beta Z')
 
-    if ofname != '':
-        plt.savefig(ofname)
+    if ofile != '':
+        plt.savefig(ofile, bbox_inches='tight')
 
     if show == True:
         plt.show()
@@ -124,7 +124,7 @@ def plot_trajectory_velocity(trajectory, show=True, ofname=''):
     return plt
     
     
-def plot_power_density(V, title='', show=True, ofname=''):
+def plot_power_density(V, title='', show=True, ofile=''):
     """Plot a 2D histogram with equal spacing"""
         
     X = [item[0][0] for item in V]
@@ -142,8 +142,8 @@ def plot_power_density(V, title='', show=True, ofname=''):
     plt.ylabel('X2 Axis [$m$]')
     plt.title(title)
 
-    if ofname != '':
-        plt.savefig(ofname)
+    if ofile != '':
+        plt.savefig(ofile, bbox_inches='tight')
 
     if show == True:
         plt.show()
@@ -151,7 +151,35 @@ def plot_power_density(V, title='', show=True, ofname=''):
     return plt
 
 
-def plot_spectrum(S, log=False, show=True, ofname=''):
+def plot_flux(V, title='', show=True, ofile=''):
+    """Plot a 2D histogram with equal spacing"""
+        
+    X = [item[0][0] for item in V]
+    Y = [item[0][1] for item in V]
+    P = [item[1]    for item in V]
+
+    NX = len(np.unique(X))
+    NY = len(np.unique(Y))
+
+    plt.figure(1, figsize=(10, 6))
+    #plt.figure(1)
+    plt.hist2d(X, Y, bins=[NX, NY], weights=P)
+    plt.colorbar()
+
+    plt.xlabel('X1 Axis [$m$]')
+    plt.ylabel('X2 Axis [$m$]')
+    plt.title(title)
+
+    if ofile != '':
+        plt.savefig(ofile, bbox_inches='tight')
+
+    if show == True:
+        plt.show()
+
+    return plt
+
+
+def plot_spectrum(S, log=False, show=True, ofile=''):
     """Plot the spectrum"""
     
     X = [item[0] for item in S]
@@ -163,8 +191,8 @@ def plot_spectrum(S, log=False, show=True, ofname=''):
     plt.ylabel('Photons [$\gamma / mm^2 / 0.1bw / s$]')
     plt.title('Spectrum')
 
-    if ofname != '':
-        plt.savefig(ofname)
+    if ofile != '':
+        plt.savefig(ofile, bbox_inches='tight')
 
     if show == True:
         plt.show()
@@ -175,7 +203,7 @@ def plot_spectrum(S, log=False, show=True, ofname=''):
 
 
 
-def plot_magnetic_field(srs, zmin, zmax, show=True, ofname=''):
+def plot_magnetic_field(srs, zmin, zmax, show=True, ofile=''):
     """Plot the magnetic field as a function of Z"""
 
     Z = np.linspace(zmin, zmax, 100000)
@@ -195,8 +223,8 @@ def plot_magnetic_field(srs, zmin, zmax, show=True, ofname=''):
     plt.ylabel('By [T]')
     plt.title('Vertical Magnetic Field')
 
-    if ofname != '':
-        plt.savefig(ofname)
+    if ofile != '':
+        plt.savefig(ofile, bbox_inches='tight')
 
     if show == True:
         plt.show()
@@ -224,7 +252,7 @@ def total_power(pd):
 
 
 
-def plot_electric_field_vs_time(efield, show=True, ofname=''):
+def plot_electric_field_vs_time(efield, show=True, ofile=''):
     """Plot the electric field as a function of time"""
 
     T  = [item[0]    for item in efield]
