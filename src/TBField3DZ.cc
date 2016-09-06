@@ -4,6 +4,7 @@
 #include <sstream>
 #include <fstream>
 #include <algorithm>
+#include <cmath>
 
 TBField3DZ::TBField3DZ ()
 {
@@ -144,6 +145,14 @@ bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotat
     }
 
     // UPDATE: rotation
+    if (Rotation.GetX() != 0 || Rotation.GetY() != 0) {
+      throw std::invalid_argument("Rotation in X and Y not allowed here");
+    }
+    if (Rotation.GetZ() != 0) {
+      double const Bx0 = Bx;
+      Bx = Bx * cos(Rotation.GetZ()) - By * sin(Rotation.GetZ());
+      By = Bx0 * sin(Rotation.GetZ()) + By * cos(Rotation.GetZ());
+    }
 
     // Translation
     Z += Translation.GetZ();

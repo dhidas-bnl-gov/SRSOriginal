@@ -1191,7 +1191,7 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   PyObject* List_Points_eV      = PyList_New(0);
   int NParticles = 0;
   int GPU = 0;
-  char* OFile = "";
+  char* OutFileName = "";
 
 
 
@@ -1204,7 +1204,7 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
                                                              &List_Points_eV,
                                                              &NParticles,
                                                              &GPU,
-                                                             &OFile)) {
+                                                             &OutFileName)) {
     return NULL;
   }
 
@@ -1300,8 +1300,8 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   }
 
 
-  if (std::string(OFile) != "") {
-    SpectrumContainer.SaveToFile(OFile);
+  if (std::string(OutFileName) != "") {
+    SpectrumContainer.SaveToFile(OutFileName);
   }
 
   // Return the spectrum
@@ -2448,10 +2448,6 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
     return NULL;
   }
 
-  // Write output file?
-  if (OutFileName != "") {
-    FluxContainer.WriteToFileText(OutFileName, Dim);
-  }
 
 
   // Build the output list of: [[[x, y, z], Flux], [...]]
@@ -2712,6 +2708,10 @@ static PyObject* SRS_CalculateElectricFieldTimeDomain (SRSObject* self, PyObject
   T3DScalarContainer XYZT;
   self->obj->CalculateElectricFieldTimeDomain(Obs, XYZT);
 
+  // UPDATE: Format is not great for XYZT output
+  if (std::string(OutFileName) != "") {
+    XYZT.WriteToFileText(OutFileName, 3);
+  }
 
   // Build the output list of: [[[x, y, z], Flux], [...]]
   // Create a python list
