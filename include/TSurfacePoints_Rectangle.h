@@ -13,6 +13,7 @@
 #include "TSurfacePoints.h"
 
 #include <string>
+#include <stdexcept>
 
 class TSurfacePoints_Rectangle : public TSurfacePoints
 {

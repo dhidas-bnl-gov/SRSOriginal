@@ -13,6 +13,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <stdexcept>
 
 class T3DScalar
 {
