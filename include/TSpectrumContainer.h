@@ -24,16 +24,19 @@ class TSpectrumContainer
 
     void   SetFlux   (size_t const, double const);
     void   SetPoint  (size_t const, double const, double const);
-    void   AddPoint  (double const);
+    void   AddPoint  (double const, double const Flux = 0);
     void   AddToFlux (size_t const, double const);
     double GetFlux   (size_t const) const;
     double GetEnergy (size_t const) const;
     double GetAngularFrequency (size_t const) const;
     size_t GetNPoints () const;
 
-    void SaveToFile (std::string const, std::string const Header = "") const;
-    void SaveToFileBinary (std::string const, std::string const Header = "") const;
+    void WriteToFileText (std::string const, std::string const Header = "") const;
+    void WriteToFileBinary (std::string const, std::string const Header = "") const;
 
+    void Clear ();
+    void AverageFromFilesText (std::vector<std::string> const&);
+    void AverageFromFilesBinary (std::vector<std::string> const&);
 
   private:
 

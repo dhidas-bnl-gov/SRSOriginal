@@ -1192,19 +1192,21 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   int NParticles = 0;
   int GPU = 0;
   char* OutFileName = "";
+  char* OutFileNameBinary = "";
 
 
 
-  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", "nparticles", "gpu", "ofile", NULL};
+  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", "nparticles", "gpu", "ofile", "bofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOiis", kwlist,
-                                                             &List_Obs,
-                                                             &NPoints,
-                                                             &List_EnergyRange_eV,
-                                                             &List_Points_eV,
-                                                             &NParticles,
-                                                             &GPU,
-                                                             &OutFileName)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOiiss", kwlist,
+                                                              &List_Obs,
+                                                              &NPoints,
+                                                              &List_EnergyRange_eV,
+                                                              &List_Points_eV,
+                                                              &NParticles,
+                                                              &GPU,
+                                                              &OutFileName,
+                                                              &OutFileNameBinary)) {
     return NULL;
   }
 
@@ -1301,7 +1303,11 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
 
 
   if (std::string(OutFileName) != "") {
-    SpectrumContainer.SaveToFile(OutFileName);
+    SpectrumContainer.WriteToFileText(OutFileName);
+  }
+
+  if (std::string(OutFileNameBinary) != "") {
+    SpectrumContainer.WriteToFileBinary(OutFileNameBinary);
   }
 
   // Return the spectrum
@@ -1324,18 +1330,20 @@ static PyObject* SRS_CalculateSpectrumGPU (SRSObject* self, PyObject* args, PyOb
   PyObject* List_Points_eV      = PyList_New(0);
   int NParticles = 0;
   char* OFile = "";
+  char* BOFile = "";
 
 
 
-  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", "nparticles", "ofile", NULL};
+  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", "nparticles", "ofile", "bofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOis", kwlist,
-                                                            &List_Obs,
-                                                            &NPoints,
-                                                            &List_EnergyRange_eV,
-                                                            &List_Points_eV,
-                                                            &NParticles,
-                                                            &OFile)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOiss", kwlist,
+                                                             &List_Obs,
+                                                             &NPoints,
+                                                             &List_EnergyRange_eV,
+                                                             &List_Points_eV,
+                                                             &NParticles,
+                                                             &OFile,
+                                                             &BOFile)) {
     return NULL;
   }
 
@@ -1418,7 +1426,11 @@ static PyObject* SRS_CalculateSpectrumGPU (SRSObject* self, PyObject* args, PyOb
 
 
   if (std::string(OFile) != "") {
-    SpectrumContainer.SaveToFile(OFile);
+    SpectrumContainer.WriteToFileText(OFile);
+  }
+
+  if (std::string(BOFile) != "") {
+    SpectrumContainer.WriteToFileBinary(OFile);
   }
 
   // Return the spectrum
@@ -2669,6 +2681,187 @@ static PyObject* SRS_CalculateFluxRectangleGPU (SRSObject* self, PyObject* args,
 
 
 
+static PyObject* SRS_AverageSpectra (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Calculate the flux on a surface given an energy and list of points in 3D
+
+  PyObject*   List_InFileNamesText = PyList_New(0);
+  PyObject*   List_InFileNamesBinary = PyList_New(0);
+  char const* OutFileNameText = "";
+  char const* OutFileNameBinary = "";
+
+
+  static char *kwlist[] = {"ifiles", "bifiles", "ofile", "bofile", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "|OOss", kwlist,
+                                                          &List_InFileNamesText,
+                                                          &List_InFileNamesBinary,
+                                                          &OutFileNameText,
+                                                          &OutFileNameBinary)) {
+    return NULL;
+  }
+
+  // Grab the number of input files for both text and binary lists
+  int const NFilesText = PyList_Size(List_InFileNamesText);
+  int const NFilesBinary = PyList_Size(List_InFileNamesBinary);
+
+  // Doesn't allow for both binary and text input at the same time
+  if (NFilesText != 0 && NFilesBinary !=0) {
+    PyErr_SetString(PyExc_ValueError, "either text or binary files may be added, but not both.");
+    return NULL;
+  }
+
+  // Check that there is at least one file
+  if (NFilesText + NFilesBinary < 1) {
+    PyErr_SetString(PyExc_ValueError, "No files given.  You need at least one file as input in a list.");
+    return NULL;
+  }
+
+  // Add file names to vector
+  std::vector<std::string> FileNames;
+  for (int i = 0; i != NFilesText; ++i) {
+    FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesText, i)) );
+  }
+  for (int i = 0; i != NFilesBinary; ++i) {
+    FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesBinary, i)) );
+  }
+
+  // Container for flux average
+  TSpectrumContainer Container;
+
+  // Either they are text files or binary files
+  if (NFilesText > 0) {
+    Container.AverageFromFilesText(FileNames);
+  } else {
+    //Container.AverageFromFilesBinary(FileNames);
+  }
+
+  // Build the output list of: [[[x, y, z], Value], [...]]
+  // Create a python list
+  PyObject *PList = PyList_New(0);
+
+  // Text output
+  if (std::string(OutFileNameText) != "") {
+    Container.WriteToFileText(OutFileNameText);
+  }
+
+  // Binary output
+  if (std::string(OutFileNameBinary) != "") {
+    Container.WriteToFileBinary(OutFileNameBinary);
+  }
+
+
+  return SRS_GetSpectrumAsList(self, Container);
+}
+
+
+
+
+
+
+
+
+
+static PyObject* SRS_AverageT3DScalars (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Calculate the flux on a surface given an energy and list of points in 3D
+
+  PyObject*   List_InFileNamesText = PyList_New(0);
+  PyObject*   List_InFileNamesBinary = PyList_New(0);
+  int         Dim = 2;
+  char const* OutFileNameText = "";
+  char const* OutFileNameBinary = "";
+
+
+  static char *kwlist[] = {"ifiles", "bifiles", "ofile", "bofile", "dim", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "|OOssi", kwlist,
+                                                         &List_InFileNamesText,
+                                                         &List_InFileNamesBinary,
+                                                         &OutFileNameText,
+                                                         &OutFileNameBinary,
+                                                         &Dim)) {
+    return NULL;
+  }
+
+  // Grab the number of input files for both text and binary lists
+  int const NFilesText = PyList_Size(List_InFileNamesText);
+  int const NFilesBinary = PyList_Size(List_InFileNamesBinary);
+
+  // Doesn't allow for both binary and text input at the same time
+  if (NFilesText != 0 && NFilesBinary !=0) {
+    PyErr_SetString(PyExc_ValueError, "either text or binary files may be added, but not both.");
+    return NULL;
+  }
+
+  // Check that there is at least one file
+  if (NFilesText + NFilesBinary < 1) {
+    PyErr_SetString(PyExc_ValueError, "No files given.  You need at least one file as input in a list.");
+    return NULL;
+  }
+
+  // Add file names to vector
+  std::vector<std::string> FileNames;
+  for (int i = 0; i != NFilesText; ++i) {
+    FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesText, i)) );
+  }
+  for (int i = 0; i != NFilesBinary; ++i) {
+    FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesBinary, i)) );
+  }
+
+  // Container for flux average
+  T3DScalarContainer Container;
+
+  // Either they are text files or binary files
+  if (NFilesText > 0) {
+    Container.AverageFromFilesText(FileNames, Dim);
+  } else {
+    Container.AverageFromFilesBinary(FileNames, Dim);
+  }
+
+  // Build the output list of: [[[x, y, z], Value], [...]]
+  // Create a python list
+  PyObject *PList = PyList_New(0);
+
+  // Number of points in container
+  size_t const NPoints = Container.GetNPoints();
+
+  for (size_t i = 0; i != NPoints; ++i) {
+
+    // This point in container
+    T3DScalar P = Container.GetPoint(i);
+
+    // Inner list for each point
+    PyObject *PList2 = PyList_New(0);
+
+
+    // Add position and value to list
+    PyList_Append(PList2, SRS_TVector3DAsList(P.GetX()));
+    PyList_Append(PList2, Py_BuildValue("f", P.GetV()));
+    PyList_Append(PList, PList2);
+
+  }
+
+  // Text output
+  if (std::string(OutFileNameText) != "") {
+    Container.WriteToFileText(OutFileNameText, Dim);
+  }
+
+  // Binary output
+  if (std::string(OutFileNameBinary) != "") {
+    Container.WriteToFileBinary(OutFileNameBinary, Dim);
+  }
+
+  return PList;
+}
+
+
+
+
+
+
+
+
 
 static PyObject* SRS_CalculateElectricFieldTimeDomain (SRSObject* self, PyObject* args, PyObject *keywds)
 {
@@ -2826,6 +3019,10 @@ static PyMethodDef SRS_methods[] = {
   {"calculate_flux",                    (PyCFunction) SRS_CalculateFlux,                   METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
   {"calculate_flux_rectangle",          (PyCFunction) SRS_CalculateFluxRectangle,          METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
   {"calculate_flux_rectangle_gpu",      (PyCFunction) SRS_CalculateFluxRectangleGPU,       METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
+
+  {"average_spectra",                   (PyCFunction) SRS_AverageSpectra,                  METH_VARARGS | METH_KEYWORDS, "average spectra"},
+  {"average_flux",                      (PyCFunction) SRS_AverageT3DScalars,               METH_VARARGS | METH_KEYWORDS, "average fluxes"},
+  {"average_power_density",             (PyCFunction) SRS_AverageT3DScalars,               METH_VARARGS | METH_KEYWORDS, "average power densities"},
 
   {"calculate_electric_field",          (PyCFunction) SRS_CalculateElectricFieldTimeDomain,METH_VARARGS | METH_KEYWORDS, "calculate the electric field in the time domain"},
 

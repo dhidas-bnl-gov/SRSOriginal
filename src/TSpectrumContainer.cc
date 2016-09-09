@@ -142,10 +142,10 @@ void TSpectrumContainer::SetPoint (size_t const i, double const Energy, double c
 
 
 
-void TSpectrumContainer::AddPoint (double const Energy)
+void TSpectrumContainer::AddPoint (double const Energy, double const Flux)
 {
-  // Add an energy point to the end of the vector.  Default flux value is zero
-  fSpectrumPoints.push_back( std::make_pair(Energy, 0.0) );
+  // Add an energy point to the end of the vector.
+  fSpectrumPoints.push_back( std::make_pair(Energy, Flux) );
 
   return;
 }
@@ -220,7 +220,7 @@ size_t TSpectrumContainer::GetNPoints () const
 
 
 
-void TSpectrumContainer::SaveToFile (std::string const FileName, std::string const Header) const
+void TSpectrumContainer::WriteToFileText (std::string const FileName, std::string const Header) const
 {
   // Write this spectrum to a file in text format.
   // FileName - File name to write to
@@ -260,7 +260,7 @@ void TSpectrumContainer::SaveToFile (std::string const FileName, std::string con
 
 
 
-void TSpectrumContainer::SaveToFileBinary (std::string const FileName, std::string const Header) const
+void TSpectrumContainer::WriteToFileBinary (std::string const FileName, std::string const Header) const
 {
   // UPDATE: Actually make this a binary output
   // Write this spectrum to a file in text format.
@@ -294,6 +294,177 @@ void TSpectrumContainer::SaveToFileBinary (std::string const FileName, std::stri
 
   // Close file
   f.close();
+
+  return;
+}
+
+
+
+
+void TSpectrumContainer::Clear ()
+{
+  // Clear contents
+  fSpectrumPoints.clear();
+  fCompensation.clear();
+
+  return;
+}
+
+
+
+
+
+void TSpectrumContainer::AverageFromFilesText (std::vector<std::string> const& Files)
+{
+  // Average the inpput from all text files.  Text files must be the same points in energy
+  // arranged in exactly the same format.  The energy points are taken from only the first file
+  // in the vector
+
+  // Clear my contents
+  this->Clear();
+
+  // Check that we have at least one file!
+  if (Files.size() < 1) {
+    throw;
+  }
+
+  // Double number of files for averaging
+  double const N = (double) Files.size();
+
+  // Open all files
+  std::vector<std::ifstream> f(Files.size());
+  for (size_t i = 0; i != Files.size(); ++i) {
+    f[i].open(Files[i].c_str());
+  }
+
+  // Variables used for writing to file
+  double X, V;
+
+  // Are we done reading yet
+  bool NotDone = true;
+
+  // Keep track of which point we are on
+  size_t ip = 0;
+
+    // Loop over all points until done
+  while (NotDone) {
+
+    // For each point loop over files and average
+    for (size_t i = 0; i != f.size(); ++i) {
+
+      // Read data from current file
+      f[i] >> X >> V;
+
+      // If we hit an eof we are done.
+      if (f[i].eof()) {
+
+        // Change the done state to stop reading files
+        NotDone = false;
+
+        // This must be file index 0
+        if (i != 0) {
+          throw;
+        }
+
+        break;
+      }
+
+      // Add point to self
+      if (i == 0) {
+        this->AddPoint(X, V/N);
+      } else {
+        this->AddToFlux(ip, V/N);
+      }
+    }
+
+    // Increment point counter
+    ++ip;
+  }
+
+  // Close all files
+  for (size_t i = 0; i != Files.size(); ++i) {
+    f[i].close();
+  }
+
+  return;
+}
+
+
+
+
+
+void TSpectrumContainer::AverageFromFilesBinary (std::vector<std::string> const& Files)
+{
+  // Average the inpput from all text files.  Text files must be the same points in energy
+  // arranged in exactly the same format.  The energy points are taken from only the first file
+  // in the vector
+
+  // Clear my contents
+  this->Clear();
+
+  // Check that we have at least one file!
+  if (Files.size() < 1) {
+    throw;
+  }
+
+  // Double number of files for averaging
+  double const N = (double) Files.size();
+
+  // Open all files
+  std::vector<std::ifstream> f(Files.size());
+  for (size_t i = 0; i != Files.size(); ++i) {
+    f[i].open(Files[i].c_str());
+  }
+
+  // Variables used for writing to file
+  double X, V;
+
+  // Are we done reading yet
+  bool NotDone = true;
+
+  // Keep track of which point we are on
+  size_t ip = 0;
+
+    // Loop over all points until done
+  while (NotDone) {
+
+    // For each point loop over files and average
+    for (size_t i = 0; i != f.size(); ++i) {
+
+      // Read data from current file
+      f[i].read( (char*)  &X, sizeof(double));
+      f[i].read( (char*)  &V, sizeof(double));
+
+      // If we hit an eof we are done.
+      if (f[i].eof()) {
+
+        // Change the done state to stop reading files
+        NotDone = false;
+
+        // This must be file index 0
+        if (i != 0) {
+          throw;
+        }
+
+        break;
+      }
+
+      // Add point to self
+      if (i == 0) {
+        this->AddPoint(X, V/N);
+      } else {
+        this->AddToFlux(ip, V/N);
+      }
+    }
+
+    // Increment point counter
+    ++ip;
+  }
+
+  // Close all files
+  for (size_t i = 0; i != Files.size(); ++i) {
+    f[i].close();
+  }
 
   return;
 }

@@ -203,12 +203,6 @@ void TParticleTrajectoryPoints::WriteToFileBinary (std::string const& FileName) 
     throw;
   }
 
-  // Write header
-
-  // Set the ofstream in scientific output mode
-  f << std::scientific;
-  f.precision(30);
-
   // Loop over all points and print to file
   for (size_t i = 0; i != fB.size(); ++i) {
     double value;

@@ -61,11 +61,16 @@ class T3DScalarContainer
     void AddPoint (TVector3D const&, double const);
     void AddToPoint (size_t const, double const);
 
+    void Clear ();
+    void AverageFromFilesText (std::vector<std::string> const&, int const Dimension);
+    void AverageFromFilesBinary (std::vector<std::string> const&, int const Dimension);
+
     size_t GetNPoints () const;
 
     T3DScalar const& GetPoint (size_t const) const;
 
     void WriteToFileText (std::string const&, int const);
+    void WriteToFileBinary (std::string const&, int const);
 
   private:
     std::vector<T3DScalar> fValues;
