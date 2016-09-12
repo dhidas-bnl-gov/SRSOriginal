@@ -1,5 +1,57 @@
 from math import sin, cos, sqrt, pi
 
+class PSRectangle:
+    """A Parametric surface - rectangle"""
+
+    # This shape specific parameters
+    L = 1
+    W = 1
+    
+
+    # Required for all PS shapes
+    # Start, stop, and number of points for the u and v parameters
+    # All PSShapes must have these defined
+    ustart = -L/2.
+    ustop  = +L/2.
+    vstart = -W/2.
+    vstop  = +W/2.
+    nu = 10
+    nv = 10
+ 
+    def __init__ (self, L=1, W=1, ustart=-L/2., ustop=L/2., nu=10, vstart=-W/2., vstop=W/2., nv=10):
+        self.L = L
+        self.W = W
+        self.ustart = -L/2.
+        self.ustop = L/2.
+        self.nu = nu
+        self.vstart = -W/2.
+        self.vstop = W/2.
+        self.nv = nv
+       
+    
+    def position (self, u, v):
+        """Return the position in 3D at this u and v"""
+
+        x = u
+        y = v
+        z = 0
+        
+        return [x, y, z]
+    
+    
+    
+    def normal (self, u, v):
+        """Return a unit normal in 3D at this u and v position"""
+
+        xn = 0
+        yn = 0
+        zn = 1
+        
+        return [xn, yn, zn]
+
+
+
+
 class PSTorus:
     """A Parametric surface - torus"""
 
@@ -74,11 +126,18 @@ class PSCylinder:
     def __init__ (self, R=1, L=1, ustart=None, ustop=None, nu=10, vstart=None, vstop=None, nv=10):
         self.R = R
         self.L = L
-        if ustart is not None: self.ustart = ustart
-        if ustop  is not None: self.ustop = ustop
+        self.ustart = -L/2.
+        self.ustop  = +L/2.
         self.nu = nu
-        if vstart is not None: self.vstart = vstart
-        if vstop  is not None: self.vstop = vstop
+        if vstart is None:
+            self.vstart = 0
+        else:
+            self.vstart = vstart
+        if vstop is None:
+            self.vstop = 2.*pi
+        else:
+            self.vstop = vstop
+
         self.nv = nv
        
     

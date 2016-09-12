@@ -13,8 +13,8 @@ def power_density_3d(srs, surface,
     for u in np.linspace(surface.ustart, surface.ustop, surface.nu):
         for v in np.linspace(surface.vstart, surface.vstop, surface.nv):
             points.append([surface.position(u, v), surface.normal(u, v)])
-      
-        
+
+
     power_density = srs.calculate_power_density(points=points, normal=normal, rotations=rotations, translation=translation, nparticles=nparticles)
     P = [item[1] for item in power_density]
 
