@@ -57,7 +57,7 @@ def plot_trajectory_position(trajectory, show=True, ofile=''):
     Z  = [item[0][2] for item in trajectory]
 
     # Plot X and Y vs. Z
-    plt.figure(1, figsize=(20, 5))
+    plt.figure(1, figsize=(18, 4.5))
     plt.subplot(131)
     plt.plot(Z, X)
     plt.xlabel('Z [m]')
@@ -96,7 +96,7 @@ def plot_trajectory_velocity(trajectory, show=True, ofile=''):
     T = range(len(VX))
 
     # Plot VX, VY, VZ vs. T
-    plt.figure(1, figsize=(20, 5))
+    plt.figure(1, figsize=(18, 4.5))
     plt.subplot(131)
     plt.plot(T, VX)
     plt.xlabel('T [step]')
@@ -124,7 +124,7 @@ def plot_trajectory_velocity(trajectory, show=True, ofile=''):
     return plt
     
     
-def plot_power_density(V, title='', show=True, ofile=''):
+def plot_power_density(V, title='Power Density [$W / mm^2$]', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile=''):
     """Plot a 2D histogram with equal spacing"""
         
     X = [item[0][0] for item in V]
@@ -134,12 +134,12 @@ def plot_power_density(V, title='', show=True, ofile=''):
     NX = len(np.unique(X))
     NY = len(np.unique(Y))
 
-    plt.figure(1, figsize=(20, 10))
+    plt.figure(1, figsize=(18, 9))
     plt.hist2d(X, Y, bins=[NX, NY], weights=P)
     plt.colorbar()
 
-    plt.xlabel('X1 Axis [$m$]')
-    plt.ylabel('X2 Axis [$m$]')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
     plt.title(title)
 
     if ofile != '':
@@ -151,7 +151,7 @@ def plot_power_density(V, title='', show=True, ofile=''):
     return plt
 
 
-def plot_flux(V, title='', show=True, ofile=''):
+def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile=''):
     """Plot a 2D histogram with equal spacing"""
         
     X = [item[0][0] for item in V]
@@ -161,13 +161,13 @@ def plot_flux(V, title='', show=True, ofile=''):
     NX = len(np.unique(X))
     NY = len(np.unique(Y))
 
-    plt.figure(1, figsize=(10, 6))
+    plt.figure(1, figsize=(18, 9))
     #plt.figure(1)
     plt.hist2d(X, Y, bins=[NX, NY], weights=P)
     plt.colorbar()
 
-    plt.xlabel('X1 Axis [$m$]')
-    plt.ylabel('X2 Axis [$m$]')
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
     plt.title(title)
 
     if ofile != '':
@@ -188,9 +188,39 @@ def plot_spectrum(S, log=False, show=True, ofile=''):
     if log:
         plt.yscale('log')
     plt.xlabel('Energy [eV]')
-    plt.ylabel('Photons [$\gamma / mm^2 / 0.1bw / s$]')
+    plt.ylabel('$\gamma / mm^2 / 0.1\%bw / s$')
     plt.title('Spectrum')
 
+    if ofile != '':
+        plt.savefig(ofile, bbox_inches='tight')
+
+    if show == True:
+        plt.show()
+
+    return plt
+
+
+
+def plot_spectra(S, L, show=True, ofile='', title='', loc='upper left', log=False):
+
+    plt.figure(1, figsize=(18, 9))
+    for i in range(len(S)):
+        s = S[i]
+        
+        X = [item[0] for item in s]
+        Y = [item[1] for item in s]
+        plt.plot(X, Y, label=L[i])
+
+    if log:
+        plt.yscale('log')
+        
+    plt.legend(loc=loc)
+    plt.xlabel('Energy [eV]')
+    plt.ylabel('[$\gamma / mm^2 / 0.1\%bw / s$]')
+    if title == '':
+        title='Spectrum'
+    plt.title(title)
+    
     if ofile != '':
         plt.savefig(ofile, bbox_inches='tight')
 
@@ -209,19 +239,26 @@ def plot_magnetic_field(srs, zmin, zmax, show=True, ofile=''):
     Z = np.linspace(zmin, zmax, 100000)
     Bx = [srs.get_bfield([0, 0, z])[0] for z in Z]
     By = [srs.get_bfield([0, 0, z])[1] for z in Z]
+    Bz = [srs.get_bfield([0, 0, z])[2] for z in Z]
 
-    plt.figure(1, figsize=(20, 10))
-    plt.subplot(121)
+    plt.figure(1, figsize=(18, 4.5))
+    plt.subplot(131)
     plt.plot(Z, Bx)
     plt.xlabel('Z [m]')
     plt.ylabel('Bx [T]')
     plt.title('Horizontal Magnetic Field')
 
-    plt.subplot(122)
+    plt.subplot(132)
     plt.plot(Z, By)
     plt.xlabel('Z [m]')
     plt.ylabel('By [T]')
     plt.title('Vertical Magnetic Field')
+
+    plt.subplot(133)
+    plt.plot(Z, Bz)
+    plt.xlabel('Z [m]')
+    plt.ylabel('Bz [T]')
+    plt.title('Longitudinal Magnetic Field')
 
     if ofile != '':
         plt.savefig(ofile, bbox_inches='tight')
@@ -260,21 +297,21 @@ def plot_electric_field_vs_time(efield, show=True, ofile=''):
     Ey = [item[1][1] for item in efield]
     Ez = [item[1][2] for item in efield]
 
-    plt.figure(1, figsize=(20, 10))
+    plt.figure(1, figsize=(18, 9))
     plt.subplot(131)
     plt.plot(T, Ex)
     plt.xlabel('T [s]')
     plt.ylabel('Ex')
     plt.title('Electric Field (Ex)')
 
-    plt.figure(1, figsize=(20, 10))
+    plt.figure(1, figsize=(18, 9))
     plt.subplot(132)
     plt.plot(T, Ey)
     plt.xlabel('T [s]')
     plt.ylabel('Ey')
     plt.title('Electric Field (Ey)')
 
-    plt.figure(1, figsize=(20, 10))
+    plt.figure(1, figsize=(18, 9))
     plt.subplot(133)
     plt.plot(T, Ez)
     plt.xlabel('T [s]')
