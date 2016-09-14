@@ -14,7 +14,8 @@
 
 int TestRect ()
 {
-  TSurfacePoints_Rectangle S("XY", 2, 2, 1, 1, TVector3D(0, 0, TSRS::Pi() / 2), TVector3D(0, 0, 1), 1);
+  TSurfacePoints_Rectangle S;
+  S.Init("ZX", 2, 2, 1.5, 2.5, TVector3D(0, 0, 0), TVector3D(0, 0, 0), 0);
 
   std::cout << S.GetNPoints() << std::endl;
   std::cout << S.GetXYZ(0) << std::endl;

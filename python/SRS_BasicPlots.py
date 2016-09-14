@@ -1,6 +1,7 @@
 from matplotlib.colors import LogNorm
 import numpy as np
 import matplotlib.pyplot as plt
+from math import sqrt
 
 
 def write_power_density_csv (P, fileName) :
@@ -48,7 +49,7 @@ def add_power_densities(A, B):
 
 
 
-def plot_trajectory_position(trajectory, show=True, ofile=''):
+def plot_trajectory_position(trajectory, show=True, ofile='', axis='Z'):
     """Plot the trajectory"""
 
     # Get coordinate lists
@@ -56,24 +57,46 @@ def plot_trajectory_position(trajectory, show=True, ofile=''):
     Y  = [item[0][1] for item in trajectory]
     Z  = [item[0][2] for item in trajectory]
 
+    if axis is 'X':
+        X1Label = 'X [m]'
+        X2Label = 'Y [m]'
+        X3Label = 'Z [m]'
+        X1 = X
+        X2 = Y
+        X3 = Z
+    elif axis is 'Y':
+        X1Label = 'Y [m]'
+        X2Label = 'Z [m]'
+        X3Label = 'X [m]'
+        X1 = Y
+        X2 = Z
+        X3 = X
+    elif axis is 'Z':
+        X1Label = 'Z [m]'
+        X2Label = 'X [m]'
+        X3Label = 'Y [m]'
+        X1 = Z
+        X2 = X
+        X3 = Y
+
     # Plot X and Y vs. Z
     plt.figure(1, figsize=(18, 4.5))
     plt.subplot(131)
-    plt.plot(Z, X)
-    plt.xlabel('Z [m]')
-    plt.ylabel('X [m]')
+    plt.plot(X1, X2)
+    plt.xlabel(X1Label)
+    plt.ylabel(X2Label)
     plt.title('Particle Trajectory')
 
     plt.subplot(132)
-    plt.plot(Z, Y)
-    plt.xlabel('Z [m]')
-    plt.ylabel('Y [m]')
+    plt.plot(X1, X3)
+    plt.xlabel(X1Label)
+    plt.ylabel(X3Label)
     plt.title('Particle Trajectory')
 
     plt.subplot(133)
-    plt.plot(X, Y)
-    plt.xlabel('X [m]')
-    plt.ylabel('Y [m]')
+    plt.plot(X2, X3)
+    plt.xlabel(X2Label)
+    plt.ylabel(X3Label)
     plt.title('Particle Trajectory')
 
 
@@ -233,32 +256,67 @@ def plot_spectra(S, L, show=True, ofile='', title='', loc='upper left', log=Fals
 
 
 
-def plot_magnetic_field(srs, zmin, zmax, show=True, ofile=''):
+def plot_magnetic_field(srs, mymin=-1, mymax=1, show=True, ofile='', axis='Z', npoints=20000, between_two_points=None):
     """Plot the magnetic field as a function of Z"""
 
-    Z = np.linspace(zmin, zmax, 100000)
-    Bx = [srs.get_bfield([0, 0, z])[0] for z in Z]
-    By = [srs.get_bfield([0, 0, z])[1] for z in Z]
-    Bz = [srs.get_bfield([0, 0, z])[2] for z in Z]
+
+    P = []
+    Bx = []
+    By = []
+    Bz = []
+
+    if between_two_points is not None:
+        p0 = between_two_points[0]
+        p1 = between_two_points[1]
+        step = [ (p1[0] - p0[0]) / float(npoints - 1), (p1[1] - p0[1]) / float(npoints - 1), (p1[2] - p0[2]) / float(npoints - 1)]
+        distance = sqrt( pow(p1[0]-p0[0], 2) + pow(p1[1]-p0[1], 2) + pow(p1[2]-p0[2], 2) )
+        P = np.linspace(0, distance, npoints)
+
+
+        for i in range(npoints):
+            x = p0[0] + step[0] * float(i)
+            y = p0[1] + step[1] * float(i)
+            z = p0[2] + step[2] * float(i)
+
+            Bx.append(srs.get_bfield([x, y, z])[0])
+            By.append(srs.get_bfield([x, y, z])[1])
+            Bz.append(srs.get_bfield([x, y, z])[2])
+            axis = 'Position'
+    else:
+        P = np.linspace(mymin, mymax, npoints)
+        if axis is 'X':
+            Bx = [srs.get_bfield([p, 0, 0])[0] for p in P]
+            By = [srs.get_bfield([p, 0, 0])[1] for p in P]
+            Bz = [srs.get_bfield([p, 0, 0])[2] for p in P]
+        elif axis is 'Y':
+            Bx = [srs.get_bfield([0, p, 0])[0] for p in P]
+            By = [srs.get_bfield([0, p, 0])[1] for p in P]
+            Bz = [srs.get_bfield([0, p, 0])[2] for p in P]
+        elif axis is 'Z':
+            Bx = [srs.get_bfield([0, 0, p])[0] for p in P]
+            By = [srs.get_bfield([0, 0, p])[1] for p in P]
+            Bz = [srs.get_bfield([0, 0, p])[2] for p in P]
+        else:
+            raise
+
+
+
 
     plt.figure(1, figsize=(18, 4.5))
     plt.subplot(131)
-    plt.plot(Z, Bx)
-    plt.xlabel('Z [m]')
+    plt.plot(P, Bx)
+    plt.xlabel(axis + ' [m]')
     plt.ylabel('Bx [T]')
-    plt.title('Horizontal Magnetic Field')
 
     plt.subplot(132)
-    plt.plot(Z, By)
-    plt.xlabel('Z [m]')
+    plt.plot(P, By)
+    plt.xlabel(axis + ' [m]')
     plt.ylabel('By [T]')
-    plt.title('Vertical Magnetic Field')
 
     plt.subplot(133)
-    plt.plot(Z, Bz)
-    plt.xlabel('Z [m]')
+    plt.plot(P, Bz)
+    plt.xlabel(axis + ' [m]')
     plt.ylabel('Bz [T]')
-    plt.title('Longitudinal Magnetic Field')
 
     if ofile != '':
         plt.savefig(ofile, bbox_inches='tight')

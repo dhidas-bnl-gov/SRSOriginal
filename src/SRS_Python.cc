@@ -3105,6 +3105,13 @@ PyMODINIT_FUNC initSRS ()
   Py_INCREF(&SRSType);
   PyModule_AddObject(m, "SRS", (PyObject *)&SRSType);
 
+
+  // Print copyright notice
+  PyObject* sys = PyImport_ImportModule( "sys");
+  PyObject* s_out = PyObject_GetAttrString(sys, "stdout");
+  PyObject_CallMethod(s_out, "write", "s", "OSCARS - Open Source Code for Advanced Radiation Simulation\nBrookhaven National Laboratory, Upton NY, USA\nhttp://oscars.bnl.gov\noscars@bnl.gov");
+
+
 }
 
 

@@ -1010,8 +1010,16 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
     }
   }
 
-  for (int i = 0; i != Surface.GetNPoints(); ++i) {
-    PowerDensityContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+  if (Dimension == 3) {
+    for (int i = 0; i != Surface.GetNPoints(); ++i) {
+      PowerDensityContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+    }
+  } else if (Dimension == 2) {
+    for (int i = 0; i != Surface.GetNPoints(); ++i) {
+      PowerDensityContainer.AddPoint( TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), 0);
+    }
+  } else {
+    throw;
   }
 
   this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
@@ -1241,25 +1249,24 @@ void SRS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface, d
       SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
     }
 
+
     // Multiply field by Constant C1 and time step
     SumE *= C1 * DeltaT;
 
-    double const EXSquared = (SumE.GetX() * std::conj(SumE.GetX())).real();
-    double const EYSquared = (SumE.GetY() * std::conj(SumE.GetY())).real();
-    double const EX2PlusEY2 = EXSquared + EYSquared;
-    double LinearFraction = EXSquared / EX2PlusEY2;// - EYSquared / EX2PlusEY2;
+    //double const EXSquared = (SumE.GetX() * std::conj(SumE.GetX())).real();
+    //double const EYSquared = (SumE.GetY() * std::conj(SumE.GetY())).real();
+    //double const EX2PlusEY2 = EXSquared + EYSquared;
+    //double LinearFraction = EXSquared / EX2PlusEY2;// - EYSquared / EX2PlusEY2;
+
+    // Fraction in direction of Normal
+    //double const NormallyIncidentEFraction = sqrt(std::norm(SumE.UnitVector().Dot(Surface.GetPoint(i).GetNormal())));
+    //std::cout << ObservationPoint << " " << NormallyIncidentEFraction << std::endl;
 
     // Set the flux for this frequency / energy point
     double const ThisFlux = C2 *  SumE.Dot( SumE.CC() ).real() * Weight;
     //double const ThisFlux = LinearFraction;
 
-    if (Dimension == 2) {
-      FluxContainer.AddToPoint(i, ThisFlux);
-    } else if (Dimension == 3) {
-      FluxContainer.AddToPoint(i, ThisFlux);
-    } else {
-      throw std::out_of_range("incorrect dimensions");
-    }
+    FluxContainer.AddToPoint(i, ThisFlux);
   }
 
   return;
@@ -1411,8 +1418,16 @@ void SRS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, do
 {
   // Final stop for entry to calculation
 
-  for (size_t i = 0; i != Surface.GetNPoints(); ++i) {
-    FluxContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+  if (Dimension == 3) {
+    for (int i = 0; i != Surface.GetNPoints(); ++i) {
+      FluxContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+    }
+  } else if (Dimension == 2) {
+    for (int i = 0; i != Surface.GetNPoints(); ++i) {
+      FluxContainer.AddPoint( TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), 0);
+    }
+  } else {
+    throw;
   }
 
   this->CalculateFlux2(Particle, Surface, Energy_eV, FluxContainer, Dimension, Weight);

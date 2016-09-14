@@ -139,6 +139,15 @@ TVector3DC TVector3DC::Cross (TVector3DC const& V) const
 
 
 
+TVector3DC TVector3DC::UnitVector () const
+{
+  // Get the cross product of this cross V using the right hand convention
+  return *this / this->Mag();
+}
+
+
+
+
 TVector3DC TVector3DC::CC () const
 {
   // Get the cross product of this cross V using the right hand convention

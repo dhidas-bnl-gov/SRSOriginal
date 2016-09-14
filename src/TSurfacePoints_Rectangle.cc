@@ -168,24 +168,24 @@ void TSurfacePoints_Rectangle::Init (std::string const& Plane, int const NX1, in
     fX2Vector.SetXYZ(0, fX2StepSize, 0);
   } else if (P == "YX") {
     fStartVector.SetXYZ(-WidthX2 / 2., -WidthX1 / 2., 0);
-    fX2Vector.SetXYZ(fX1StepSize, 0, 0);
-    fX1Vector.SetXYZ(0, fX2StepSize, 0);
+    fX2Vector.SetXYZ(fX2StepSize, 0, 0);
+    fX1Vector.SetXYZ(0, fX1StepSize, 0);
   } else if (P == "XZ") {
     fStartVector.SetXYZ(-WidthX1 / 2., 0, -WidthX2 / 2.);
     fX1Vector.SetXYZ(fX1StepSize, 0, 0);
     fX2Vector.SetXYZ(0, 0, fX2StepSize);
   } else if (P == "ZX") {
     fStartVector.SetXYZ(-WidthX2 / 2., 0, -WidthX1 / 2.);
-    fX2Vector.SetXYZ(fX1StepSize, 0, 0);
-    fX1Vector.SetXYZ(0, 0, fX2StepSize);
+    fX2Vector.SetXYZ(fX2StepSize, 0, 0);
+    fX1Vector.SetXYZ(0, 0, fX1StepSize);
   } else if (P == "YZ") {
     fStartVector.SetXYZ(0, -WidthX1 / 2., -WidthX2 / 2.);
     fX1Vector.SetXYZ(0, fX1StepSize, 0);
     fX2Vector.SetXYZ(0, 0, fX2StepSize);
   } else if (P == "ZY") {
     fStartVector.SetXYZ(0, -WidthX2 / 2., -WidthX1 / 2.);
-    fX2Vector.SetXYZ(0, fX1StepSize, 0);
-    fX1Vector.SetXYZ(0, 0, fX2StepSize);
+    fX2Vector.SetXYZ(0, fX2StepSize, 0);
+    fX1Vector.SetXYZ(0, 0, fX1StepSize);
   } else {
     throw std::invalid_argument("not a valid surface string: XY YX XZ ZX YZ ZY");
   }

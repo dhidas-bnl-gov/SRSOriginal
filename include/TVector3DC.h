@@ -37,6 +37,7 @@ class TVector3DC
     double Perp2 (TVector3DC const&) const;
     std::complex<double> Dot(TVector3DC const&) const;
     TVector3DC Cross (TVector3DC const&) const;
+    TVector3DC UnitVector () const;
     TVector3DC CC () const;
     double Mag2 () const;
     double Mag () const;

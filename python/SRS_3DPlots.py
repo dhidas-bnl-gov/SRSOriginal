@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 def power_density_3d(srs, surface,
-                    normal=1, rotations=[0, 0, 0], translation=[0, 0, 0], nparticles=0, gpu=0):
+                    normal=1, rotations=[0, 0, 0], translation=[0, 0, 0], nparticles=0, gpu=0, xlim=None, ylim=None, zlim=None):
     """calculate power density for and plot a parametric surface in 3d"""
 
     points = []
@@ -55,7 +55,16 @@ def power_density_3d(srs, surface,
     ax.set_ylabel('Z [m]')
     ax.set_zlabel('Y [m]')
     #ax.set_ylim(translation_[2] - 0.1, translation_[2] + 0.1)
-    ax.plot_surface(X2, Z2, Y2, facecolors=cm.jet(colors), cmap=cm.jet, rstride=1, cstride=1, alpha=1)
+
+    if xlim is not None:
+        ax.set_xlim(xlim[0], xlim[1])
+    if ylim is not None:
+        ax.set_zlim(ylim[0], ylim[1])
+    if zlim is not None:
+        ax.set_ylim(zlim[0], zlim[1])
+
+
+    ax.plot_surface(X2, Z2, Y2, facecolors=cm.jet(colors), cmap=cm.jet, rstride=1, cstride=1, alpha=0.4)
     ax.invert_xaxis()
 
     m = cm.ScalarMappable(cmap=cm.jet)
