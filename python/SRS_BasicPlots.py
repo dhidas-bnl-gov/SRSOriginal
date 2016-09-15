@@ -174,7 +174,7 @@ def plot_power_density(V, title='Power Density [$W / mm^2$]', xlabel='X1 Axis [$
     return plt
 
 
-def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile=''):
+def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile='', figsize=None, ylim=None, xlim=None, colorbar=True):
     """Plot a 2D histogram with equal spacing"""
         
     X = [item[0][0] for item in V]
@@ -184,10 +184,14 @@ def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [
     NX = len(np.unique(X))
     NY = len(np.unique(Y))
 
-    plt.figure(1, figsize=(18, 9))
-    #plt.figure(1)
+    # Size and limits
+    plt.figure(1, figsize=figsize)
+    if ylim is not None: plt.ylim(ylim[0], ylim[1])
+    if xlim is not None: plt.xlim(xlim[0], xlim[1])
+
     plt.hist2d(X, Y, bins=[NX, NY], weights=P)
-    plt.colorbar()
+    if colorbar is True:
+        plt.colorbar()
 
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -202,9 +206,14 @@ def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [
     return plt
 
 
-def plot_spectrum(S, log=False, show=True, ofile=''):
+def plot_spectrum(S, log=False, show=True, ofile='', title='Spectrum', figsize=None, ylim=None, xlim=None):
     """Plot the spectrum"""
-    
+
+    # Size and limits
+    plt.figure(1, figsize=figsize)
+    if ylim is not None: plt.ylim(ylim[0], ylim[1])
+    if xlim is not None: plt.xlim(xlim[0], xlim[1])
+
     X = [item[0] for item in S]
     Y = [item[1] for item in S]
     plt.plot(X, Y)
@@ -212,7 +221,7 @@ def plot_spectrum(S, log=False, show=True, ofile=''):
         plt.yscale('log')
     plt.xlabel('Energy [eV]')
     plt.ylabel('$\gamma / mm^2 / 0.1\%bw / s$')
-    plt.title('Spectrum')
+    plt.title(title)
 
     if ofile != '':
         plt.savefig(ofile, bbox_inches='tight')
@@ -224,9 +233,14 @@ def plot_spectrum(S, log=False, show=True, ofile=''):
 
 
 
-def plot_spectra(S, L, show=True, ofile='', title='', loc='upper left', log=False):
+def plot_spectra(S, L, show=True, ofile='', title='', loc='upper left', log=False, figsize=None, ylim=None, xlim=None):
 
-    plt.figure(1, figsize=(18, 9))
+
+    # Size and limits
+    plt.figure(1, figsize=figsize)
+    if ylim is not None: plt.ylim(ylim[0], ylim[1])
+    if xlim is not None: plt.xlim(xlim[0], xlim[1])
+
     for i in range(len(S)):
         s = S[i]
         

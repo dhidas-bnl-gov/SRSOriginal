@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 def power_density_3d(srs, surface,
-                    normal=1, rotations=[0, 0, 0], translation=[0, 0, 0], nparticles=0, gpu=0, xlim=None, ylim=None, zlim=None):
+                    normal=1, rotations=[0, 0, 0], translation=[0, 0, 0], nparticles=0, gpu=0,
+                    title='Power Density', xlim=None, ylim=None, zlim=None, colorbar=True, figsize=None, alpha=0.4, ofile=None, show=True):
     """calculate power density for and plot a parametric surface in 3d"""
 
     points = []
@@ -48,7 +49,7 @@ def power_density_3d(srs, surface,
   
 
 
-    fig = plt.figure(figsize=(20, 15))
+    fig = plt.figure(1, figsize=figsize)
     ax = fig.gca(projection = '3d')
     #ax.view_init(30, -40)
     ax.set_xlabel('X [m]')
@@ -64,13 +65,21 @@ def power_density_3d(srs, surface,
         ax.set_ylim(zlim[0], zlim[1])
 
 
-    ax.plot_surface(X2, Z2, Y2, facecolors=cm.jet(colors), cmap=cm.jet, rstride=1, cstride=1, alpha=0.4)
+    ax.plot_surface(X2, Z2, Y2, facecolors=cm.jet(colors), cmap=cm.jet, rstride=1, cstride=1, alpha=alpha)
     ax.invert_xaxis()
 
     m = cm.ScalarMappable(cmap=cm.jet)
     m.set_array(PP)
-    plt.colorbar(m)
+    if colorbar is True:
+        plt.colorbar(m)
 
-    plt.show()
+    plt.title(title)
+
+
+    if ofile is not None:
+        plt.savefig(ofile, bbox_inches='tight')
+
+    if show is True:
+        plt.show()
     
     return plt
