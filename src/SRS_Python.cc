@@ -21,7 +21,7 @@
 #include "T3DScalarContainer.h"
 #include "TBFieldPythonFunction.h"
 #include "TBField3D_Gaussian.h"
-#include "TBField3D_Uniform.h"
+#include "TBField3D_UniformBox.h"
 #include "TBField3D_IdealUndulator.h"
 #include "TRandomA.h"
 
@@ -570,12 +570,8 @@ static PyObject* SRS_AddMagneticFieldUniform (SRSObject* self, PyObject* args, P
     }
   }
 
-  // Rotate field and widths
-  BField.RotateSelfXYZ(Rotations);
-  Width.RotateSelfXYZ(Rotations);
-
   // Add the field
-  self->obj->AddMagneticField((TBField*) new TBField3D_Uniform(BField, Width, Translation));
+  self->obj->AddMagneticField((TBField*) new TBField3D_UniformBox(BField, Width, Translation, Rotations));
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);

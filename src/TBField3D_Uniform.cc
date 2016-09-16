@@ -30,6 +30,13 @@ TBField3D_Uniform::TBField3D_Uniform (TVector3D const& BField, TVector3D const& 
 }
 
 
+TBField3D_Uniform::~TBField3D_Uniform ()
+{
+  // Destruction
+}
+
+
+
 double TBField3D_Uniform::GetBx (double const X, double const Y, double const Z) const
 {
   return this->GetB(TVector3D(X, Y, Z)).GetX();
@@ -67,19 +74,19 @@ TVector3D TBField3D_Uniform::GetB (TVector3D const& X) const
   TVector3D const RX = X - fCenter;
 
   if (fWidth.GetX() > 0) {
-    if (fabs(RX.GetX()) > fWidth.GetX() / 2.) {
+    if (fabs(RX.GetX()) > fabs(fWidth.GetX() / 2.)) {
       return TVector3D(0, 0, 0);
     }
   }
 
   if (fWidth.GetY() > 0) {
-    if (fabs(RX.GetY()) > fWidth.GetY() / 2.) {
+    if (fabs(RX.GetY()) > fabs(fWidth.GetY() / 2.)) {
       return TVector3D(0, 0, 0);
     }
   }
 
   if (fWidth.GetZ() > 0) {
-    if (fabs(RX.GetZ()) > fWidth.GetZ() / 2.) {
+    if (fabs(RX.GetZ()) > fabs(fWidth.GetZ() / 2.)) {
       return TVector3D(0, 0, 0);
     }
   }
