@@ -82,6 +82,19 @@ void TVector3D::SetXYZ (double const X, double const Y, double const Z)
 
 
 
+void TVector3D::SetXYZ (TVector3D const& V)
+{
+  // Set the X, Y, and Z components
+  fX = V.GetX();
+  fY = V.GetY();
+  fZ = V.GetZ();
+
+  return;
+}
+
+
+
+
 double TVector3D::Mag() const
 {
   // Get the magnitude

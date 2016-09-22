@@ -484,14 +484,8 @@ static PyObject* SRS_AddMagneticFieldGaussian (SRSObject* self, PyObject* args, 
     }
   }
 
-
-  // Rotate field and sigma
-  // UPDATE: check this
-  BField.RotateSelfXYZ(Rotations);
-  Sigma.RotateSelfXYZ(Rotations);
-
   // Add field
-  self->obj->AddMagneticField( (TBField*) new TBField3D_Gaussian(BField, Translation, Sigma));
+  self->obj->AddMagneticField( (TBField*) new TBField3D_Gaussian(BField, Translation, Sigma, Rotations));
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -724,6 +718,168 @@ static PyObject* SRS_GetBField (SRSObject* self, PyObject* args)
   // Return the python list
   return PList;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+static PyObject* SRS_AddElectricField (SRSObject* self, PyObject* args, PyObject* keywds)
+{
+  // Add a magnetic field from a file.
+  // UPDATE: add binary file reading
+
+
+  // Grab the values
+  char const* FileName = "";
+  char const* FileFormat = "";
+  PyObject*   List_Rotations   = PyList_New(0);
+  PyObject*   List_Translation = PyList_New(0);
+  PyObject*   List_Scaling     = PyList_New(0);
+
+  TVector3D Rotations(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+  std::vector<double> Scaling;
+
+
+  // Input variables and parsing
+  static char *kwlist[] = {"ifile", "iformat", "rotations", "translation", "scale", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss|OOO", kwlist,
+                                                           &FileName,
+                                                           &FileFormat,
+                                                           &List_Rotations,
+                                                           &List_Translation,
+                                                           &List_Scaling)) {
+    return NULL;
+  }
+
+  // Check that filename and format exist
+  if (FileName == "" || FileFormat == "") {
+    PyErr_SetString(PyExc_ValueError, "'ifile' or 'iformat' is blank");
+    return NULL;
+  }
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
+  }
+
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
+  }
+
+  // Get any scaling factors
+  // UPDATE: Check against fileformat number of strings
+  for (int i = 0; i < PyList_Size(List_Scaling); ++i) {
+    Scaling.push_back(PyFloat_AsDouble(PyList_GetItem(List_Scaling, i)));
+  }
+
+  // Add the magnetic field to the SRS object
+  try {
+    self->obj->AddElectricField(FileName, FileFormat, Rotations, Translation, Scaling);
+  } catch (...) {
+    PyErr_SetString(PyExc_ValueError, "Could not import electric field.  Check 'ifile' and 'iformat' are correct");
+    return NULL;
+  }
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+static PyObject* SRS_GetEField (SRSObject* self, PyObject* args)
+{
+  // Get the magnetic field at a point as a 3D list [Ex, Ey, Ez]
+
+  // Python list object
+  PyObject * List;
+
+  // Grab the python list from the input
+  if (! PyArg_ParseTuple( args, "O!", &PyList_Type, &List)) {
+    return NULL;
+  }
+
+  // Has to have the correct number of arguments
+  if (PyList_Size(List) != 3) {
+    return NULL;
+  }
+
+  // Grab the values
+  TVector3D X;
+  try {
+    X = SRS_ListAsTVector3D(List);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in input");
+    return NULL;
+  }
+
+  // Set the object variable
+  TVector3D const F = self->obj->GetE(X);
+
+  // Create a python list
+  PyObject *PList = SRS_TVector3DAsList(F);
+
+  // Return the python list
+  return PList;
+}
+
+
+
+static PyObject* SRS_ClearElectricFields (SRSObject* self)
+{
+  // Clear all magnetic fields in the SRS object
+  self->obj->ClearElectricFields();
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2991,6 +3147,10 @@ static PyMethodDef SRS_methods[] = {
   {"add_undulator",                     (PyCFunction) SRS_AddMagneticFieldIdealUndulator,  METH_VARARGS | METH_KEYWORDS, "add magnetic field from ideal undulator in 3D"},
   {"get_bfield",                        (PyCFunction) SRS_GetBField,                       METH_VARARGS, "get the magnetic field at a given position in space (and someday time?)"},
   {"clear_magnetic_fields",             (PyCFunction) SRS_ClearMagneticFields,             METH_NOARGS,  "clear all internal magnetic fields"},
+
+  {"add_electric_field",                (PyCFunction) SRS_AddElectricField,                METH_VARARGS | METH_KEYWORDS, "add an electric field from a file"},
+  {"get_efield",                        (PyCFunction) SRS_GetEField,                       METH_VARARGS, "get the electric field at a given position in space (and someday time?)"},
+  {"clear_electric_fields",             (PyCFunction) SRS_ClearElectricFields,             METH_NOARGS,  "clear all internal electric fields"},
                                                                                           
                                                                                           
   {"set_particle_beam",                 (PyCFunction) SRS_SetParticleBeam,                 METH_VARARGS | METH_KEYWORDS, "add a particle beam"},

@@ -32,12 +32,10 @@ TBFieldPythonFunction::~TBFieldPythonFunction ()
 
 TVector3D TBFieldPythonFunction::GetB (TVector3D const& X) const
 {
-  // Create a python list from input vector
-  PyObject *InputList = PyList_New(0);
-  PyList_Append(InputList, Py_BuildValue("d", X.GetX()));
-  PyList_Append(InputList, Py_BuildValue("d", X.GetY()));
-  PyList_Append(InputList, Py_BuildValue("d", X.GetZ()));
+  // Get the magnetic field from a python function.
 
+  // For the future
+  double T = 0;
 
   // Check to see the function is callable
   if (!PyCallable_Check(fPythonFunction)) {
@@ -47,7 +45,7 @@ TVector3D TBFieldPythonFunction::GetB (TVector3D const& X) const
 
   // Build the input object for the python function
   PyObject* InputTuple;
-  InputTuple = Py_BuildValue("(O)", InputList);
+  InputTuple = Py_BuildValue("(dddd)", X.GetX(), X.GetY(), X.GetZ(), T);
 
   // Call python function
   PyObject* OutputTuple = PyEval_CallObject(fPythonFunction, InputTuple);
@@ -78,7 +76,6 @@ TVector3D TBFieldPythonFunction::GetB (TVector3D const& X) const
   // Decrement object references no longer needed
   Py_DECREF(OutputTuple);
   Py_DECREF(OutputList);
-  Py_DECREF(InputList);
 
   // Return the magnetic field vector
   return ReturnVector;

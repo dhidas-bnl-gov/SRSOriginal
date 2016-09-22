@@ -15,7 +15,7 @@ class TBField3D_Gaussian : public TBField
 {
   public:
     TBField3D_Gaussian ();
-    TBField3D_Gaussian (TVector3D const&, TVector3D const&, TVector3D const&);
+    TBField3D_Gaussian (TVector3D const&, TVector3D const&, TVector3D const&, TVector3D const& Rotations = TVector3D(0, 0, 0));
     ~TBField3D_Gaussian ();
 
     double    GetBx (double const, double const, double const) const;
@@ -30,7 +30,11 @@ class TBField3D_Gaussian : public TBField
     TVector3D fBField;
     TVector3D fCenter;
     TVector3D fSigma;
+    TVector3D fRotated;
 
+    bool fIgnoreAxisX;
+    bool fIgnoreAxisY;
+    bool fIgnoreAxisZ;
 
 };
 

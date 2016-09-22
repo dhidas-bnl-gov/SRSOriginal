@@ -17,6 +17,7 @@
 
 #include "SRS_Cuda.h"
 #include "TBFieldContainer.h"
+#include "TFieldContainer.h"
 #include "TParticleBeamContainer.h"
 #include "TSurfacePoints.h"
 #include "TSpectrumContainer.h"
@@ -39,11 +40,22 @@ class SRS
     void AddMagneticField (TBField*);
     void ClearMagneticFields ();
 
+    void AddElectricField (std::string const, std::string const, TVector3D const& R = TVector3D(0, 0, 0), TVector3D const& D = TVector3D(0, 0, 0), std::vector<double> const& S = std::vector<double>());
+    void AddElectricField (TField*);
+    void ClearElectricFields ();
+
+
     double    GetBx (double const, double const, double const) const;
     double    GetBy (double const, double const, double const) const;
     double    GetBz (double const, double const, double const) const;
     TVector3D GetB  (double const, double const, double const) const;
     TVector3D GetB  (TVector3D const&) const;
+
+    double    GetEx (double const, double const, double const) const;
+    double    GetEy (double const, double const, double const) const;
+    double    GetEz (double const, double const, double const) const;
+    TVector3D GetE  (double const, double const, double const) const;
+    TVector3D GetE  (TVector3D const&) const;
 
 
     // Functions related to the particle beam(s)
@@ -112,6 +124,7 @@ class SRS
 
   private:
     TBFieldContainer fBFieldContainer;
+    TFieldContainer fEFieldContainer;
 
     TParticleBeamContainer fParticleBeamContainer;
 

@@ -16,6 +16,7 @@
 #include "TVector3DC.h"
 #include "TBField1DZRegularized.h"
 #include "TBField3DZRegularized.h"
+#include "TField3DGrid.h"
 #include "TSpectrumContainer.h"
 
 
@@ -197,6 +198,107 @@ TVector3D SRS::GetB (TVector3D const& X) const
   // Return summed Bx from container
   return this->fBFieldContainer.GetB(X);
 }
+
+
+
+
+
+
+
+
+
+
+void SRS::AddElectricField (std::string const FileName, std::string const Format, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
+{
+  // Add a electric field from a file to the field container
+  this->fEFieldContainer.AddField( new TField3DGrid(FileName, Format) );
+
+  return;
+}
+
+
+void SRS::AddElectricField (TField* F)
+{
+  // Add a electric field from a file to the field container
+  this->fEFieldContainer.AddField(F);
+
+  return;
+}
+
+
+
+void SRS::ClearElectricFields ()
+{
+  this->fEFieldContainer.Clear();
+  return;
+}
+
+
+
+
+double SRS::GetEx (double const X, double const Y, double const Z) const
+{
+  // Return summed Ex from container
+  return this->fEFieldContainer.GetFx(X, Y, Z);
+}
+
+
+
+
+
+double SRS::GetEy (double const X, double const Y, double const Z) const
+{
+  // Return summed Ey from container
+  return this->fEFieldContainer.GetFy(X, Y, Z);
+}
+
+
+
+
+
+double SRS::GetEz (double const X, double const Y, double const Z) const
+{
+  // Return summed Ez from container
+  return this->fEFieldContainer.GetFz(X, Y, Z);
+}
+
+
+
+
+TVector3D SRS::GetE (double const X, double const Y, double const Z) const
+{
+  // Return summed E from container
+  return this->fEFieldContainer.GetF(X, Y, Z);
+}
+
+
+
+
+TVector3D SRS::GetE (TVector3D const& X) const
+{
+  // Return summed E from container
+  return this->fEFieldContainer.GetF(X);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -313,8 +313,78 @@ def plot_magnetic_field(srs, mymin=-1, mymax=1, show=True, ofile='', axis='Z', n
         else:
             raise
 
+    plt.figure(1, figsize=(18, 4.5))
+    plt.subplot(131)
+    plt.plot(P, Bx)
+    plt.xlabel(axis + ' [m]')
+    plt.ylabel('Bx [T]')
+
+    plt.subplot(132)
+    plt.plot(P, By)
+    plt.xlabel(axis + ' [m]')
+    plt.ylabel('By [T]')
+
+    plt.subplot(133)
+    plt.plot(P, Bz)
+    plt.xlabel(axis + ' [m]')
+    plt.ylabel('Bz [T]')
+
+    if ofile != '':
+        plt.savefig(ofile, bbox_inches='tight')
+
+    if show == True:
+        plt.show()
+
+    return plt
 
 
+
+
+
+
+
+def plot_electric_field(srs, mymin=-1, mymax=1, show=True, ofile='', axis='Z', npoints=20000, between_two_points=None):
+    """Plot the magnetic field as a function of Z"""
+
+
+    P = []
+    Bx = []
+    By = []
+    Bz = []
+
+    if between_two_points is not None:
+        p0 = between_two_points[0]
+        p1 = between_two_points[1]
+        step = [ (p1[0] - p0[0]) / float(npoints - 1), (p1[1] - p0[1]) / float(npoints - 1), (p1[2] - p0[2]) / float(npoints - 1)]
+        distance = sqrt( pow(p1[0]-p0[0], 2) + pow(p1[1]-p0[1], 2) + pow(p1[2]-p0[2], 2) )
+        P = np.linspace(0, distance, npoints)
+
+
+        for i in range(npoints):
+            x = p0[0] + step[0] * float(i)
+            y = p0[1] + step[1] * float(i)
+            z = p0[2] + step[2] * float(i)
+
+            Bx.append(srs.get_efield([x, y, z])[0])
+            By.append(srs.get_efield([x, y, z])[1])
+            Bz.append(srs.get_efield([x, y, z])[2])
+            axis = 'Position'
+    else:
+        P = np.linspace(mymin, mymax, npoints)
+        if axis is 'X':
+            Bx = [srs.get_efield([p, 0, 0])[0] for p in P]
+            By = [srs.get_efield([p, 0, 0])[1] for p in P]
+            Bz = [srs.get_efield([p, 0, 0])[2] for p in P]
+        elif axis is 'Y':
+            Bx = [srs.get_efield([0, p, 0])[0] for p in P]
+            By = [srs.get_efield([0, p, 0])[1] for p in P]
+            Bz = [srs.get_efield([0, p, 0])[2] for p in P]
+        elif axis is 'Z':
+            Bx = [srs.get_efield([0, 0, p])[0] for p in P]
+            By = [srs.get_efield([0, 0, p])[1] for p in P]
+            Bz = [srs.get_efield([0, 0, p])[2] for p in P]
+        else:
+            raise
 
     plt.figure(1, figsize=(18, 4.5))
     plt.subplot(131)
@@ -339,8 +409,13 @@ def plot_magnetic_field(srs, mymin=-1, mymax=1, show=True, ofile='', axis='Z', n
         plt.show()
 
     return plt
-    
-    
+
+
+
+
+
+
+
 def total_power(pd):
     """Calculate the total power in a uniform grid.
     

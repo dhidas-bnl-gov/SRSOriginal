@@ -32,6 +32,7 @@ class TVector3D
     void SetY (double const);
     void SetZ (double const);
     void SetXYZ (double const, double const, double const);
+    void SetXYZ (TVector3D const&);
 
     double Mag () const;
     double Mag2 () const;

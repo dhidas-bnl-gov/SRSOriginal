@@ -92,11 +92,15 @@ TVector3D TBField3D_UniformBox::GetB (double const X, double const Y, double con
 
 TVector3D TBField3D_UniformBox::GetB (TVector3D const& X) const
 {
+  // Get the magnetic field at a point in space.
+
+  // If you rotate the object the field is rotated in fBField and the coordinate rotation is done here
 
   // Translate back into box frame
   TVector3D XInBoxCoordinates = X;
   XInBoxCoordinates.RotateSelfXYZ(fRotated);
 
+  // Position in the box frame with respect to the center
   TVector3D const RX = XInBoxCoordinates - fCenter;
 
   if (!fIgnoreAxisX && fabs(RX.GetX()) > fabs(fWidth.GetX() / 2.) || !fIgnoreAxisY && fabs(RX.GetY()) > fabs(fWidth.GetY() / 2.) || !fIgnoreAxisZ && fabs(RX.GetZ()) > fabs(fWidth.GetZ() / 2.)) {
