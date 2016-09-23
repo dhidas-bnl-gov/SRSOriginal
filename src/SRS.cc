@@ -208,10 +208,10 @@ TVector3D SRS::GetB (TVector3D const& X) const
 
 
 
-void SRS::AddElectricField (std::string const FileName, std::string const Format, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
+void SRS::AddElectricField (std::string const FileName, std::string const Format, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Add a electric field from a file to the field container
-  this->fEFieldContainer.AddField( new TField3DGrid(FileName, Format) );
+  this->fEFieldContainer.AddField( new TField3DGrid(FileName, Format, Rotations, Translation) );
 
   return;
 }

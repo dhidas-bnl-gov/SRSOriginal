@@ -13,12 +13,14 @@
 
 TField3DGrid::TField3DGrid ()
 {
+  fRotated.SetXYZ(0, 0, 0);
+  fTranslation.SetXYZ(0, 0, 0);
 }
 
 
 
 
-TField3DGrid::TField3DGrid (std::string const& InFileName, std::string const& FileFormat)
+TField3DGrid::TField3DGrid (std::string const& InFileName, std::string const& FileFormat, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
 {
   
   // I will accept lower-case
@@ -26,13 +28,14 @@ TField3DGrid::TField3DGrid (std::string const& InFileName, std::string const& Fi
   std::transform(format.begin(), format.end(), format.begin(), ::toupper);
 
   // Which file format are you looking at?
-  if (format == "SPECTRA") {
+  if (format == "OSCARS") {
+    this->ReadFile(InFileName, Rotations, Translation);
+  } else if (format == "SPECTRA") {
+    this->ReadFile_SPECTRA(InFileName, Rotations, Translation, CommentChar);
   } else if (format == "SRW") {
-    this->ReadFile_SRW(InFileName);
+    this->ReadFile_SRW(InFileName, Rotations, Translation, CommentChar);
   } else {
   }
-
-
 }
 
 
@@ -84,8 +87,14 @@ size_t TField3DGrid::GetIndex (size_t const ix, size_t const iy, size_t const iz
 
 
 
-TVector3D TField3DGrid::GetF (TVector3D const& X) const
+TVector3D TField3DGrid::GetF (TVector3D const& XIN) const
 {
+  // Get the field at a point in space.  Must rotate point into coordinate system, then translate it.
+
+  // Rotate and Translate
+  TVector3D X(XIN);
+  X.RotateSelfXYZ(fRotated);
+  X -= fTranslation;
 
   // If outside the range, return a zero
   if (fNX > 1 && (X.GetX() < fXStart || X.GetX() > fXStop)) {
@@ -208,6 +217,34 @@ TVector3D TField3DGrid::GetF (TVector3D const& X) const
 
 
 
+double TField3DGrid::GetHeaderValue (std::string const& L) const
+{
+  // Get the value after comment character
+
+  // Easy reading
+  std::istringstream S;
+  S.str(L);
+
+  // For the two values of interest
+  double Value;
+
+  S >> Value;
+
+  // Check read state of input
+  if (S.bad()) {
+    std::cerr << "ERROR: S is bad" << std::endl;
+    throw;
+  }
+
+  return Value;
+}
+
+
+
+
+
+
+
 double TField3DGrid::GetHeaderValueSRW (std::string const& L, const char CommentChar) const
 {
   // Get the value after comment character
@@ -244,9 +281,9 @@ double TField3DGrid::GetHeaderValueSRW (std::string const& L, const char Comment
 
 
 
-void TField3DGrid::ReadFile_SRW (std::string const& InFileName)
+void TField3DGrid::ReadFile (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
 {
-  // Read file with SRW field input format
+  // Read file with the best format in the entire world, OSCARSv1.0
 
   // Open the input file and throw exception if not open
   std::ifstream fi(InFileName);
@@ -265,41 +302,41 @@ void TField3DGrid::ReadFile_SRW (std::string const& InFileName)
 
   // Initial X
   std::getline(fi, L);
-  double const XStart = GetHeaderValueSRW(L);
+  double const XStart = GetHeaderValue(L);
 
   // Step X
   std::getline(fi, L);
-  double const XStep = GetHeaderValueSRW(L);
+  double const XStep = GetHeaderValue(L);
 
   // Number of points X
   std::getline(fi, L);
-  int const NX = (int) GetHeaderValueSRW(L);
+  int const NX = (int) GetHeaderValue(L);
 
 
   // Initial Y
   std::getline(fi, L);
-  double const YStart = GetHeaderValueSRW(L);
+  double const YStart = GetHeaderValue(L);
 
   // Step Y
   std::getline(fi, L);
-  double const YStep = GetHeaderValueSRW(L);
+  double const YStep = GetHeaderValue(L);
 
   // Number of points Y
   std::getline(fi, L);
-  int const NY = (int) GetHeaderValueSRW(L);
+  int const NY = (int) GetHeaderValue(L);
 
 
   // Initial Z
   std::getline(fi, L);
-  double const ZStart = GetHeaderValueSRW(L);
+  double const ZStart = GetHeaderValue(L);
 
   // Step Z
   std::getline(fi, L);
-  double const ZStep = GetHeaderValueSRW(L);
+  double const ZStep = GetHeaderValue(L);
 
   // Number of points Z
   std::getline(fi, L);
-  int const NZ = (int) GetHeaderValueSRW(L);
+  int const NZ = (int) GetHeaderValue(L);
 
 
   // Check Number of points is > 0 for all
@@ -391,7 +428,9 @@ void TField3DGrid::ReadFile_SRW (std::string const& InFileName)
         }
 
         // Push data to storage
-        fData.push_back(TVector3D(fx, fy, fz));
+        TVector3D F(fx, fy, fz);
+        F.RotateSelfXYZ(Rotations);
+        fData.push_back(F);
       }
     }
   }
@@ -399,7 +438,332 @@ void TField3DGrid::ReadFile_SRW (std::string const& InFileName)
   // Close file
   fi.close();
 
+  // Store Rotations and Translation
+  fRotated = Rotations;
+  fTranslation = Translation;
+
   return;
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void TField3DGrid::ReadFile_SRW (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
+{
+  // Read file with SRW field input format
+
+  // Open the input file and throw exception if not open
+  std::ifstream fi(InFileName);
+  if (!fi) {
+    std::cerr << "ERROR: cannot open file" << std::endl;
+    throw;
+  }
+
+  // For reading lines of file
+  std::istringstream S;
+  std::string L;
+
+  // Initial line for comment
+  std::getline(fi, L);
+
+
+  // Initial X
+  std::getline(fi, L);
+  double const XStart = GetHeaderValueSRW(L, CommentChar);
+
+  // Step X
+  std::getline(fi, L);
+  double const XStep = GetHeaderValueSRW(L, CommentChar);
+
+  // Number of points X
+  std::getline(fi, L);
+  int const NX = (int) GetHeaderValueSRW(L, CommentChar);
+
+
+  // Initial Y
+  std::getline(fi, L);
+  double const YStart = GetHeaderValueSRW(L, CommentChar);
+
+  // Step Y
+  std::getline(fi, L);
+  double const YStep = GetHeaderValueSRW(L, CommentChar);
+
+  // Number of points Y
+  std::getline(fi, L);
+  int const NY = (int) GetHeaderValueSRW(L, CommentChar);
+
+
+  // Initial Z
+  std::getline(fi, L);
+  double const ZStart = GetHeaderValueSRW(L, CommentChar);
+
+  // Step Z
+  std::getline(fi, L);
+  double const ZStep = GetHeaderValueSRW(L, CommentChar);
+
+  // Number of points Z
+  std::getline(fi, L);
+  int const NZ = (int) GetHeaderValueSRW(L, CommentChar);
+
+
+  // Check Number of points is > 0 for all
+  if (NX < 1 || NY < 1 || NY < 1) {
+    std::cerr << "ERROR: invalid npoints" << std::endl;
+    throw;
+  }
+
+  // Save position data to object variables
+  fNX = NX;
+  fNY = NY;
+  fNZ = NZ;
+  fXStart = XStart;
+  fYStart = YStart;
+  fZStart = ZStart;
+  fXStep  = XStep;
+  fYStep  = YStep;
+  fZStep  = ZStep;
+  fXStop  = fXStart + (fNX - 1) * fXStep;
+  fYStop  = fYStart + (fNY - 1) * fYStep;
+  fZStop  = fZStart + (fNZ - 1) * fZStep;
+
+  fHasX = NX > 1 ? true : false;
+  fHasY = NY > 1 ? true : false;
+  fHasZ = NZ > 1 ? true : false;
+
+  if (fHasX && fHasY && fHasZ) {
+    fDIMX = kDIMX_XYZ;
+  } else if (fHasX && fHasY) {
+    fDIMX = kDIMX_XY;
+  } else if (fHasX && fHasZ) {
+    fDIMX = kDIMX_XZ;
+  } else if (fHasY && fHasZ) {
+    fDIMX = kDIMX_YZ;
+  } else if (fHasX) {
+    fDIMX = kDIMX_X;
+  } else if (fHasY) {
+    fDIMX = kDIMX_Y;
+  } else if (fHasZ) {
+    fDIMX = kDIMX_Z;
+  } else {
+    std::cerr << "ERROR: error in file header format" << std::endl;
+    throw;
+  }
+
+  fXDIM = 0;
+  if (fHasX) {
+    ++fXDIM;
+  }
+  if (fHasY) {
+    ++fXDIM;
+  }
+  if (fHasZ) {
+    ++fXDIM;
+  }
+
+  // Reserve correct number of points in vector (slightly faster)
+  fData.reserve(fNX * fNY * fNZ);
+
+  // Temp variables for field
+  double fx;
+  double fy;
+  double fz;
+
+
+  // Loop over all points
+  for (int ix = 0; ix != NX; ++ix) {
+    for (int iy = 0; iy != NY; ++iy) {
+      for (int iz = 0; iz != NZ; ++iz) {
+
+        // Grab a line from input file
+        std::getline(fi, L);
+
+        // Check we did not hit an EOF
+        if (fi.eof()) {
+          std::cerr << "ERROR: bad input file" << std::endl;
+          throw;
+        }
+
+        // Read data
+        S.clear();
+        S.str(L);
+        S >> fx >> fy >> fz;
+
+        // Check the stream did not hit an EOF
+        if (S.fail()) {
+          std::cerr << "ERRROR: input stream bad" << std::endl;
+          throw;
+        }
+
+        // Push data to storage
+        TVector3D F(fx, fy, fz);
+        F.RotateSelfXYZ(Rotations);
+        fData.push_back(F);
+      }
+    }
+  }
+
+  // Close file
+  fi.close();
+
+  // Store Rotations and Translation
+  fRotated = Rotations;
+  fTranslation = Translation;
+
+  return;
+}
+
+
+
+
+
+
+
+
+void TField3DGrid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
+{
+  // Read file with SPECTRA field input format
+
+  // Open the input file and throw exception if not open
+  std::ifstream fi(InFileName);
+  if (!fi) {
+    std::cerr << "ERROR: cannot open file" << std::endl;
+    throw;
+  }
+
+  // For reading lines of file
+  std::istringstream S;
+  std::string L;
+
+  // Initial line for comment
+  std::getline(fi, L);
+  S.str(L);
+
+  // Grab parameters and correct for [mm] -> [m] conversion.
+  S >> fXStep >> fYStep >> fZStep >> fNX >> fNY >> fNZ;
+  fXStep /= 1000.;
+  fYStep /= 1000.;
+  fZStep /= 1000.;
+
+  if (S.bad()) {
+    throw;
+  }
+
+
+  // Check Number of points is > 0 for all
+  if (fNX < 1 || fNY < 1 || fNY < 1) {
+    std::cerr << "ERROR: invalid npoints" << std::endl;
+    throw;
+  }
+
+  // Save position data to object variables
+  fXStart = (fXStep * fNX) / 2;
+  fYStart = (fYStep * fNX) / 2;
+  fZStart = (fZStep * fNX) / 2;
+  fXStop  = fXStart + (fNX - 1) * fXStep;
+  fYStop  = fYStart + (fNY - 1) * fYStep;
+  fZStop  = fZStart + (fNZ - 1) * fZStep;
+
+  fHasX = fNX > 1 ? true : false;
+  fHasY = fNY > 1 ? true : false;
+  fHasZ = fNZ > 1 ? true : false;
+
+  if (fHasX && fHasY && fHasZ) {
+    fDIMX = kDIMX_XYZ;
+  } else if (fHasX && fHasY) {
+    fDIMX = kDIMX_XY;
+  } else if (fHasX && fHasZ) {
+    fDIMX = kDIMX_XZ;
+  } else if (fHasY && fHasZ) {
+    fDIMX = kDIMX_YZ;
+  } else if (fHasX) {
+    fDIMX = kDIMX_X;
+  } else if (fHasY) {
+    fDIMX = kDIMX_Y;
+  } else if (fHasZ) {
+    fDIMX = kDIMX_Z;
+  } else {
+    std::cerr << "ERROR: error in file header format" << std::endl;
+    throw;
+  }
+
+  fXDIM = 0;
+  if (fHasX) {
+    ++fXDIM;
+  }
+  if (fHasY) {
+    ++fXDIM;
+  }
+  if (fHasZ) {
+    ++fXDIM;
+  }
+
+  // Reserve correct number of points in vector (slightly faster)
+  fData.reserve(fNX * fNY * fNZ);
+
+  // Temp variables for field
+  double fx;
+  double fy;
+  double fz;
+
+
+  // Loop over all points
+  for (int ix = 0; ix != fNX; ++ix) {
+    for (int iy = 0; iy != fNY; ++iy) {
+      for (int iz = 0; iz != fNZ; ++iz) {
+
+        // Grab a line from input file
+        std::getline(fi, L);
+
+        // Check we did not hit an EOF
+        if (fi.eof()) {
+          std::cerr << "ERROR: bad input file" << std::endl;
+          throw;
+        }
+
+        // Read data
+        S.clear();
+        S.str(L);
+        S >> fx >> fy >> fz;
+
+        // Check the stream did not hit an EOF
+        if (S.fail()) {
+          std::cerr << "ERRROR: input stream bad" << std::endl;
+          throw;
+        }
+
+        // Push data to storage
+        TVector3D F(fx, fy, fz);
+        F.RotateSelfXYZ(Rotations);
+        fData.push_back(F);
+      }
+    }
+  }
+
+  // Close file
+  fi.close();
+
+  // Store Rotations and Translation
+  fRotated = Rotations;
+  fTranslation = Translation;
+
+  return;
+}
