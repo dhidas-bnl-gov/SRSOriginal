@@ -22,7 +22,6 @@ TField3DGrid::TField3DGrid ()
 
 TField3DGrid::TField3DGrid (std::string const& InFileName, std::string const& FileFormat, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
 {
-  
   // I will accept lower-case
   std::string format = FileFormat;
   std::transform(format.begin(), format.end(), format.begin(), ::toupper);
@@ -675,9 +674,9 @@ void TField3DGrid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D co
   }
 
   // Save position data to object variables
-  fXStart = (fXStep * fNX) / 2;
-  fYStart = (fYStep * fNX) / 2;
-  fZStart = (fZStep * fNX) / 2;
+  fXStart = -(fXStep * fNX) / 2;
+  fYStart = -(fYStep * fNX) / 2;
+  fZStart = -(fZStep * fNX) / 2;
   fXStop  = fXStart + (fNX - 1) * fXStep;
   fYStop  = fYStart + (fNY - 1) * fYStep;
   fZStop  = fZStart + (fNZ - 1) * fZStep;
@@ -723,7 +722,6 @@ void TField3DGrid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D co
   double fx;
   double fy;
   double fz;
-
 
   // Loop over all points
   for (int ix = 0; ix != fNX; ++ix) {
