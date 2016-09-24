@@ -104,8 +104,12 @@ class SRS
     void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
     void CalculatePowerDensityGPU (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
     void CalculatePowerDensityGPU (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
+    void CalculatePowerDensityThreads (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
+    void CalculatePowerDensityPoint (TParticleA&, TVector3D const, TVector3D const, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "", size_t const io = 0);
     double CalculateTotalPower ();
     double CalculateTotalPower (TParticleA&);
+
+    void TestThreads (TParticleA&);
 
     // Flux Calculations
     //void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, std::string const& OutFileName = "");

@@ -12,12 +12,14 @@
 #include <complex>
 #include <fstream>
 #include <sstream>
+#include <thread>
 
 #include "TVector3DC.h"
 #include "TBField1DZRegularized.h"
 #include "TBField3DZRegularized.h"
 #include "TField3DGrid.h"
 #include "TSpectrumContainer.h"
+#include "TSurfacePoints_Rectangle.h"
 
 
 
@@ -1125,6 +1127,185 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
   }
 
   this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
+
+  return;
+}
+
+
+
+
+
+
+
+
+
+void SRS::CalculatePowerDensityPoint (TParticleA& Particle, TVector3D const Obs, TVector3D const Normal, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName, size_t const io)
+{
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // Particle - Particle, contains trajectory (or if not, calculate it)
+  // Surface - Observation Point
+
+
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    throw std::out_of_range("no particle defined");
+  }
+
+  // Are we writing to a file?
+  bool const WriteToFile = OutFileName != "" ? true : false;
+
+
+  // Grab the Trajectory
+  TParticleTrajectoryPoints& T = Particle.GetTrajectory();
+
+  // Number of points in Trajectory
+  size_t const NTPoints = T.GetNPoints();
+
+  // Timestep from trajectory
+  double const DeltaT = T.GetDeltaT();
+
+  // Variables for parts of the numerator and denominator of power density equation
+  TVector3D Numerator;
+  double Denominator;
+
+  //std::cout << "Directional: " << Directional << std::endl;
+
+
+
+    // For summing power contributions
+    double Sum = 0;
+
+    // Loop over all points in the trajectory
+    for (int iT = 0; iT != NTPoints ; ++iT) {
+
+      // Get current position, Beta, and Acceleration(over c)
+      TVector3D const& X = T.GetX(iT);
+      TVector3D const& B = T.GetB(iT);
+      TVector3D const& AoverC = T.GetAoverC(iT);
+
+      // Define the three normal vectors.  N1 is in the direction of propogation,
+      // N2 and N3 are in a plane perpendicular to N1
+      TVector3D const N1 = (Obs - X).UnitVector();
+      TVector3D const N2 = N1.Orthogonal().UnitVector();
+      TVector3D const N3 = N1.Cross(N2).UnitVector();
+
+      // For computing non-normally incidence
+      double const N1DotNormal = N1.Dot(Normal);
+      // UPDATE: URGENT: Check this
+      if (Directional && N1DotNormal <= 0) {
+        continue;
+      }
+
+      // Compute Numerator and denominator
+      Numerator = N1.Cross( ( (N1 - B).Cross((AoverC)) ) );
+      Denominator = pow(1 - (B).Dot(N1), 5);
+
+      // Add contributions from both N2 and N3
+      Sum += pow(Numerator.Dot(N2), 2) / Denominator / (Obs - X).Mag2() * N1DotNormal;
+      Sum += pow(Numerator.Dot(N3), 2) / Denominator / (Obs - X).Mag2() * N1DotNormal;
+
+  }
+    // Undulators, Wigglers and their applications, p42
+    Sum *= fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TSRS::Pi2() * TSRS::Epsilon0() * TSRS::C()) * DeltaT;
+
+    Sum /= 1e6; // m^2 to mm^2
+
+    // If you don't care about the direction of the normal vector
+    // UPDATE: Check
+    if (!Directional) {
+      if (Sum < 0) {
+        Sum *= -1;
+      }
+    }
+
+    if (Dimension == 2) {
+      PowerDensityContainer.AddToPoint(io, Sum);
+    } else if (Dimension == 3) {
+      PowerDensityContainer.AddToPoint(io, Sum);
+    } else {
+      throw std::out_of_range("incorrect dimensions");
+    }
+
+
+
+  return;
+}
+
+
+
+void SRS::TestThreads (TParticleA& P)
+{ 
+  std::cout << "Thread "<< std::endl;
+  return;
+}
+
+
+
+
+
+void SRS::CalculatePowerDensityThreads (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+{
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // Surface - Observation Point
+
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
+  if (Dimension == 3) {
+    for (int i = 0; i != Surface.GetNPoints(); ++i) {
+      PowerDensityContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+    }
+  } else if (Dimension == 2) {
+    for (int i = 0; i != Surface.GetNPoints(); ++i) {
+      PowerDensityContainer.AddPoint( TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), 0);
+    }
+  } else {
+    throw;
+  }
+
+  // Calculate the trajectory from scratch
+  this->CalculateTrajectory(fParticle);
+
+  std::vector<std::thread> Threads;
+
+  int const NThreads = 8;
+  size_t const NPoints = Surface.GetNPoints();
+
+  int const NBlocks = NPoints / NThreads;
+  int const Remainder = NPoints % NThreads;
+
+
+  for (size_t ib = 0; ib != NBlocks; ++ib) {
+    for (size_t it = 0; it != NThreads; ++it) {
+      size_t const io = ib * NThreads + it;
+      Threads.push_back(std::thread(&SRS::CalculatePowerDensityPoint, this, std::ref(fParticle), Surface.GetPoint(io).GetPoint(), Surface.GetPoint(io).GetNormal(), std::ref(PowerDensityContainer), Dimension, Directional, Weight, OutFileName, io));
+    }
+
+    for (size_t it = 0; it != NThreads; ++it) {
+      Threads[it].join();
+    }
+    Threads.clear();
+  }
+
+  for (size_t it = 0; it != Remainder; ++it) {
+    size_t const io = NBlocks * NThreads + it;
+    Threads.push_back(std::thread(&SRS::CalculatePowerDensityPoint, this, std::ref(fParticle), Surface.GetPoint(io).GetPoint(), Surface.GetPoint(io).GetNormal(), std::ref(PowerDensityContainer), Dimension, Directional, Weight, OutFileName, io));
+  }
+  for (size_t it = 0; it != Remainder; ++it) {
+    Threads[it].join();
+  }
+  Threads.clear();
+
 
   return;
 }

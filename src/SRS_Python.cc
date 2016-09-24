@@ -21,6 +21,7 @@
 #include "T3DScalarContainer.h"
 #include "TBFieldPythonFunction.h"
 #include "TBField3D_Gaussian.h"
+#include "TField3D_Gaussian.h"
 #include "TBField3D_UniformBox.h"
 #include "TBField3D_IdealUndulator.h"
 #include "TRandomA.h"
@@ -812,6 +813,85 @@ static PyObject* SRS_AddElectricField (SRSObject* self, PyObject* args, PyObject
 
 
 
+
+
+static PyObject* SRS_AddElectricFieldGaussian (SRSObject* self, PyObject* args, PyObject* keywds)
+{
+  // Add a magnetic field that is a gaussian
+
+  // Lists and variables
+  PyObject* List_Field       = PyList_New(0);
+  PyObject* List_Translation  = PyList_New(0);
+  PyObject* List_Rotations    = PyList_New(0);
+  PyObject* List_Sigma        = PyList_New(0);
+
+  TVector3D Field(0, 0, 0);
+  TVector3D Sigma(0, 0, 0);
+  TVector3D Rotations(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+
+  // Input variables and parsing
+  static char *kwlist[] = {"efield", "sigma", "rotations", "translation", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "OO|OO", kwlist,
+                                                          &List_Field,
+                                                          &List_Sigma,
+                                                          &List_Rotations,
+                                                          &List_Translation)) {
+    return NULL;
+  }
+
+
+
+  // Check Field
+  try {
+    Field = SRS_ListAsTVector3D(List_Field);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'bfield'");
+    return NULL;
+  }
+
+  // Check Width
+  try {
+    Sigma = SRS_ListAsTVector3D(List_Sigma);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'sigma'");
+    return NULL;
+  }
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
+  }
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
+  }
+
+  // Add field
+  self->obj->AddElectricField( (TField*) new TField3D_Gaussian(Field, Translation, Sigma, Rotations));
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
 static PyObject* SRS_GetEField (SRSObject* self, PyObject* args)
 {
   // Get the magnetic field at a point as a 3D list [Ex, Ey, Ez]
@@ -859,6 +939,122 @@ static PyObject* SRS_ClearElectricFields (SRSObject* self)
   Py_INCREF(Py_None);
   return Py_None;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+static PyObject* SRS_AddFieldGaussian (SRSObject* self, PyObject* args, PyObject* keywds)
+{
+  // Add a magnetic field that is a gaussian
+
+  // Lists and variables
+  PyObject* List_BField       = PyList_New(0);
+  PyObject* List_EField       = PyList_New(0);
+  PyObject* List_Translation  = PyList_New(0);
+  PyObject* List_Rotations    = PyList_New(0);
+  PyObject* List_Sigma        = PyList_New(0);
+
+  TVector3D Field(0, 0, 0);
+  TVector3D Sigma(0, 0, 0);
+  TVector3D Rotations(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+
+  // Input variables and parsing
+  static char *kwlist[] = {"sigma", "bfield", "efield", "rotations", "translation", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|OOOO", kwlist,
+                                                          &List_Sigma,
+                                                          &List_BField,
+                                                          &List_EField,
+                                                          &List_Rotations,
+                                                          &List_Translation)) {
+    return NULL;
+  }
+
+  bool const HasBField = PyList_Size(List_BField) > 0;
+  bool const HasEField = PyList_Size(List_EField) > 0;
+
+  // Check that you don't define an e and a b field
+  if (HasBField && HasEField) {
+    PyErr_SetString(PyExc_ValueError, "You cannot define both 'bfield' and 'efield'");
+    return NULL;
+  }
+
+  // Check Field
+  if (HasBField ) {
+    try {
+      Field = SRS_ListAsTVector3D(List_BField);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'bfield'");
+      return NULL;
+    }
+  } else if (HasEField) {
+    try {
+      Field = SRS_ListAsTVector3D(List_EField);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'efield'");
+      return NULL;
+    }
+  } else {
+    PyErr_SetString(PyExc_ValueError, "You must define either 'bfield' or 'efield'");
+    return NULL;
+  }
+
+  // Check Width
+  try {
+    Sigma = SRS_ListAsTVector3D(List_Sigma);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'sigma'");
+    return NULL;
+  }
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = SRS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
+  }
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = SRS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
+  }
+
+  // Add field
+  if (HasBField) {
+    //self->obj->AddMagneticField( (TField*) new TField3D_Gaussian(Field, Translation, Sigma, Rotations));
+  } else {
+    self->obj->AddElectricField( (TField*) new TField3D_Gaussian(Field, Translation, Sigma, Rotations));
+  }
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
 
 
 
@@ -1742,7 +1938,7 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
 
 
   // Check GPU parameter
-  if (GPU != 0 && GPU != 1) {
+  if (GPU != 0 && GPU != 1 && GPU != 3) {
     PyErr_SetString(PyExc_ValueError, "'gpu' must be 0 or 1");
     return NULL;
   }
@@ -1761,6 +1957,8 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
         self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
       } else if (GPU == 1) {
         self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
+      } else if (GPU == 2) {
+        self->obj->CalculatePowerDensityThreads(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
       }
     } else {
       double const Weight = 1.0 / (double) NParticles;
@@ -1967,7 +2165,7 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 
 
   // Check GPU parameter
-  if (GPU != 0 && GPU != 1) {
+  if (GPU != 0 && GPU != 1 && GPU != 2) {
     PyErr_SetString(PyExc_ValueError, "'gpu' must be 0 or 1");
     return NULL;
   }
@@ -1988,6 +2186,8 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
         self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
       } else if (GPU == 1) {
         self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
+      } else if (GPU == 2) {
+        self->obj->CalculatePowerDensityThreads(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
       }
     } else {
       double const Weight = 1.0 / (double) NParticles;
@@ -1997,6 +2197,8 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
           self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, Weight, OutFileName);
         } else if (GPU == 1) {
           self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, Weight, OutFileName);
+        } else if (GPU == 2) {
+          self->obj->CalculatePowerDensityThreads(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
         }
       }
     }
@@ -3149,9 +3351,12 @@ static PyMethodDef SRS_methods[] = {
   {"clear_magnetic_fields",             (PyCFunction) SRS_ClearMagneticFields,             METH_NOARGS,  "clear all internal magnetic fields"},
 
   {"add_electric_field",                (PyCFunction) SRS_AddElectricField,                METH_VARARGS | METH_KEYWORDS, "add an electric field from a file"},
+  {"add_electric_field_gaussian",       (PyCFunction) SRS_AddElectricFieldGaussian,        METH_VARARGS | METH_KEYWORDS, "add an electric field in form of 3D gaussian"},
   {"get_efield",                        (PyCFunction) SRS_GetEField,                       METH_VARARGS, "get the electric field at a given position in space (and someday time?)"},
   {"clear_electric_fields",             (PyCFunction) SRS_ClearElectricFields,             METH_NOARGS,  "clear all internal electric fields"},
-                                                                                          
+ 
+  {"add_field_gaussian",                (PyCFunction) SRS_AddFieldGaussian,                METH_VARARGS | METH_KEYWORDS, "add a magnetic or electric field in form of 3D gaussian"},
+
                                                                                           
   {"set_particle_beam",                 (PyCFunction) SRS_SetParticleBeam,                 METH_VARARGS | METH_KEYWORDS, "add a particle beam"},
   {"add_particle_beam",                 (PyCFunction) SRS_AddParticleBeam,                 METH_VARARGS | METH_KEYWORDS, "add a particle beam"},
