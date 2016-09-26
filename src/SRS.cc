@@ -36,6 +36,11 @@ SRS::SRS ()
   fCTStart = 0;
   fCTStop  = 0;
   fNPointsTrajectory = 0;
+  fNPointsPerMeter = 10000;
+
+  // Set Global compute settings
+  SetUseGPUGlobal(0);   // GPU off by default
+  SetNThreadsGlobal(2); // Use N threads for calculations by default
 }
 
 
@@ -412,37 +417,15 @@ void SRS::SetNPointsTrajectory (size_t const N)
 
 
 
-void SRS::SetCTStart (double const X)
-{
-  // Set the start time in units of m (where v = c)
-  fCTStart = X;
-  return;
-}
-
-
-
-
-void SRS::SetCTStop (double const X)
-{
-  // Set the stop time in units of m (where v = c)
-  fCTStop = X;
-  return;
-}
-
-
-
-
 void SRS::SetCTStartStop (double const Start, double const Stop)
 {
   // Set the start and stop time in units of m (where v = c)
 
   // If npoints is zero set this to some default value
-  if (fNPointsTrajectory == 0) {
-    fNPointsTrajectory = 10001 * (Stop - Start);
-  }
+  fNPointsTrajectory = fNPointsPerMeter * (Stop - Start);
 
-  this->SetCTStart(Start);
-  this->SetCTStop(Stop);
+  fCTStart = Start;
+  fCTStop  = Stop;
   return;
 }
 
@@ -471,6 +454,24 @@ double SRS::GetCTStop () const
 {
   // Return the stop time in units of m (where v = c)
   return fCTStop;
+}
+
+
+
+
+void SRS::SetUseGPUGlobal (int const in)
+{
+  fUseGPUGlobal = in;
+  return;
+}
+
+
+
+
+void SRS::SetNThreadsGlobal (int const N)
+{
+  fNThreadsGlobal = N;
+  return;
 }
 
 
@@ -1098,7 +1099,7 @@ void SRS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Sur
 
 
 
-void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, int const NParticles, std::string const& OutFileName, int const NThreads, int const GPU)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1126,7 +1127,48 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
     throw;
   }
 
-  this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
+  // Don't write output in individual mode
+  std::string const BlankOutFileName = "";
+
+  // GPU will outrank NThreads...
+  if (NParticles == 0) {
+    if (GPU == 0) {
+      if (NThreads == 1) {
+        this->CalculatePowerDensity(Surface, PowerDensityContainer, Dimension, Directional, 1, BlankOutFileName);
+      } else {
+        if (NThreads == 0) {
+          this->CalculatePowerDensityThreads(Surface, PowerDensityContainer, fNThreadsGlobal, Dimension, Directional, 1, BlankOutFileName);
+        } else {
+          this->CalculatePowerDensityThreads(Surface, PowerDensityContainer, NThreads, Dimension, Directional, 1, BlankOutFileName);
+        }
+      }
+    } else if (GPU == 1) {
+      this->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dimension, Directional, 1, BlankOutFileName);
+    }
+  } else {
+    double const Weight = 1.0 / (double) NParticles;
+    for (int i = 0; i != NParticles; ++i) {
+      this->SetNewParticle();
+      if (GPU == 0) {
+        if (NThreads == 1) {
+          this->CalculatePowerDensity(Surface, PowerDensityContainer, Dimension, Directional, Weight, BlankOutFileName);
+        } else {
+          if (NThreads == 0) {
+            this->CalculatePowerDensityThreads(Surface, PowerDensityContainer, fNThreadsGlobal, Dimension, Directional, Weight, BlankOutFileName);
+          } else {
+            this->CalculatePowerDensityThreads(Surface, PowerDensityContainer,  NThreads, Dimension, Directional, Weight, BlankOutFileName);
+          }
+        }
+      } else if (GPU == 1) {
+        this->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dimension, Directional, Weight, BlankOutFileName);
+      }
+    }
+  }
+
+
+  if (OutFileName != "") {
+    PowerDensityContainer.WriteToFileText(OutFileName, Dimension);
+  }
 
   return;
 }
@@ -1139,7 +1181,7 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
 
 
 
-void SRS::CalculatePowerDensityPoint (TParticleA& Particle, TVector3D const Obs, TVector3D const Normal, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName, size_t const io)
+void SRS::CalculatePowerDensityPoint (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, size_t const io, int const Dimension, bool const Directional, double const Weight)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1152,9 +1194,6 @@ void SRS::CalculatePowerDensityPoint (TParticleA& Particle, TVector3D const Obs,
   if (Particle.GetType() == "") {
     throw std::out_of_range("no particle defined");
   }
-
-  // Are we writing to a file?
-  bool const WriteToFile = OutFileName != "" ? true : false;
 
 
   // Grab the Trajectory
@@ -1173,6 +1212,8 @@ void SRS::CalculatePowerDensityPoint (TParticleA& Particle, TVector3D const Obs,
   //std::cout << "Directional: " << Directional << std::endl;
 
 
+  TVector3D const Obs = Surface.GetPoint(io).GetPoint();
+  TVector3D const Normal = Surface.GetPoint(io).GetNormal();
 
     // For summing power contributions
     double Sum = 0;
@@ -1245,7 +1286,7 @@ void SRS::TestThreads (TParticleA& P)
 
 
 
-void SRS::CalculatePowerDensityThreads (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+void SRS::CalculatePowerDensityThreads (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const NThreads, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1273,33 +1314,36 @@ void SRS::CalculatePowerDensityThreads (TSurfacePoints const& Surface, T3DScalar
     throw;
   }
 
+  // Check if NThreads is overriding the default nthreads
+  int const NThreadsToUse = NThreads > 0 ? NThreads : fNThreadsGlobal;
+
   // Calculate the trajectory from scratch
   this->CalculateTrajectory(fParticle);
 
   std::vector<std::thread> Threads;
 
-  int const NThreads = 8;
   size_t const NPoints = Surface.GetNPoints();
 
-  int const NBlocks = NPoints / NThreads;
-  int const Remainder = NPoints % NThreads;
+  int const NBlocks = NPoints / NThreadsToUse;
+  int const Remainder = NPoints % NThreadsToUse;
 
+  std::cout << "NThreadsToUse " << NThreadsToUse << std::endl;
 
   for (size_t ib = 0; ib != NBlocks; ++ib) {
-    for (size_t it = 0; it != NThreads; ++it) {
-      size_t const io = ib * NThreads + it;
-      Threads.push_back(std::thread(&SRS::CalculatePowerDensityPoint, this, std::ref(fParticle), Surface.GetPoint(io).GetPoint(), Surface.GetPoint(io).GetNormal(), std::ref(PowerDensityContainer), Dimension, Directional, Weight, OutFileName, io));
+    for (size_t it = 0; it != NThreadsToUse; ++it) {
+      size_t const io = ib * NThreadsToUse + it;
+      Threads.push_back(std::thread(&SRS::CalculatePowerDensityPoint, this, std::ref(fParticle), std::ref(Surface), std::ref(PowerDensityContainer), io, Dimension, Directional, Weight));
     }
 
-    for (size_t it = 0; it != NThreads; ++it) {
+    for (size_t it = 0; it != NThreadsToUse; ++it) {
       Threads[it].join();
     }
     Threads.clear();
   }
 
   for (size_t it = 0; it != Remainder; ++it) {
-    size_t const io = NBlocks * NThreads + it;
-    Threads.push_back(std::thread(&SRS::CalculatePowerDensityPoint, this, std::ref(fParticle), Surface.GetPoint(io).GetPoint(), Surface.GetPoint(io).GetNormal(), std::ref(PowerDensityContainer), Dimension, Directional, Weight, OutFileName, io));
+    size_t const io = NBlocks * NThreadsToUse + it;
+    Threads.push_back(std::thread(&SRS::CalculatePowerDensityPoint, this, std::ref(fParticle), std::ref(Surface), std::ref(PowerDensityContainer), io, Dimension, Directional, Weight));
   }
   for (size_t it = 0; it != Remainder; ++it) {
     Threads[it].join();

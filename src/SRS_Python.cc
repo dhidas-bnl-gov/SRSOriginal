@@ -188,26 +188,44 @@ static PyObject* SRS_SetSeed (SRSObject* self, PyObject* arg)
 
 
 
-
-
-
-
-
-
-static PyObject* SRS_SetCTStart (SRSObject* self, PyObject* arg)
+static PyObject* SRS_SetGPUGlobal (SRSObject* self, PyObject* arg)
 {
-  // Set the start time in [m] for caculation
-
   // Grab the value from input
-  double val = PyFloat_AsDouble(arg);
+  int const GPU = PyInt_AsLong(arg);
 
-  // Set the object variable
-  self->obj->SetCTStart(val);
+  self->obj->SetUseGPUGlobal(GPU);
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
   return Py_None;
 }
+
+
+
+
+
+static PyObject* SRS_SetNThreadsGlobal (SRSObject* self, PyObject* arg)
+{
+  // Grab the value from input
+  int const NThreads = PyInt_AsLong(arg);
+
+  self->obj->SetNThreadsGlobal(NThreads);
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -216,25 +234,6 @@ static PyObject* SRS_GetCTStart (SRSObject* self)
   // Get the start time in [m] for calculation
   return Py_BuildValue("d", self->obj->GetCTStart());
 }
-
-
-
-
-static PyObject* SRS_SetCTStop (SRSObject* self, PyObject* arg)
-{
-  // Set the stop time in [m] for calculations
-
-  // Grab the value
-  double val = PyFloat_AsDouble(arg);
-
-  // Set the object variable
-  self->obj->SetCTStop(val);
-
-  // Must return python object None in a special way
-  Py_INCREF(Py_None);
-  return Py_None;
-}
-
 
 
 
@@ -1840,19 +1839,21 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
   int const   Dim = 3;
   int         NParticles = 0;
   int         GPU = 0;
+  int         NThreads = 0;
   char const* OutFileName = "";
 
 
-  static char *kwlist[] = {"points", "normal", "rotations", "translation", "nparticles", "gpu", "ofile", NULL};
+  static char *kwlist[] = {"points", "normal", "rotations", "translation", "nparticles", "gpu", "nthreads", "ofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOiis", kwlist,
-                                                             &List_Points,
-                                                             &NormalDirection,
-                                                             &List_Rotations,
-                                                             &List_Translation,
-                                                             &NParticles,
-                                                             &GPU,
-                                                             &OutFileName)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOiiis", kwlist,
+                                                              &List_Points,
+                                                              &NormalDirection,
+                                                              &List_Rotations,
+                                                              &List_Translation,
+                                                              &NParticles,
+                                                              &GPU,
+                                                              &NThreads,
+                                                              &OutFileName)) {
     return NULL;
   }
 
@@ -1938,10 +1939,23 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
 
 
   // Check GPU parameter
-  if (GPU != 0 && GPU != 1 && GPU != 3) {
+  if (GPU != 0 && GPU != 1) {
     PyErr_SetString(PyExc_ValueError, "'gpu' must be 0 or 1");
     return NULL;
   }
+
+  // Check NThreads parameter
+  if (NThreads < 0) {
+    PyErr_SetString(PyExc_ValueError, "'nthreads' must be > 0");
+    return NULL;
+  }
+
+  // Check you are not trying to use threads and GPU
+  if (NThreads > 0 && GPU == 1) {
+    PyErr_SetString(PyExc_ValueError, "gpu is 1 and nthreads > 0.  Both are not currently allowed.");
+    return NULL;
+  }
+    
 
 
   // Container for Point plus scalar
@@ -1952,25 +1966,7 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
   bool const Directional = NormalDirection == 0 ? false : true;
 
   try {
-    if (NParticles == 0) {
-      if (GPU == 0) {
-        self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
-      } else if (GPU == 1) {
-        self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
-      } else if (GPU == 2) {
-        self->obj->CalculatePowerDensityThreads(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
-      }
-    } else {
-      double const Weight = 1.0 / (double) NParticles;
-      for (int i = 0; i != NParticles; ++i) {
-        self->obj->SetNewParticle();
-        if (GPU == 0) {
-          self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, Weight, OutFileName);
-        } else if (GPU == 1) {
-          self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, Weight, OutFileName);
-        }
-      }
-    }
+    self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, NParticles, OutFileName, NThreads, GPU);
   } catch (std::length_error e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
@@ -2028,24 +2024,26 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
   int         NormalDirection = 0;
   int         NParticles = 0;
   int         GPU = 0;
+  int         NThreads = 0;
   int         Dim = 2;
   char*       OutFileName = "";
 
 
-  static char *kwlist[] = {"npoints", "plane", "width", "x0x1x2", "rotations", "translation", "ofile", "normal", "nparticles", "gpu", "dim",  NULL};
+  static char *kwlist[] = {"npoints", "plane", "width", "x0x1x2", "rotations", "translation", "ofile", "normal", "nparticles", "gpu", "nthreads", "dim",  NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|sOOOOsiiii", kwlist,
-                                                                 &List_NPoints,
-                                                                 &SurfacePlane,
-                                                                 &List_Width,
-                                                                 &List_X0X1X2,
-                                                                 &List_Rotations,
-                                                                 &List_Translation,
-                                                                 &OutFileName,
-                                                                 &NormalDirection,
-                                                                 &NParticles,
-                                                                 &GPU,
-                                                                 &Dim)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|sOOOOsiiiii", kwlist,
+                                                                  &List_NPoints,
+                                                                  &SurfacePlane,
+                                                                  &List_Width,
+                                                                  &List_X0X1X2,
+                                                                  &List_Rotations,
+                                                                  &List_Translation,
+                                                                  &OutFileName,
+                                                                  &NormalDirection,
+                                                                  &NParticles,
+                                                                  &GPU,
+                                                                  &NThreads,
+                                                                  &Dim)) {
     return NULL;
   }
 
@@ -2165,10 +2163,23 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 
 
   // Check GPU parameter
-  if (GPU != 0 && GPU != 1 && GPU != 2) {
+  if (GPU != 0 && GPU != 1) {
     PyErr_SetString(PyExc_ValueError, "'gpu' must be 0 or 1");
     return NULL;
   }
+
+  // Check NThreads parameter
+  if (NThreads < 0) {
+    PyErr_SetString(PyExc_ValueError, "'nthreads' must be > 0");
+    return NULL;
+  }
+
+  // Check you are not trying to use threads and GPU
+  if (NThreads > 0 && GPU == 1) {
+    PyErr_SetString(PyExc_ValueError, "gpu is 1 and nthreads > 0.  Both are not currently allowed.");
+    return NULL;
+  }
+    
 
 
 
@@ -2181,27 +2192,7 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
   // Actually calculate the spectrum
   bool const Directional = NormalDirection == 0 ? false : true;
   try {
-    if (NParticles == 0) {
-      if (GPU == 0) {
-        self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
-      } else if (GPU == 1) {
-        self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
-      } else if (GPU == 2) {
-        self->obj->CalculatePowerDensityThreads(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
-      }
-    } else {
-      double const Weight = 1.0 / (double) NParticles;
-      for (int i = 0; i != NParticles; ++i) {
-        self->obj->SetNewParticle();
-        if (GPU == 0) {
-          self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, Weight, OutFileName);
-        } else if (GPU == 1) {
-          self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, Weight, OutFileName);
-        } else if (GPU == 2) {
-          self->obj->CalculatePowerDensityThreads(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
-        }
-      }
-    }
+    self->obj->CalculatePowerDensity(Surface, PowerDensityContainer, Dim, Directional, NParticles, OutFileName, NThreads, GPU);
   } catch (std::length_error e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
@@ -2241,6 +2232,9 @@ static PyObject* SRS_CalculatePowerDensityRectangle (SRSObject* self, PyObject* 
 static PyObject* SRS_CalculatePowerDensityRectangleGPU (SRSObject* self, PyObject* args, PyObject *keywds)
 {
   // Calculate the spectrum given an observation point, and energy range
+
+  // UPDATE: Unused function
+  throw;
 
   char const* SurfacePlane = "";
   size_t      NX1 = 0;
@@ -3313,8 +3307,6 @@ static PyObject* SRS_CalculateElectricFieldTimeDomain (SRSObject* self, PyObject
 
 
 static PyGetSetDef SRS_getseters[] = {
-  {"ctstart", (getter)SRS_GetCTStart, (setter)SRS_SetCTStart, "Start time for calculation in [m]", NULL},
-  {"ctstop",  (getter)SRS_GetCTStop,  (setter)SRS_SetCTStop,  "Stop time for calculation in [m]", NULL},
   {"npoints_trajectory",  (getter)SRS_GetNPointsTrajectory,  (setter)SRS_SetNPointsTrajectory,  "Total number of points for trajectory", NULL},
   {NULL}  /* Sentinel */
 };
@@ -3332,11 +3324,11 @@ static PyMethodDef SRS_methods[] = {
   {"rand",                              (PyCFunction) SRS_Random,                          METH_NOARGS,  "uniformally distributed random number [0, 1)"},
   {"norm",                              (PyCFunction) SRS_RandomNormal,                    METH_NOARGS,  "Normally distributed random number"},
   {"set_seed",                          (PyCFunction) SRS_SetSeed,                         METH_O,       "Set the random seed"},
+  {"set_gpu_global",                    (PyCFunction) SRS_SetGPUGlobal,                    METH_O,       "Set global use GPU"},
+  {"set_nthreads_global",               (PyCFunction) SRS_SetNThreadsGlobal,               METH_O,       "Set global number of threads to use"},
 
 
-  {"set_ctstart",                       (PyCFunction) SRS_SetCTStart,                      METH_O,       "set the start time in [m]"},
   {"get_ctstart",                       (PyCFunction) SRS_GetCTStart,                      METH_NOARGS,  "get the start time in [m]"},
-  {"set_ctstop",                        (PyCFunction) SRS_SetCTStop,                       METH_O,       "set the stop time in [m]"},
   {"get_ctstop",                        (PyCFunction) SRS_GetCTStop,                       METH_NOARGS,  "get the stop time in [m]"},
   {"set_ctstartstop",                   (PyCFunction) SRS_SetCTStartStop,                  METH_VARARGS, "set the start and stop time in [m]"},
   {"set_npoints_trajectory",            (PyCFunction) SRS_SetNPointsTrajectory,            METH_O,       "set the total number of points for the trajectory"},

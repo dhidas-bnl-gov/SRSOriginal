@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 def power_density_3d(srs, surface,
-                    normal=1, rotations=[0, 0, 0], translation=[0, 0, 0], nparticles=0, gpu=0,
+                    normal=1, rotations=[0, 0, 0], translation=[0, 0, 0], nparticles=0, gpu=0, nthreads=0,
                     title='Power Density', xlim=None, ylim=None, zlim=None, colorbar=True, figsize=None, alpha=0.4, ofile=None, show=True):
     """calculate power density for and plot a parametric surface in 3d"""
 
@@ -16,7 +16,7 @@ def power_density_3d(srs, surface,
             points.append([surface.position(u, v), surface.normal(u, v)])
 
 
-    power_density = srs.calculate_power_density(points=points, normal=normal, rotations=rotations, translation=translation, nparticles=nparticles, gpu=gpu)
+    power_density = srs.calculate_power_density(points=points, normal=normal, rotations=rotations, translation=translation, nparticles=nparticles, gpu=gpu, nthreads=nthreads)
     P = [item[1] for item in power_density]
 
     X2 = []

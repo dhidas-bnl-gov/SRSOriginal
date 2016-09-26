@@ -35,8 +35,7 @@ int TestSRS ()
 
 
   // Setup for particle
-  S.SetCTStart(0.0);
-  S.SetCTStop (3.0);
+  S.SetCTStartStop(0.0, 3.0);
   S.SetNPointsTrajectory(1901);
 
   S.SetNewParticle();

@@ -75,13 +75,15 @@ class SRS
     TParticleTrajectoryPoints const& GetTrajectory ();
 
     void SetNPointsTrajectory (size_t const);
-    void SetCTStart (double const);
-    void SetCTStop  (double const);
     void SetCTStartStop (double const, double const);
 
     size_t GetNPointsTrajectory () const;
     double GetCTStart () const;
     double GetCTStop  () const;
+
+    // Global threads and GPU settings
+    void SetUseGPUGlobal (int const);
+    void SetNThreadsGlobal (int const);
 
     // Random seed setting and random numbers
     void SetSeed (int const) const;
@@ -101,11 +103,11 @@ class SRS
     // Power Density calculation
     void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
     void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
-    void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
+    void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, int const NParticles = 0, std::string const& OutFileName = "", int const NThreads = 0, int const GPU = 0);
     void CalculatePowerDensityGPU (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
     void CalculatePowerDensityGPU (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
-    void CalculatePowerDensityThreads (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
-    void CalculatePowerDensityPoint (TParticleA&, TVector3D const, TVector3D const, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "", size_t const io = 0);
+    void CalculatePowerDensityThreads (TSurfacePoints const&, T3DScalarContainer&, int const, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
+    void CalculatePowerDensityPoint (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, size_t const, int const Dimension = 3, bool const Directional = true, double const Weight = 1);
     double CalculateTotalPower ();
     double CalculateTotalPower (TParticleA&);
 
@@ -139,6 +141,7 @@ class SRS
     double fCTStart;
     double fCTStop;
     size_t fNPointsTrajectory;
+    size_t fNPointsPerMeter;
 
 
     // Current particle for calculations and rel parameters
@@ -147,6 +150,10 @@ class SRS
 
     // Spectrum container
     TSpectrumContainer fSpectrum;
+
+    // Global thread and GPU settings
+    int fNThreadsGlobal;
+    bool fUseGPUGlobal;
 
 
 
