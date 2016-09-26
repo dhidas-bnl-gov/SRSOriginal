@@ -10,6 +10,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 TField3DGrid::TField3DGrid ()
 {
