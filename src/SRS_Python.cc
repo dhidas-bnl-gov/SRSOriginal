@@ -1537,26 +1537,29 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   PyObject* List_EnergyRange_eV = PyList_New(0);
   PyObject* List_Points_eV      = PyList_New(0);
   int NParticles = 0;
+  int NThreads = 0;
   int GPU = 0;
   char* OutFileName = "";
   char* OutFileNameBinary = "";
 
 
 
-  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", "nparticles", "gpu", "ofile", "bofile", NULL};
+  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", "nparticles", "nthreads", "gpu", "ofile", "bofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOiiss", kwlist,
-                                                              &List_Obs,
-                                                              &NPoints,
-                                                              &List_EnergyRange_eV,
-                                                              &List_Points_eV,
-                                                              &NParticles,
-                                                              &GPU,
-                                                              &OutFileName,
-                                                              &OutFileNameBinary)) {
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOiiiss", kwlist,
+                                                               &List_Obs,
+                                                               &NPoints,
+                                                               &List_EnergyRange_eV,
+                                                               &List_Points_eV,
+                                                               &NParticles,
+                                                               &NThreads,
+                                                               &GPU,
+                                                               &OutFileName,
+                                                               &OutFileNameBinary)) {
     return NULL;
   }
 
+  std::cout << " SRS_Python" << std::endl;
 
   // Check if a beam is at least defined
   //if (self->obj->GetNParticleBeams() < 1) {
@@ -1611,9 +1614,24 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
   }
 
 
+  // Check NThreads parameter
+  if (NThreads < 0) {
+    PyErr_SetString(PyExc_ValueError, "'nthreads' must be > 0");
+    return NULL;
+  }
+
+  // Check you are not trying to use threads and GPU
+  if (NThreads > 0 && GPU == 1) {
+    PyErr_SetString(PyExc_ValueError, "gpu is 1 and nthreads > 0.  Both are not currently allowed.");
+    return NULL;
+  }
+    
 
 
   TSpectrumContainer SpectrumContainer;
+
+  std::cout << " SRS_Python " << Obs << " " <<NThreads << " " <<GPU << std::endl;
+
 
   if (VPoints_eV.size() == 0) {
     SpectrumContainer.Init(NPoints, EStart, EStop);
@@ -1623,23 +1641,7 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
 
   // Actually calculate the spectrum
   try {
-    if (NParticles == 0) {
-      if (GPU == 0) {
-        self->obj->CalculateSpectrum(Obs, SpectrumContainer);
-      } else if (GPU == 1) {
-        self->obj->CalculateSpectrumGPU(Obs, SpectrumContainer);
-      }
-    } else {
-      double const Weight = 1.0 / (double) NParticles;
-      for (int i = 0; i != NParticles; ++i) {
-        self->obj->SetNewParticle();
-        if (GPU == 0) {
-          self->obj->CalculateSpectrum(Obs, SpectrumContainer, Weight);
-        } else if (GPU == 1) {
-          self->obj->CalculateSpectrumGPU(Obs, SpectrumContainer, Weight);
-        }
-      }
-    }
+    self->obj->CalculateSpectrum(Obs, SpectrumContainer, NParticles, NThreads, GPU);
   } catch (std::length_error e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
@@ -1666,123 +1668,6 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
 
 
 
-static PyObject* SRS_CalculateSpectrumGPU (SRSObject* self, PyObject* args, PyObject* keywds)
-{
-  // Calculate the spectrum given an observation point, and energy range
-
-
-  PyObject* List_Obs = PyList_New(0);
-  int NPoints = 0;
-  PyObject* List_EnergyRange_eV = PyList_New(0);
-  PyObject* List_Points_eV      = PyList_New(0);
-  int NParticles = 0;
-  char* OFile = "";
-  char* BOFile = "";
-
-
-
-  static char *kwlist[] = {"obs", "npoints", "energy_range_eV", "points_eV", "nparticles", "ofile", "bofile", NULL};
-
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|iOOiss", kwlist,
-                                                             &List_Obs,
-                                                             &NPoints,
-                                                             &List_EnergyRange_eV,
-                                                             &List_Points_eV,
-                                                             &NParticles,
-                                                             &OFile,
-                                                             &BOFile)) {
-    return NULL;
-  }
-
-
-  // Check if a beam is at least defined
-  //if (self->obj->GetNParticleBeams() < 1) {
-  //  PyErr_SetString(PyExc_ValueError, "No particle beam defined");
-  //  return NULL;
-  //}
-
-
-  // Check number of particles
-  if (NParticles < 0) {
-    PyErr_SetString(PyExc_ValueError, "'nparticles' must be >= 1 (sort of)");
-    return NULL;
-  }
-
-
-  // Add all values to a vector
-  std::vector<double> VPoints_eV;
-  for (int i = 0; i < PyList_Size(List_Points_eV); ++i) {
-    VPoints_eV.push_back(PyFloat_AsDouble(PyList_GetItem(List_Points_eV, i)));
-  }
-
-  double EStart;
-  double EStop;
-
-  if (PyList_Size(List_EnergyRange_eV) != 0) {
-    if (PyList_Size(List_EnergyRange_eV) == 2) {
-      EStart = PyFloat_AsDouble(PyList_GetItem(List_EnergyRange_eV, 0));
-      EStop  = PyFloat_AsDouble(PyList_GetItem(List_EnergyRange_eV, 1));
-    } else {
-      PyErr_SetString(PyExc_ValueError, "'energy_range_eV' must be a list of length 2");
-      return NULL;
-    }
-  }
-
-
-
-
-  // Observation point
-  TVector3D Obs(0, 0, 0);
-  try {
-    Obs = SRS_ListAsTVector3D(List_Obs);
-  } catch (std::length_error e) {
-    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'obs'");
-    return NULL;
-  }
-
-
-
-  TSpectrumContainer SpectrumContainer;
-
-  if (VPoints_eV.size() == 0) {
-    SpectrumContainer.Init(NPoints, EStart, EStop);
-  } else {
-    SpectrumContainer.Init(VPoints_eV);
-  }
-
-  // Actually calculate the spectrum
-  try {
-    if (NParticles == 0) {
-      self->obj->CalculateSpectrumGPU(Obs, SpectrumContainer);
-    } else {
-      double const Weight = 1.0 / (double) NParticles;
-      for (int i = 0; i != NParticles; ++i) {
-        std::cout << i << std::endl;
-        self->obj->SetNewParticle();
-        self->obj->CalculateTrajectory();
-        self->obj->CalculateSpectrumGPU(Obs, SpectrumContainer, Weight);
-      }
-    }
-  } catch (std::length_error e) {
-    PyErr_SetString(PyExc_ValueError, e.what());
-    return NULL;
-  } catch (std::out_of_range e) {
-    PyErr_SetString(PyExc_ValueError, e.what());
-    return NULL;
-  }
-
-
-  if (std::string(OFile) != "") {
-    SpectrumContainer.WriteToFileText(OFile);
-  }
-
-  if (std::string(BOFile) != "") {
-    SpectrumContainer.WriteToFileBinary(OFile);
-  }
-
-  // Return the spectrum
-  return SRS_GetSpectrumAsList(self, SpectrumContainer);
-}
 
 
 
@@ -3363,7 +3248,6 @@ static PyMethodDef SRS_methods[] = {
   {"get_trajectory",                    (PyCFunction) SRS_GetTrajectory,                   METH_NOARGS,  "Get the trajectory for the current particle as 2 3D lists [[x, y, z], [BetaX, BetaY, BetaZ]]"},
 
   {"calculate_spectrum",                (PyCFunction) SRS_CalculateSpectrum,               METH_VARARGS | METH_KEYWORDS, "calculate the spectrum at an observation point"},
-  {"calculate_spectrum_gpu",            (PyCFunction) SRS_CalculateSpectrumGPU,            METH_VARARGS | METH_KEYWORDS, "calculate the spectrum at an observation point"},
 
   {"calculate_total_power",             (PyCFunction) SRS_CalculateTotalPower,             METH_NOARGS,  "calculate total power radiated"},
   {"calculate_power_density_rectangle", (PyCFunction) SRS_CalculatePowerDensityRectangle,  METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},

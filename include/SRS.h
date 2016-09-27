@@ -90,9 +90,12 @@ class SRS
     double GetRandomNormal () const;
     double GetRandomUniform () const;
 
-    void CalculateSpectrumGPU (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight = 1);
+    void CalculateSpectrumGPU (TParticleA&, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight = 1, std::string const OutFileName = "");
     void CalculateSpectrum ();
     void CalculateSpectrum (TVector3D const&, TSpectrumContainer&, double const Weight = 1);
+    void CalculateSpectrum (TVector3D const&, TSpectrumContainer&, int const, int const, int const);
+    void CalculateSpectrumThreads (TParticleA&, TVector3D const&, TSpectrumContainer&, int const, double const Weight = 1, std::string const& OutFileName = "");
+    void CalculateFluxPoint (TParticleA&, TVector3D const&, TSpectrumContainer&, int const i, double const Weight = 1);
     void CalculateSpectrum (TParticleA&, TVector3D const&, TSpectrumContainer&, double const Weight = 1);
     void CalculateSpectrum (TParticleA&, TVector3D const&, double const, double const, size_t const, std::string const& OutFileName = "");
     void CalculateSpectrum (TVector3D const&, double const, double const, size_t const);
@@ -106,7 +109,7 @@ class SRS
     void CalculatePowerDensity (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, int const NParticles = 0, std::string const& OutFileName = "", int const NThreads = 0, int const GPU = 0);
     void CalculatePowerDensityGPU (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
     void CalculatePowerDensityGPU (TSurfacePoints const&, T3DScalarContainer&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
-    void CalculatePowerDensityThreads (TSurfacePoints const&, T3DScalarContainer&, int const, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
+    void CalculatePowerDensityThreads (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, int const, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
     void CalculatePowerDensityPoint (TParticleA&, TSurfacePoints const&, T3DScalarContainer&, size_t const, int const Dimension = 3, bool const Directional = true, double const Weight = 1);
     double CalculateTotalPower ();
     double CalculateTotalPower (TParticleA&);

@@ -724,10 +724,10 @@ void SRS::RK4 (double y[], double dydx[], int n, double x, double h, double yout
 
 
 
-void SRS::CalculateSpectrumGPU (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
+void SRS::CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight, std::string const OutFileName)
 {
   // Check that particle has been set yet.  If fType is "" it has not been set yet
-  if (fParticle.GetType() == "") {
+  if (Particle.GetType() == "") {
     try {
       this->SetNewParticle();
     } catch (std::exception e) {
@@ -736,10 +736,10 @@ void SRS::CalculateSpectrumGPU (TVector3D const& ObservationPoint, TSpectrumCont
   }
 
   // Calculate trajectory
-  this->CalculateTrajectory(fParticle);
+  this->CalculateTrajectory(Particle);
 
   #ifdef CUDA
-  return SRS_Cuda_CalculateSpectrumGPU (fParticle, ObservationPoint, Spectrum, Weight);
+  return SRS_Cuda_CalculateSpectrumGPU (Particle, ObservationPoint, Spectrum, Weight);
   #else
   throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
   #endif
@@ -768,6 +768,251 @@ void SRS::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumContain
   this->CalculateSpectrum(fParticle, ObservationPoint, Spectrum, Weight);
   return;
 }
+
+
+
+
+void SRS::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, int const NParticles, int const NThreads, int const GPU)
+{
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (fParticle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
+  //this->CalculateSpectrum(fParticle, ObservationPoint, Spectrum, Weight);
+  // Don't write output in individual mode
+  std::string const BlankOutFileName = "";
+
+  // GPU will outrank NThreads...
+  if (NParticles == 0) {
+    if (GPU == 0) {
+      if (NThreads == 1) {
+        this->CalculateSpectrum(fParticle, ObservationPoint, Spectrum);
+      } else {
+        if (NThreads == 0) {
+          this->CalculateSpectrumThreads(fParticle, ObservationPoint, Spectrum, fNThreadsGlobal, 1, BlankOutFileName);
+        } else {
+  std::cout << "HERE " << ObservationPoint << " " << NParticles << " " << NThreads << " " << GPU << std::endl;
+          this->CalculateSpectrumThreads(fParticle, ObservationPoint, Spectrum, NThreads, 1, BlankOutFileName);
+        }
+      }
+    } else if (GPU == 1) {
+      this->CalculateSpectrumGPU(fParticle, ObservationPoint, Spectrum, 1, BlankOutFileName);
+    }
+  } else {
+    double const Weight = 1.0 / (double) NParticles;
+    for (int i = 0; i != NParticles; ++i) {
+      this->SetNewParticle();
+      if (GPU == 0) {
+        if (NThreads == 1) {
+          // UPDATE: No outfile here, check
+          this->CalculateSpectrum(fParticle, ObservationPoint, Spectrum, Weight);
+        } else {
+          if (NThreads == 0) {
+            this->CalculateSpectrumThreads(fParticle, ObservationPoint, Spectrum, fNThreadsGlobal, Weight, BlankOutFileName);
+          } else {
+            this->CalculateSpectrumThreads(fParticle, ObservationPoint, Spectrum, NThreads, Weight, BlankOutFileName);
+          }
+        }
+      } else if (GPU == 1) {
+        this->CalculateSpectrumGPU(fParticle, ObservationPoint, Spectrum, Weight, BlankOutFileName);
+      }
+    }
+  }
+  return;
+}
+
+
+
+
+void SRS::CalculateFluxPoint (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, int const i, double const Weight)
+{
+  // Calculates the single particle spectrum at a given observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  // Save this in the spectrum container.
+  //
+  // Particle - the Particle.. with a Trajectory structure hopefully
+  // ObservationPoint - Observation Point
+  // Spectrum - Spectrum container
+
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    throw std::out_of_range("no particle defined");
+  }
+
+
+  // Grab the Trajectory
+  TParticleTrajectoryPoints& T = Particle.GetTrajectory();
+
+
+  // Time step.  Expecting it to be constant throughout calculation
+  double const DeltaT = T.GetDeltaT();
+
+
+  // Number of points in the trajectory
+  size_t const NTPoints = T.GetNPoints();
+
+  if (NTPoints < 1) {
+    throw std::length_error("no points in trajectory.  Is particle or beam defined?");
+  }
+
+  // Number of points in the spectrum container
+  size_t const NEPoints = Spectrum.GetNPoints();
+
+  // Constant C0 for calculation
+  double const C0 = Particle.GetQ() / (TSRS::FourPi() * TSRS::C() * TSRS::Epsilon0() * TSRS::Sqrt2Pi());
+
+  // Constant for flux calculation at the end
+  double const C2 = TSRS::FourPi() * Particle.GetCurrent() / (TSRS::H() * fabs(Particle.GetQ()) * TSRS::Mu0() * TSRS::C()) * 1e-6 * 0.001;
+
+  // Imaginary "i" and complxe 1+0i
+  std::complex<double> const I(0, 1);
+  std::complex<double> const One(1, 0);
+
+
+  // Loop over all points in the spectrum container
+
+    // Angular frequency
+    double const Omega = Spectrum.GetAngularFrequency(i);
+
+    // Constant for field calculation
+    std::complex<double> ICoverOmega = I * TSRS::C() / Omega;
+
+    // Constant for calculation
+    std::complex<double> const C1(0, C0 * Omega);
+
+    // Electric field summation in frequency space
+    TVector3DC SumE(0, 0, 0);
+
+    // Loop over all points in trajectory
+    for (int iT = 0; iT != NTPoints; ++iT) {
+
+      // Particle position
+      TVector3D const& X = T.GetX(iT);
+
+      // Particle "Beta" (velocity over speed of light)
+      TVector3D const& B = T.GetB(iT);
+
+      // Vector pointing from particle to observer
+      TVector3D const R = ObservationPoint - X;
+
+      // Unit vector pointing from particl to observer
+      TVector3D const N = R.UnitVector();
+
+      // Distance from particle to observer
+      double const D = R.Mag();
+
+      // Exponent for fourier transformed field
+      std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TSRS::C()));
+
+      // Sum in fourier transformed field (integral)
+      SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
+    }
+
+    // Multiply field by Constant C1 and time step
+    SumE *= C1 * DeltaT;
+
+    // Set the flux for this frequency / energy point
+    Spectrum.AddToFlux(i, C2 *  SumE.Dot( SumE.CC() ).real() * Weight);
+
+
+
+  return;
+}
+
+
+
+
+
+void SRS::CalculateSpectrumThreads (TParticleA& Particle, TVector3D const& Obs, TSpectrumContainer& Spectrum, int const NThreads, double const Weight, std::string const& OutFileName)
+{
+  // Calculates spectrum for the given particle and observation point
+  // in units of [photons / second / 0.001% BW / mm^2]
+  //
+  // Surface - Observation Point
+
+  // Check that particle has been set yet.  If fType is "" it has not been set yet
+  if (Particle.GetType() == "") {
+    try {
+      this->SetNewParticle();
+    } catch (std::exception e) {
+      throw std::out_of_range("no beam defined");
+    }
+  }
+
+  // Calculate trajectory before we fanout into threads
+  this->CalculateTrajectory(Particle);
+
+  // Check if NThreads is overriding the default nthreads
+  int const NThreadsToUse = NThreads > 0 ? NThreads : fNThreadsGlobal;
+
+  // Calculate the trajectory from scratch
+  this->CalculateTrajectory(Particle);
+
+  // Vector container for threads
+  std::vector<std::thread> Threads;
+
+  size_t const NPoints = Spectrum.GetNPoints();
+
+  int const NBlocks = NPoints / NThreadsToUse;
+  int const Remainder = NPoints % NThreadsToUse;
+
+  int const NFirst = NPoints > NThreadsToUse ? NThreadsToUse : NPoints;
+  for (int io = 0; io != NFirst; ++io) {
+    Threads.push_back(std::thread(&SRS::CalculateFluxPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), io, Weight));
+  }
+  for (int io = NFirst; io != NPoints + NFirst; ++io) {
+    int const it = io % NFirst;
+    Threads[it].join();
+    if (io < NPoints) {
+      Threads[it] = std::thread(&SRS::CalculateFluxPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), io, Weight);
+    }
+  }
+  return;
+
+
+  for (size_t ib = 0; ib != NBlocks; ++ib) {
+    for (size_t it = 0; it != NThreadsToUse; ++it) {
+      size_t const io = ib * NThreadsToUse + it;
+      Threads.push_back(std::thread(&SRS::CalculateFluxPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), io, Weight));
+    }
+
+    for (size_t it = 0; it != NThreadsToUse; ++it) {
+      Threads[it].join();
+    }
+    Threads.clear();
+  }
+
+  for (size_t it = 0; it != Remainder; ++it) {
+    size_t const io = NBlocks * NThreadsToUse + it;
+    Threads.push_back(std::thread(&SRS::CalculateFluxPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), io, Weight));
+  }
+  for (size_t it = 0; it != Remainder; ++it) {
+    Threads[it].join();
+  }
+  Threads.clear();
+
+
+  return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1137,9 +1382,9 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
         this->CalculatePowerDensity(Surface, PowerDensityContainer, Dimension, Directional, 1, BlankOutFileName);
       } else {
         if (NThreads == 0) {
-          this->CalculatePowerDensityThreads(Surface, PowerDensityContainer, fNThreadsGlobal, Dimension, Directional, 1, BlankOutFileName);
+          this->CalculatePowerDensityThreads(fParticle, Surface, PowerDensityContainer, fNThreadsGlobal, Dimension, Directional, 1, BlankOutFileName);
         } else {
-          this->CalculatePowerDensityThreads(Surface, PowerDensityContainer, NThreads, Dimension, Directional, 1, BlankOutFileName);
+          this->CalculatePowerDensityThreads(fParticle, Surface, PowerDensityContainer, NThreads, Dimension, Directional, 1, BlankOutFileName);
         }
       }
     } else if (GPU == 1) {
@@ -1154,9 +1399,9 @@ void SRS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContain
           this->CalculatePowerDensity(Surface, PowerDensityContainer, Dimension, Directional, Weight, BlankOutFileName);
         } else {
           if (NThreads == 0) {
-            this->CalculatePowerDensityThreads(Surface, PowerDensityContainer, fNThreadsGlobal, Dimension, Directional, Weight, BlankOutFileName);
+            this->CalculatePowerDensityThreads(fParticle, Surface, PowerDensityContainer, fNThreadsGlobal, Dimension, Directional, Weight, BlankOutFileName);
           } else {
-            this->CalculatePowerDensityThreads(Surface, PowerDensityContainer,  NThreads, Dimension, Directional, Weight, BlankOutFileName);
+            this->CalculatePowerDensityThreads(fParticle, Surface, PowerDensityContainer,  NThreads, Dimension, Directional, Weight, BlankOutFileName);
           }
         }
       } else if (GPU == 1) {
@@ -1286,7 +1531,7 @@ void SRS::TestThreads (TParticleA& P)
 
 
 
-void SRS::CalculatePowerDensityThreads (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const NThreads, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+void SRS::CalculatePowerDensityThreads (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const NThreads, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1294,7 +1539,7 @@ void SRS::CalculatePowerDensityThreads (TSurfacePoints const& Surface, T3DScalar
   // Surface - Observation Point
 
   // Check that particle has been set yet.  If fType is "" it has not been set yet
-  if (fParticle.GetType() == "") {
+  if (Particle.GetType() == "") {
     try {
       this->SetNewParticle();
     } catch (std::exception e) {
@@ -1318,7 +1563,7 @@ void SRS::CalculatePowerDensityThreads (TSurfacePoints const& Surface, T3DScalar
   int const NThreadsToUse = NThreads > 0 ? NThreads : fNThreadsGlobal;
 
   // Calculate the trajectory from scratch
-  this->CalculateTrajectory(fParticle);
+  this->CalculateTrajectory(Particle);
 
   std::vector<std::thread> Threads;
 
@@ -1332,7 +1577,7 @@ void SRS::CalculatePowerDensityThreads (TSurfacePoints const& Surface, T3DScalar
   for (size_t ib = 0; ib != NBlocks; ++ib) {
     for (size_t it = 0; it != NThreadsToUse; ++it) {
       size_t const io = ib * NThreadsToUse + it;
-      Threads.push_back(std::thread(&SRS::CalculatePowerDensityPoint, this, std::ref(fParticle), std::ref(Surface), std::ref(PowerDensityContainer), io, Dimension, Directional, Weight));
+      Threads.push_back(std::thread(&SRS::CalculatePowerDensityPoint, this, std::ref(Particle), std::ref(Surface), std::ref(PowerDensityContainer), io, Dimension, Directional, Weight));
     }
 
     for (size_t it = 0; it != NThreadsToUse; ++it) {
@@ -1343,7 +1588,7 @@ void SRS::CalculatePowerDensityThreads (TSurfacePoints const& Surface, T3DScalar
 
   for (size_t it = 0; it != Remainder; ++it) {
     size_t const io = NBlocks * NThreadsToUse + it;
-    Threads.push_back(std::thread(&SRS::CalculatePowerDensityPoint, this, std::ref(fParticle), std::ref(Surface), std::ref(PowerDensityContainer), io, Dimension, Directional, Weight));
+    Threads.push_back(std::thread(&SRS::CalculatePowerDensityPoint, this, std::ref(Particle), std::ref(Surface), std::ref(PowerDensityContainer), io, Dimension, Directional, Weight));
   }
   for (size_t it = 0; it != Remainder; ++it) {
     Threads[it].join();
