@@ -796,7 +796,6 @@ void SRS::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumContain
         if (NThreads == 0) {
           this->CalculateSpectrumThreads(fParticle, ObservationPoint, Spectrum, fNThreadsGlobal, 1, BlankOutFileName);
         } else {
-  std::cout << "HERE " << ObservationPoint << " " << NParticles << " " << NThreads << " " << GPU << std::endl;
           this->CalculateSpectrumThreads(fParticle, ObservationPoint, Spectrum, NThreads, 1, BlankOutFileName);
         }
       }
@@ -1191,7 +1190,7 @@ void SRS::AddToSpectrum (TSpectrumContainer const& S, double const Weight)
       fSpectrum.AddToFlux(i, S.GetFlux(i) * Weight);
     }
   } else {
-    std::cout << "ERROR: incorrect dimension in spectrum" << std::endl;
+    std::cerr << "ERROR: incorrect dimension in spectrum" << std::endl;
     throw std::out_of_range("spectra dimensions do not match");
   }
 
@@ -1542,11 +1541,6 @@ void SRS::CalculatePowerDensityPoint (TParticleA& Particle, TSurfacePoints const
 
 
 
-void SRS::TestThreads (TParticleA& P)
-{ 
-  std::cout << "Thread "<< std::endl;
-  return;
-}
 
 
 
@@ -2307,8 +2301,6 @@ void SRS::CalculateFluxThreads (TParticleA& Particle, TSurfacePoints const& Surf
 
   // How many threads to start in the first for loop
   int const NFirst = NPoints > NThreadsToUse ? NThreadsToUse : NPoints;
-
-  std::cout << "mynth: " << NThreads << std::endl;
 
   // Start threads and keep in vector
   for (int io = 0; io != NFirst; ++io) {

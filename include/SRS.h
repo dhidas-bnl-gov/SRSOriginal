@@ -117,7 +117,6 @@ class SRS
     double CalculateTotalPower ();
     double CalculateTotalPower (TParticleA&);
 
-    void TestThreads (TParticleA&);
 
     // Flux Calculations
     //void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, std::string const& OutFileName = "");

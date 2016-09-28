@@ -1602,8 +1602,6 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
     return NULL;
   }
 
-  std::cout << " SRS_Python" << std::endl;
-
   // Check if a beam is at least defined
   //if (self->obj->GetNParticleBeams() < 1) {
   //  PyErr_SetString(PyExc_ValueError, "No particle beam defined");
@@ -1668,13 +1666,9 @@ static PyObject* SRS_CalculateSpectrum (SRSObject* self, PyObject* args, PyObjec
     PyErr_SetString(PyExc_ValueError, "gpu is 1 and nthreads > 0.  Both are not currently allowed.");
     return NULL;
   }
-    
 
-
+  // Container for spectrum
   TSpectrumContainer SpectrumContainer;
-
-  std::cout << " SRS_Python " << Obs << " " <<NThreads << " " <<GPU << std::endl;
-
 
   if (VPoints_eV.size() == 0) {
     SpectrumContainer.Init(NPoints, EStart, EStop);
@@ -1824,9 +1818,6 @@ static PyObject* SRS_CalculatePowerDensity (SRSObject* self, PyObject* args, PyO
       return NULL;
     }
   }
-
-  std::cout << "Translation " << Translation << std::endl;
-
 
   // Look for arbitrary shape 3D points
   TSurfacePoints_3D Surface;
@@ -2426,9 +2417,6 @@ static PyObject* SRS_CalculateFlux (SRSObject* self, PyObject* args, PyObject *k
     }
   }
 
-  std::cout << "Translation " << Translation << std::endl;
-
-
   // Look for arbitrary shape 3D points
   TSurfacePoints_3D Surface;
   for (int i = 0; i < PyList_Size(List_Points); ++i) {
@@ -2722,8 +2710,6 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
   // Actually calculate the spectrum
   bool const Directional = NormalDirection == 0 ? false : true;
 
-
-  std::cout << "NThreads: " << NThreads << std::endl;
   try {
     self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, NParticles, NThreads, GPU, Dim, OutFileName);
   } catch (std::length_error e) {
