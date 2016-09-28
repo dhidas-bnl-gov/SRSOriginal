@@ -1479,7 +1479,7 @@ static PyObject* SRS_GetTrajectory (SRSObject* self)
 
 static PyObject* SRS_GetSpectrumAsList (SRSObject* self, TSpectrumContainer const& Spectrum)
 {
-  // Get the Trajectory as 2 3D lists [[x, y, z], [BetaX, BetaY, BetaZ]]
+  // Get the spectrum as a list format for python output
 
   // Create a python list
   PyObject *PList = PyList_New(0);
@@ -1501,6 +1501,49 @@ static PyObject* SRS_GetSpectrumAsList (SRSObject* self, TSpectrumContainer cons
   // Return the python list
   return PList;
 }
+
+
+
+
+
+
+TSpectrumContainer SRS_GetSpectrumFromList (PyObject* List)
+{
+  // Take an input list in spectrum format and convert it to TSpectrumContainer object
+
+  // Increment reference for list
+  Py_INCREF(List);
+
+  // Get size of input list
+  int const NPoints = PyList_Size(List);
+  if (NPoints <= 0) {
+    throw;
+  }
+
+  TSpectrumContainer S;
+
+  for (int ip = 0; ip != NPoints; ++ip) {
+    PyObject* List_Point = PyList_GetItem(List, ip);
+    if (PyList_Size(List_Point) == 2) {
+      S.AddPoint(PyFloat_AsDouble(PyList_GetItem(List_Point, 0)), PyFloat_AsDouble(PyList_GetItem(List_Point, 1)));
+    } else {
+      throw;
+    }
+  }
+
+
+  // Increment reference for list
+  Py_DECREF(List);
+
+  // Return the object
+  return S;
+}
+
+
+
+
+
+
 
 
 
@@ -2324,18 +2367,20 @@ static PyObject* SRS_CalculateFlux (SRSObject* self, PyObject* args, PyObject *k
   int         Dim = 3;
   int         NParticles = 0;
   int         GPU = 0;
+  int         NThreads = 0;
   char const* OutFileName = "";
 
 
-  static char *kwlist[] = {"energy_eV", "points", "normal", "rotations", "translation", "nparticles", "gpu", "ofile", NULL};
+  static char *kwlist[] = {"energy_eV", "points", "normal", "rotations", "translation", "nparticles", "nthreads", "gpu", "ofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|iOOiis", kwlist,
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|iOOiiis", kwlist,
                                                               &Energy_eV,
                                                               &List_Points,
                                                               &NormalDirection,
                                                               &List_Rotations,
                                                               &List_Translation,
                                                               &NParticles,
+                                                              &NThreads,
                                                               &GPU,
                                                               &OutFileName)) {
     return NULL;
@@ -2427,6 +2472,18 @@ static PyObject* SRS_CalculateFlux (SRSObject* self, PyObject* args, PyObject *k
     return NULL;
   }
 
+  // Check NThreads parameter
+  if (NThreads < 0) {
+    PyErr_SetString(PyExc_ValueError, "'nthreads' must be > 0");
+    return NULL;
+  }
+
+  // Check you are not trying to use threads and GPU
+  if (NThreads > 0 && GPU == 1) {
+    PyErr_SetString(PyExc_ValueError, "gpu is 1 and nthreads > 0.  Both are not currently allowed.");
+    return NULL;
+  }
+    
 
 
 
@@ -2434,26 +2491,8 @@ static PyObject* SRS_CalculateFlux (SRSObject* self, PyObject* args, PyObject *k
   // Container for Point plus scalar
   T3DScalarContainer FluxContainer;
 
-  bool const Directional = NormalDirection == 0 ? false : true;
-
   try {
-    if (NParticles == 0) {
-      if (GPU == 0) {
-        self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
-      } else if (GPU == 1) {
-        self->obj->CalculateFluxGPU(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
-      }
-    } else {
-      double const Weight = 1.0 / (double) NParticles;
-      for (int i = 0; i != NParticles; ++i) {
-        self->obj->SetNewParticle();
-        if (GPU == 0) {
-          self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, Weight, OutFileName);
-        } else if (GPU == 1) {
-          self->obj->CalculateFluxGPU(Surface, Energy_eV, FluxContainer, Dim, Weight, OutFileName);
-        }
-      }
-    }
+    self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, NParticles, NThreads, GPU, Dim, OutFileName);
   } catch (std::length_error e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
@@ -2515,13 +2554,14 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
   double      Energy_eV = 0;
   char const* Polarization = "";
   int         NParticles = 0;
+  int         NThreads = 0;
   int         GPU = 0;
   char const* OutFileName = "";
 
 
-  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "nparticles", "polarization", "gpu", "ofile", NULL};
+  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "nparticles", "polarization", "nthreads", "gpu", "ofile", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOisis", kwlist,
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOisiis", kwlist,
                                                                    &Energy_eV,
                                                                    &List_NPoints,
                                                                    &SurfacePlane,
@@ -2533,6 +2573,7 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
                                                                    &List_X0X1X2,
                                                                    &NParticles,
                                                                    &Polarization,
+                                                                   &NThreads,
                                                                    &GPU,
                                                                    &OutFileName)) {
     return NULL;
@@ -2659,6 +2700,21 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
     return NULL;
   }
 
+  // Check NThreads parameter
+  if (NThreads < 0) {
+    PyErr_SetString(PyExc_ValueError, "'nthreads' must be > 0");
+    return NULL;
+  }
+
+  // Check you are not trying to use threads and GPU
+  if (NThreads > 0 && GPU == 1) {
+    PyErr_SetString(PyExc_ValueError, "gpu is 1 and nthreads > 0.  Both are not currently allowed.");
+    return NULL;
+  }
+    
+
+
+
   // Container for Point plus scalar
   T3DScalarContainer FluxContainer;
 
@@ -2667,24 +2723,9 @@ static PyObject* SRS_CalculateFluxRectangle (SRSObject* self, PyObject* args, Py
   bool const Directional = NormalDirection == 0 ? false : true;
 
 
+  std::cout << "NThreads: " << NThreads << std::endl;
   try {
-    if (NParticles == 0) {
-      if (GPU == 0) {
-        self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
-      } else if (GPU == 1) {
-        self->obj->CalculateFluxGPU(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
-      }
-    } else {
-      double const Weight = 1.0 / (double) NParticles;
-      for (int i = 0; i != NParticles; ++i) {
-        self->obj->SetNewParticle();
-        if (GPU == 0) {
-          self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
-        } else if (GPU == 1) {
-          self->obj->CalculateFluxGPU(Surface, Energy_eV, FluxContainer, Dim, 1, OutFileName);
-        }
-      }
-    }
+    self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, NParticles, NThreads, GPU, Dim, OutFileName);
   } catch (std::length_error e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
@@ -2969,10 +3010,6 @@ static PyObject* SRS_AverageSpectra (SRSObject* self, PyObject* args, PyObject *
     //Container.AverageFromFilesBinary(FileNames);
   }
 
-  // Build the output list of: [[[x, y, z], Value], [...]]
-  // Create a python list
-  PyObject *PList = PyList_New(0);
-
   // Text output
   if (std::string(OutFileNameText) != "") {
     Container.WriteToFileText(OutFileNameText);
@@ -2986,6 +3023,59 @@ static PyObject* SRS_AverageSpectra (SRSObject* self, PyObject* args, PyObject *
 
   return SRS_GetSpectrumAsList(self, Container);
 }
+
+
+
+
+
+
+
+
+
+static PyObject* SRS_AddToSpectrum (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Calculate the flux on a surface given an energy and list of points in 3D
+
+  PyObject*   List_Spectrum = PyList_New(0);
+  double Weight = 1;
+
+
+  static char *kwlist[] = {"spectrum", "weight", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|d", kwlist,
+                                                        &List_Spectrum,
+                                                        &Weight)) {
+    return NULL;
+  }
+
+
+  // Check if there is an input spectrum
+
+  if (PyList_Size(List_Spectrum) < 1) {
+    PyErr_SetString(PyExc_ValueError, "No points in spectrum.");
+    return NULL;
+  }
+  TSpectrumContainer S = SRS_GetSpectrumFromList(List_Spectrum);
+
+  self->obj->AddToSpectrum(S, Weight);
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+static PyObject* SRS_GetSpectrum (SRSObject* self)
+{
+  // Calculate the flux on a surface given an energy and list of points in 3D
+
+  return SRS_GetSpectrumAsList(self, self->obj->GetSpectrum());
+}
+
+
+
 
 
 
@@ -3260,6 +3350,10 @@ static PyMethodDef SRS_methods[] = {
   {"average_spectra",                   (PyCFunction) SRS_AverageSpectra,                  METH_VARARGS | METH_KEYWORDS, "average spectra"},
   {"average_flux",                      (PyCFunction) SRS_AverageT3DScalars,               METH_VARARGS | METH_KEYWORDS, "average fluxes"},
   {"average_power_density",             (PyCFunction) SRS_AverageT3DScalars,               METH_VARARGS | METH_KEYWORDS, "average power densities"},
+
+  {"add_to_spectrum",                   (PyCFunction) SRS_AddToSpectrum,                   METH_VARARGS | METH_KEYWORDS, "add to the running average of a spectrum"},
+  {"get_spectrum",                      (PyCFunction) SRS_GetSpectrum,                     METH_VARARGS | METH_KEYWORDS, "get the internal to SRS spectrum"},
+
 
   {"calculate_electric_field",          (PyCFunction) SRS_CalculateElectricFieldTimeDomain,METH_VARARGS | METH_KEYWORDS, "calculate the electric field in the time domain"},
 

@@ -233,7 +233,7 @@ def plot_spectrum(S, log=False, show=True, ofile='', title='Spectrum', figsize=N
 
 
 
-def plot_spectra(S, L, show=True, ofile='', title='', loc='upper left', log=False, figsize=None, ylim=None, xlim=None):
+def plot_spectra(S, L, show=True, ofile='', title='', loc='upper left', log=False, figsize=None, ylim=None, xlim=None, ret=False):
 
 
     # Size and limits
@@ -264,7 +264,9 @@ def plot_spectra(S, L, show=True, ofile='', title='', loc='upper left', log=Fals
     if show == True:
         plt.show()
 
-    return plt
+    if ret:
+        return plt
+    return
 
 
 

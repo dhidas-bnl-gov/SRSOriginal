@@ -95,13 +95,16 @@ class SRS
     void CalculateSpectrum (TVector3D const&, TSpectrumContainer&, double const Weight = 1);
     void CalculateSpectrum (TVector3D const&, TSpectrumContainer&, int const, int const, int const);
     void CalculateSpectrumThreads (TParticleA&, TVector3D const&, TSpectrumContainer&, int const, double const Weight = 1, std::string const& OutFileName = "");
-    void CalculateFluxPoint (TParticleA&, TVector3D const&, TSpectrumContainer&, int const i, double const Weight = 1);
+    void CalculateSpectrumPoint (TParticleA&, TVector3D const&, TSpectrumContainer&, int const i, double const Weight = 1);
     void CalculateSpectrum (TParticleA&, TVector3D const&, TSpectrumContainer&, double const Weight = 1);
     void CalculateSpectrum (TParticleA&, TVector3D const&, double const, double const, size_t const, std::string const& OutFileName = "");
     void CalculateSpectrum (TVector3D const&, double const, double const, size_t const);
     void CalculateSpectrum (TVector3D const&, std::vector<double> const&);
 
+    void AddToSpectrum (TSpectrumContainer const&, double const Weight = 1);
+
     TSpectrumContainer const& GetSpectrum () const;
+    void ClearSpectrum ();
 
     // Power Density calculation
     void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
@@ -119,11 +122,14 @@ class SRS
     // Flux Calculations
     //void CalculateFlux (TParticleA&, TSurfacePoints const&, double const, std::string const& OutFileName = "");
     void CalculateFlux2   (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, int const Dimension = 3, double const Weight = 1);
+    void CalculateFluxPoint (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, size_t const i, int const Dimension = 3, double const Weight = 1);
     void CalculateFlux    (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, int const Dimension = 3, double const Weight = 1, std::string const& OutFileName = "");
     void CalculateFlux    (TParticleA&, TSurfacePoints const&, double const, int const Dimension = 3, double const Weight = 1, std::string const& OutFileName = "");
     void CalculateFlux1   (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, std::string const& OutFileName = "");
     void CalculateFlux    (TSurfacePoints const&, double const, T3DScalarContainer&, int const Dimension = 3, double const Weight = 1, std::string const& OutFileName = "");
+    void CalculateFlux    (TSurfacePoints const&, double const, T3DScalarContainer&, int const NParticles = 0, int const NThreads = 0, int const GPU = 0, int const Dimension = 3, std::string const& OutFileName = "");
 
+    void CalculateFluxThreads (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer&, int const NThreads = 0, int const Dimension = 3, double const Weight = 1, std::string const& OutFileName = "");
     void CalculateFluxGPU (TParticleA&, TSurfacePoints const&, double const, T3DScalarContainer& FluxContainer, int const Dimension = 3, double const Weight = 1, std::string const& OutFileName = "");
     void CalculateFluxGPU (TSurfacePoints const&, double const, T3DScalarContainer&, int const Dimension = 3, double const Weight = 1, std::string const& OutFileName = "");
 

@@ -146,6 +146,7 @@ void TSpectrumContainer::AddPoint (double const Energy, double const Flux)
 {
   // Add an energy point to the end of the vector.
   fSpectrumPoints.push_back( std::make_pair(Energy, Flux) );
+  fCompensation.push_back(0);
 
   return;
 }
