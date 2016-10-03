@@ -1202,6 +1202,54 @@ void SRS::AddToSpectrum (TSpectrumContainer const& S, double const Weight)
 
 
 
+void SRS::AddToFlux (T3DScalarContainer const& F, double const Weight)
+{
+  // Check if spectrum exists yet or not.  In not, create it
+  if (fFlux.GetNPoints() == 0) {
+    for (size_t i = 0; i != F.GetNPoints(); ++i) {
+      fFlux.AddPoint(F.GetPoint(i).GetX(), F.GetPoint(i).GetV() * Weight);
+    }
+  } else if (fFlux.GetNPoints() == F.GetNPoints()) {
+    for (size_t i = 0; i != F.GetNPoints(); ++i) {
+      fFlux.AddToPoint(i, F.GetPoint(i).GetV() * Weight);
+    }
+  } else {
+    std::cerr << "ERROR: incorrect dimension in spectrum" << std::endl;
+    throw std::out_of_range("spectra dimensions do not match");
+  }
+
+  return;
+}
+
+
+
+
+
+
+void SRS::AddToPowerDensity (T3DScalarContainer const& P, double const Weight)
+{
+  // Check if spectrum exists yet or not.  In not, create it
+  if (fPowerDensity.GetNPoints() == 0) {
+    for (size_t i = 0; i != P.GetNPoints(); ++i) {
+      fPowerDensity.AddPoint(P.GetPoint(i).GetX(), P.GetPoint(i).GetV() * Weight);
+    }
+  } else if (fPowerDensity.GetNPoints() == P.GetNPoints()) {
+    for (size_t i = 0; i != P.GetNPoints(); ++i) {
+      fPowerDensity.AddToPoint(i, P.GetPoint(i).GetV() * Weight);
+    }
+  } else {
+    std::cerr << "ERROR: incorrect dimension in spectrum" << std::endl;
+    throw std::out_of_range("spectra dimensions do not match");
+  }
+
+  return;
+}
+
+
+
+
+
+
 TSpectrumContainer const& SRS::GetSpectrum () const
 {
   return fSpectrum;
@@ -1214,6 +1262,44 @@ void SRS::ClearSpectrum ()
 {
   // Clear the contents of the particle beam container
   fSpectrum.Clear();
+
+  return;
+}
+
+
+
+
+T3DScalarContainer const& SRS::GetFlux () const
+{
+  return fFlux;
+}
+
+
+
+
+void SRS::ClearFlux ()
+{
+  // Clear the contents
+  fFlux.Clear();
+
+  return;
+}
+
+
+
+
+T3DScalarContainer const& SRS::GetPowerDensity () const
+{
+  return fPowerDensity;
+}
+
+
+
+
+void SRS::ClearPowerDensity ()
+{
+  // Clear the contents
+  fPowerDensity.Clear();
 
   return;
 }

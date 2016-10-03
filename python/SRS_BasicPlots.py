@@ -49,7 +49,7 @@ def add_power_densities(A, B):
 
 
 
-def plot_trajectory_position(trajectory, show=True, ofile='', axis='Z'):
+def plot_trajectory_position(trajectory, show=True, ofile='', axis='Z', figsize=[18, 4.5]):
     """Plot the trajectory"""
 
     # Get coordinate lists
@@ -80,20 +80,24 @@ def plot_trajectory_position(trajectory, show=True, ofile='', axis='Z'):
         X3 = Y
 
     # Plot X and Y vs. Z
-    plt.figure(1, figsize=(18, 4.5))
+    plt.figure(1, figsize=figsize)
     plt.subplot(131)
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     plt.plot(X1, X2)
     plt.xlabel(X1Label)
     plt.ylabel(X2Label)
     plt.title('Particle Trajectory')
 
     plt.subplot(132)
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     plt.plot(X1, X3)
     plt.xlabel(X1Label)
     plt.ylabel(X3Label)
     plt.title('Particle Trajectory')
 
     plt.subplot(133)
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     plt.plot(X2, X3)
     plt.xlabel(X2Label)
     plt.ylabel(X3Label)
@@ -147,7 +151,7 @@ def plot_trajectory_velocity(trajectory, show=True, ofile=''):
     return plt
     
     
-def plot_power_density(V, title='Power Density [$W / mm^2$]', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile=''):
+def plot_power_density(V, title='Power Density [$W / mm^2$]', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile='', figsize=None):
     """Plot a 2D histogram with equal spacing"""
         
     X = [item[0][0] for item in V]
@@ -157,9 +161,16 @@ def plot_power_density(V, title='Power Density [$W / mm^2$]', xlabel='X1 Axis [$
     NX = len(np.unique(X))
     NY = len(np.unique(Y))
 
-    plt.figure(1, figsize=(18, 9))
+    plt.figure(1, figsize=figsize)
     plt.hist2d(X, Y, bins=[NX, NY], weights=P)
-    plt.colorbar()
+    plt.colorbar(format='%.0e')
+    #cb.formatter.set_scientific(True)
+    #cb.formatter.set_powerlimits((0, 0))
+    #cb.ax.yaxis.set_offset_position('right')
+    #cb.update_ticks()
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+
 
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -189,9 +200,17 @@ def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [
     if ylim is not None: plt.ylim(ylim[0], ylim[1])
     if xlim is not None: plt.xlim(xlim[0], xlim[1])
 
+    plt.figure(1, figsize=figsize)
     plt.hist2d(X, Y, bins=[NX, NY], weights=P)
+    #cb.formatter.set_scientific(True)
+    #cb.formatter.set_powerlimits((0, 0))
+    #cb.ax.yaxis.set_offset_position('right')
+    #cb.update_ticks()
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     if colorbar is True:
-        plt.colorbar()
+        plt.colorbar(format='%.0e')
+        #plt.colorbar()
 
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -206,7 +225,7 @@ def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [
     return plt
 
 
-def plot_spectrum(S, log=False, show=True, ofile='', title='Spectrum', figsize=None, ylim=None, xlim=None):
+def plot_spectrum(S, log=False, show=True, ofile='', title='Spectrum', figsize=None, ylim=None, xlim=None, transparent=True):
     """Plot the spectrum"""
 
     # Size and limits
@@ -224,7 +243,7 @@ def plot_spectrum(S, log=False, show=True, ofile='', title='Spectrum', figsize=N
     plt.title(title)
 
     if ofile != '':
-        plt.savefig(ofile, bbox_inches='tight')
+        plt.savefig(ofile, bbox_inches='tight', transparent=transparent)
 
     if show == True:
         plt.show()
@@ -233,7 +252,7 @@ def plot_spectrum(S, log=False, show=True, ofile='', title='Spectrum', figsize=N
 
 
 
-def plot_spectra(S, L, show=True, ofile='', title='', loc='upper left', log=False, figsize=None, ylim=None, xlim=None, ret=False):
+def plot_spectra(spectra, label, show=True, ofile='', title='', loc='upper left', log=False, xlabel='Energy [eV]', ylabel='[$\gamma / mm^2 / 0.1\%bw / s$]', figsize=None, ylim=None, xlim=None, ret=False, axis=None, transparent=True):
 
 
     # Size and limits
@@ -241,25 +260,40 @@ def plot_spectra(S, L, show=True, ofile='', title='', loc='upper left', log=Fals
     if ylim is not None: plt.ylim(ylim[0], ylim[1])
     if xlim is not None: plt.xlim(xlim[0], xlim[1])
 
-    for i in range(len(S)):
-        s = S[i]
+    for i in range(len(spectra)):
+        s = spectra[i]
         
         X = [item[0] for item in s]
         Y = [item[1] for item in s]
-        plt.plot(X, Y, label=L[i])
+        if label is not None:
+            if label[i] is not None:
+                plt.plot(X, Y, label=label[i])
+            else:
+                plt.plot(X, Y)
+        else:
+            plt.plot(X, Y)
+
 
     if log:
         plt.yscale('log')
         
     plt.legend(loc=loc)
-    plt.xlabel('Energy [eV]')
-    plt.ylabel('[$\gamma / mm^2 / 0.1\%bw / s$]')
+    if xlabel is not None:
+        plt.xlabel(xlabel)
+    if ylabel is not None:
+        plt.ylabel(ylabel)
     if title == '':
         title='Spectrum'
-    plt.title(title)
+    elif title == None:
+        pass
+    else:
+        plt.title(title)
     
+    if axis is not None:
+        plt.axis(axis)
+
     if ofile != '':
-        plt.savefig(ofile, bbox_inches='tight')
+        plt.savefig(ofile, bbox_inches='tight', transparent=transparent)
 
     if show == True:
         plt.show()

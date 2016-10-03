@@ -102,9 +102,15 @@ class SRS
     void CalculateSpectrum (TVector3D const&, std::vector<double> const&);
 
     void AddToSpectrum (TSpectrumContainer const&, double const Weight = 1);
+    void AddToFlux (T3DScalarContainer const&, double const Weight = 1);
+    void AddToPowerDensity (T3DScalarContainer const&, double const Weight = 1);
 
     TSpectrumContainer const& GetSpectrum () const;
     void ClearSpectrum ();
+    T3DScalarContainer const& GetFlux () const;
+    void ClearFlux ();
+    T3DScalarContainer const& GetPowerDensity () const;
+    void ClearPowerDensity ();
 
     // Power Density calculation
     void CalculatePowerDensity (TParticleA&, TSurfacePoints const&, int const Dimension = 3, bool const Directional = true, double const Weight = 1, std::string const& OutFileName = "");
@@ -158,6 +164,8 @@ class SRS
 
     // Spectrum container
     TSpectrumContainer fSpectrum;
+    T3DScalarContainer fFlux;
+    T3DScalarContainer fPowerDensity;
 
     // Global thread and GPU settings
     int fNThreadsGlobal;

@@ -2,6 +2,7 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from math import sqrt
 
 def power_density_3d(srs, surface,
                     normal=1, rotations=[0, 0, 0], translation=[0, 0, 0], nparticles=0, gpu=0, nthreads=0,
@@ -83,3 +84,105 @@ def power_density_3d(srs, surface,
         plt.show()
     
     return plt
+
+
+
+
+
+def plot_bfield2D (srs, xlim=[-0.001, 0.001], zlim=[-1, 1], nx=20, nz=50):
+    """plot the bfield in 3D vector form"""
+
+    xx = []
+    zz = []
+    uu = []
+    ww = []
+    cc = []
+    BMax = 1.
+
+
+
+#    for i in np.linspace(xlim[0], xlim[1], nx):
+#        for k in np.linspace(zlim[0], zlim[1], nz):
+#            B = srs.get_bfield([i, 0, k])
+#            BMag = sqrt(B[0]*B[0] + B[1]*B[1] + B[2]*B[2])
+#            if BMag > BMax:
+#                BMax = BMag
+    
+    for i in np.linspace(xlim[0], xlim[1], nx):
+        xt = []
+        zt = []
+        ut = []
+        wt = []
+        ct = []
+        for k in np.linspace(zlim[0], zlim[1], nz):
+            xt.append(i)
+            zt.append(k)
+
+            B = srs.get_bfield([i, 0, k])
+            BMag = sqrt(B[0]*B[0] + B[1]*B[1] + B[2]*B[2])
+
+            ut.append(B[0])
+            wt.append(B[2])
+            ct.append(BMag / BMax)
+
+        xx.append(xt)
+        zz.append(zt)
+        uu.append(ut)
+        ww.append(wt)
+        cc.append(ct)
+
+
+
+
+    plt.figure()
+
+    #plt.quiver(xx, zz, uu, ww, cc, cmap=cm.jet)
+    plt.quiver(xx, zz, uu, ww)
+
+
+    plt.show()
+
+    return
+def plot_bfield3D (srs, xlim=[-0.02, 0.02], ylim=[-0.02, 0.02], zlim=[-0.2, 0.02], nx=10, ny=10, nz=10):
+    """plot the bfield in 3D vector form"""
+
+    BMax = 0.
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+
+
+    dx = (xlim[1] - xlim[0]) / (nx - 1)
+    dy = (ylim[1] - ylim[0]) / (ny - 1)
+    dz = (zlim[1] - zlim[0]) / (nz - 1)
+
+    dl = min([dx, dy, dz])
+
+    for i in np.linspace(xlim[0], xlim[1], nx):
+        for j in np.linspace(ylim[0], ylim[1], ny):
+            for k in np.linspace(zlim[0], zlim[1], nz):
+                B = srs.get_bfield([i, j, k])
+                BMag = sqrt(B[0]*B[0] + B[1]*B[1] + B[2]*B[2])
+                if BMag > BMax:
+                    BMax = BMag
+
+
+    length_scale = dl / BMax
+
+    for i in np.linspace(xlim[0], xlim[1], nx):
+        for j in np.linspace(ylim[0], ylim[1], ny):
+            for k in np.linspace(zlim[0], zlim[1], nz):
+                B = srs.get_bfield([i, j, k])
+                BMag = sqrt(B[0]*B[0] + B[1]*B[1] + B[2]*B[2])
+                ax.quiver([[[i]]], [[[j]]], [[[k]]], [[[B[0]]]], [[[B[1]]]], [[[B[2]]]], length=BMag*length_scale, cmap='Reds')
+
+
+
+
+    ax.set_title('3D Vector Field')             # title
+    ax.view_init(elev=18, azim=30)              # camera elevation and angle
+    ax.dist=8                                   # camera distance
+
+    plt.show()
+
+    return

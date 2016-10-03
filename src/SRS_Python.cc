@@ -1507,6 +1507,39 @@ static PyObject* SRS_GetSpectrumAsList (SRSObject* self, TSpectrumContainer cons
 
 
 
+static PyObject* SRS_GetT3DScalarAsList (SRSObject* self, T3DScalarContainer const& C)
+{
+  // Get the spectrum as a list format for python output
+
+  // Create a python list
+  PyObject *PList = PyList_New(0);
+
+  // Number of points in trajectory calculation
+  size_t NPoints = C.GetNPoints();
+
+  // Loop over all points
+  for (int i = 0; i != NPoints; ++i) {
+    // Create a python list
+    PyObject *PList2 = PyList_New(0);
+
+    PyObject *X = SRS_TVector3DAsList(C.GetPoint(i).GetX());
+    double const V = C.GetPoint(i).GetV();
+
+    // Add position and Beta to list
+    PyList_Append(PList2, X);
+    PyList_Append(PList2, Py_BuildValue("f", V));
+    PyList_Append(PList, PList2);
+  }
+
+  // Return the python list
+  return PList;
+}
+
+
+
+
+
+
 TSpectrumContainer SRS_GetSpectrumFromList (PyObject* List)
 {
   // Take an input list in spectrum format and convert it to TSpectrumContainer object
@@ -1538,6 +1571,45 @@ TSpectrumContainer SRS_GetSpectrumFromList (PyObject* List)
   // Return the object
   return S;
 }
+
+
+
+
+
+
+
+T3DScalarContainer SRS_GetT3DScalarContainerFromList (PyObject* List)
+{
+  // Take an input list and convert it to T3DScalarContainer object
+
+  // Increment reference for list
+  Py_INCREF(List);
+
+  // Get size of input list
+  int const NPoints = PyList_Size(List);
+  if (NPoints <= 0) {
+    throw;
+  }
+
+  T3DScalarContainer F;
+
+  for (int ip = 0; ip != NPoints; ++ip) {
+    PyObject* List_Point = PyList_GetItem(List, ip);
+    if (PyList_Size(List_Point) == 2) {
+      F.AddPoint(SRS_ListAsTVector3D(PyList_GetItem(List_Point, 0)), PyFloat_AsDouble(PyList_GetItem(List_Point, 1)));
+    } else {
+      throw;
+    }
+  }
+
+
+  // Increment reference for list
+  Py_DECREF(List);
+
+  // Return the object
+  return F;
+}
+
 
 
 
@@ -3065,6 +3137,96 @@ static PyObject* SRS_GetSpectrum (SRSObject* self)
 
 
 
+static PyObject* SRS_AddToFlux (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Calculate the flux on a surface given an energy and list of points in 3D
+
+  PyObject*   List_Flux = PyList_New(0);
+  double Weight = 1;
+
+
+  static char *kwlist[] = {"flux", "weight", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|d", kwlist,
+                                                        &List_Flux,
+                                                        &Weight)) {
+    return NULL;
+  }
+
+
+  // Check if there is an input spectrum
+
+  if (PyList_Size(List_Flux) < 1) {
+    PyErr_SetString(PyExc_ValueError, "No points in flux.");
+    return NULL;
+  }
+  T3DScalarContainer F = SRS_GetT3DScalarContainerFromList(List_Flux);
+
+  self->obj->AddToFlux(F, Weight);
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+static PyObject* SRS_GetFlux (SRSObject* self)
+{
+  // Return flux list
+
+  return SRS_GetT3DScalarAsList(self, self->obj->GetFlux());
+}
+
+
+
+
+
+
+static PyObject* SRS_AddToPowerDensity (SRSObject* self, PyObject* args, PyObject *keywds)
+{
+  // Calculate the flux on a surface given an energy and list of points in 3D
+
+  PyObject*   List_PowerDensity = PyList_New(0);
+  double Weight = 1;
+
+
+  static char *kwlist[] = {"flux", "weight", NULL};
+
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|d", kwlist,
+                                                        &List_PowerDensity,
+                                                        &Weight)) {
+    return NULL;
+  }
+
+
+  // Check if there is an input spectrum
+
+  if (PyList_Size(List_PowerDensity) < 1) {
+    PyErr_SetString(PyExc_ValueError, "No points in flux.");
+    return NULL;
+  }
+  T3DScalarContainer F = SRS_GetT3DScalarContainerFromList(List_PowerDensity);
+
+  self->obj->AddToPowerDensity(F, Weight);
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+static PyObject* SRS_GetPowerDensity (SRSObject* self)
+{
+  // Return flux list
+
+  return SRS_GetT3DScalarAsList(self, self->obj->GetPowerDensity());
+}
+
+
+
+
 
 
 
@@ -3339,6 +3501,10 @@ static PyMethodDef SRS_methods[] = {
 
   {"add_to_spectrum",                   (PyCFunction) SRS_AddToSpectrum,                   METH_VARARGS | METH_KEYWORDS, "add to the running average of a spectrum"},
   {"get_spectrum",                      (PyCFunction) SRS_GetSpectrum,                     METH_VARARGS | METH_KEYWORDS, "get the internal to SRS spectrum"},
+  {"add_to_flux",                       (PyCFunction) SRS_AddToFlux,                       METH_VARARGS | METH_KEYWORDS, "add to the running average of a flux"},
+  {"get_flux",                          (PyCFunction) SRS_GetFlux,                         METH_VARARGS | METH_KEYWORDS, "get the internal to SRS flux"},
+  {"add_to_power_density",              (PyCFunction) SRS_AddToPowerDensity,                       METH_VARARGS | METH_KEYWORDS, "add to the running average of a flux"},
+  {"get_power_density",                 (PyCFunction) SRS_GetPowerDensity,                         METH_VARARGS | METH_KEYWORDS, "get the internal to SRS flux"},
 
 
   {"calculate_electric_field",          (PyCFunction) SRS_CalculateElectricFieldTimeDomain,METH_VARARGS | METH_KEYWORDS, "calculate the electric field in the time domain"},
@@ -3426,7 +3592,7 @@ PyMODINIT_FUNC initSRS ()
   // Print copyright notice
   PyObject* sys = PyImport_ImportModule( "sys");
   PyObject* s_out = PyObject_GetAttrString(sys, "stdout");
-  PyObject_CallMethod(s_out, "write", "s", "OSCARS - Open Source Code for Advanced Radiation Simulation\nBrookhaven National Laboratory, Upton NY, USA\nhttp://oscars.bnl.gov\noscars@bnl.gov");
+  PyObject_CallMethod(s_out, "write", "s", "OSCARS - Open Source Code for Advanced Radiation Simulation\nBrookhaven National Laboratory, Upton NY, USA\nhttp://oscars.bnl.gov\noscars@bnl.gov\n\n");
 
 
 }
