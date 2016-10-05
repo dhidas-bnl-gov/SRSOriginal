@@ -6,7 +6,7 @@ from math import sqrt
 
 def power_density_3d(srs, surface,
                     normal=1, rotations=[0, 0, 0], translation=[0, 0, 0], nparticles=0, gpu=0, nthreads=0,
-                    title='Power Density', xlim=None, ylim=None, zlim=None, colorbar=True, figsize=None, alpha=0.4, ofile=None, show=True):
+                    title='Power Density', xlim=None, ylim=None, zlim=None, colorbar=True, figsize=None, alpha=0.4, ofile=None, show=True, view_init=None, axis=None, transparent=True):
     """calculate power density for and plot a parametric surface in 3d"""
 
     points = []
@@ -52,6 +52,8 @@ def power_density_3d(srs, surface,
 
     fig = plt.figure(1, figsize=figsize)
     ax = fig.gca(projection = '3d')
+    if view_init is not None:
+        ax.view_init(view_init[0], view_init[1])
     #ax.view_init(30, -40)
     ax.set_xlabel('X [m]')
     ax.set_ylabel('Z [m]')
@@ -69,16 +71,24 @@ def power_density_3d(srs, surface,
     ax.plot_surface(X2, Z2, Y2, facecolors=cm.jet(colors), cmap=cm.jet, rstride=1, cstride=1, alpha=alpha)
     ax.invert_xaxis()
 
+    if axis is not None:
+        plt.axis(axis)
+
+
     m = cm.ScalarMappable(cmap=cm.jet)
     m.set_array(PP)
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
+    plt.ticklabel_format(style='sci', axis='z', scilimits=(0,0))
     if colorbar is True:
-        plt.colorbar(m)
+        plt.colorbar(m, format='%.0e')
+
 
     plt.title(title)
 
 
     if ofile is not None:
-        plt.savefig(ofile, bbox_inches='tight')
+        plt.savefig(ofile, bbox_inches='tight', transparent=transparent)
 
     if show is True:
         plt.show()

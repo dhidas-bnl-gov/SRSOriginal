@@ -2358,16 +2358,18 @@ void SRS::CalculateFluxThreads (TParticleA& Particle, TSurfacePoints const& Surf
     }
   }
 
-  if (Dimension == 3) {
-    for (int i = 0; i != Surface.GetNPoints(); ++i) {
-      FluxContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+  if (Surface.GetNPoints() == 0) {
+    if (Dimension == 3) {
+      for (int i = 0; i != Surface.GetNPoints(); ++i) {
+        FluxContainer.AddPoint(Surface.GetPoint(i).GetPoint(), 0);
+      }
+    } else if (Dimension == 2) {
+      for (int i = 0; i != Surface.GetNPoints(); ++i) {
+        FluxContainer.AddPoint( TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), 0);
+      }
+    } else {
+      throw;
     }
-  } else if (Dimension == 2) {
-    for (int i = 0; i != Surface.GetNPoints(); ++i) {
-      FluxContainer.AddPoint( TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), 0);
-    }
-  } else {
-    throw;
   }
 
   // Check if NThreads is overriding the default nthreads

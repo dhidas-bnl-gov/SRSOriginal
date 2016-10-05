@@ -49,7 +49,7 @@ def add_power_densities(A, B):
 
 
 
-def plot_trajectory_position(trajectory, show=True, ofile='', axis='Z', figsize=[18, 4.5]):
+def plot_trajectory_position(trajectory, show=True, ofile='', axis='Z', figsize=[18, 4.5], ret=False):
     """Plot the trajectory"""
 
     # Get coordinate lists
@@ -110,7 +110,9 @@ def plot_trajectory_position(trajectory, show=True, ofile='', axis='Z', figsize=
     if show == True:
         plt.show()
 
-    return plt
+    if ret is True:
+        return plt
+    return
 
 
 def plot_trajectory_velocity(trajectory, show=True, ofile=''):
@@ -185,7 +187,7 @@ def plot_power_density(V, title='Power Density [$W / mm^2$]', xlabel='X1 Axis [$
     return plt
 
 
-def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile='', figsize=None, ylim=None, xlim=None, colorbar=True):
+def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile='', figsize=None, ylim=None, xlim=None, colorbar=True, ret=True):
     """Plot a 2D histogram with equal spacing"""
         
     X = [item[0][0] for item in V]
@@ -210,7 +212,6 @@ def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [
     plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     if colorbar is True:
         plt.colorbar(format='%.0e')
-        #plt.colorbar()
 
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -222,10 +223,13 @@ def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [
     if show == True:
         plt.show()
 
+    if ret is False:
+        return
+
     return plt
 
 
-def plot_spectrum(S, log=False, show=True, ofile='', title='Spectrum', figsize=None, ylim=None, xlim=None, transparent=True):
+def plot_spectrum(S, log=False, show=True, ofile='', title='Spectrum', figsize=None, ylim=None, xlim=None, transparent=True, ret=False):
     """Plot the spectrum"""
 
     # Size and limits
@@ -248,7 +252,9 @@ def plot_spectrum(S, log=False, show=True, ofile='', title='Spectrum', figsize=N
     if show == True:
         plt.show()
 
-    return plt
+    if ret is True:
+        return plt
+    return
 
 
 
