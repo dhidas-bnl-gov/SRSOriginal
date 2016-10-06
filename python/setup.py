@@ -14,7 +14,7 @@ moduleSRS = Extension('SRS',
                                  'src/TBField3DZRegularized.cc',
                                  'src/TBField3D_Gaussian.cc',
                                  'src/TBField3D_IdealUndulator.cc',
-                                 'src/TBField3D_Uniform.cc',
+                                 'src/TBField3D_UniformBox.cc',
                                  'src/TBFieldContainer.cc',
                                  'src/TBFieldIdeal1D.cc',
                                  'src/TBFieldPythonFunction.cc',
@@ -39,7 +39,7 @@ moduleSRS = Extension('SRS',
                                  'src/TVector3D.cc',
                                  'src/TVector3DC.cc',
                                  'src/TVector4D.cc'],
-                      extra_compile_args=['-std=c++11', '-ansi']
+                      extra_compile_args=['-std=c++11']
                      )
 
 
