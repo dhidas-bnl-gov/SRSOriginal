@@ -20,7 +20,7 @@ EXEOBJS  = $(patsubst exe/%.cc,lib/%.o,$(wildcard exe/*.cc))
 WSTPOBJS  = $(patsubst wstp/%.tm,lib/%_tm.o,$(wildcard wstp/*.tm))
 WSTPCCS  = $(patsubst wstp/%.tm,wstp/%_tm.cc,$(wildcard wstp/*.tm))
 
-SOLIB =  lib/SRS.so
+SOLIB =  lib/OSCARS.so
 
 
 WSPREP = $(WSTPDIR)/wsprep
@@ -35,7 +35,7 @@ mma: bin/SRS_MMA
 wstp/%_tm.cc : wstp/%.tm
 	$(WSPREP) $< -o $@
 
-lib/SRS.so : $(OBJS) $(CUDAOBJS) $(WSTPCCS) $(WSTPOBJS)
+lib/OSCARS.so : $(OBJS) $(CUDAOBJS) $(WSTPCCS) $(WSTPOBJS)
 	$(LD) -Wall -shared $(LIBS) $(WSTPOBJS) $(OBJS) $(CUDAOBJS) -o $@
 
 lib/%.o : src/%.cc
