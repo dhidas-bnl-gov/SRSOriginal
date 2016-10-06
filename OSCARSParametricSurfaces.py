@@ -155,8 +155,8 @@ class PSCylinder:
     def normal (self, u, v):
         """Return a unit normal in 3D at this u and v position"""
 
-        xn = cos(v)
-        yn = sin(v)
+        xn = -cos(v)
+        yn = -sin(v)
         zn = 0
         
         mag = sqrt(xn*xn + yn*yn + zn*zn)
