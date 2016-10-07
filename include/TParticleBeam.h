@@ -17,7 +17,6 @@
 
 #include "TVector3D.h"
 #include "TVector2D.h"
-#include "TTwiss.h"
 
 class TParticleBeam : public TParticleA
 {
@@ -27,15 +26,12 @@ class TParticleBeam : public TParticleA
     TParticleBeam (std::string const&, double const, double const);
     TParticleBeam (std::string const&, TVector3D const&, TVector3D const&, double const, double const);
     TParticleBeam (std::string const&, TVector3D const&, TVector3D const&, double const, double const, double const, double const Charge = 0, double const Mass = 0);
-    TParticleBeam (std::string const&, TVector3D const&, TVector3D const&, double const, double const, double const, TTwiss const&);
     ~TParticleBeam ();
 
 
     void SetInitialConditions (double const, double const, double const, double const, double const, double const, double const, double const);
     void SetInitialConditions (TVector3D const&, TVector3D const&, double const, double const);
 
-    void SetTwissParameters (TTwiss const&);
-    void SetTwissParameters (double const&, double const&, double const&, double const&, TVector3D const&);  // UPDATE: for twiss parameters AT a location
     void SetSigma(TVector3D const&, TVector2D const&, TVector2D const&, TVector3D const&, double const);
 
     TVector3D const& GetX0 () const;
@@ -48,8 +44,6 @@ class TParticleBeam : public TParticleA
     TParticleA GetNewParticle (std::string const&);
 
   private:
-
-    TTwiss fTwiss; // To be UPDATE
 
     TVector3D fX0;  // Coordinates of initial conditions [m]
     TVector3D fU0;  // Direction at fX0 (stored as a unit vector) [unitless]

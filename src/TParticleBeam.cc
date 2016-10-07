@@ -93,25 +93,6 @@ TParticleBeam::TParticleBeam (std::string const& ParticleType, TVector3D const& 
 
 
 
-TParticleBeam::TParticleBeam (std::string const& ParticleType, TVector3D const& X0, TVector3D const& D0, double const Energy, double const T0, double const Current, TTwiss const& Twiss)
-{
-  // Constructor given a particle type.
-
-  this->SetParticleType(ParticleType);
-
-  fX0 = X0;
-  fU0 = D0.UnitVector();
-  fE0 = Energy;
-  fT0 = T0;
-
-  this->SetCurrent(Current);
-
-  fTwiss = Twiss;
-}
-
-
-
-
 TParticleBeam::~TParticleBeam ()
 {
   // Destruction!
