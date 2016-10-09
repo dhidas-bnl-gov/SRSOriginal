@@ -5,7 +5,7 @@ import matplotlib.cm as cm
 from math import sqrt
 
 def power_density_3d(srs, surface,
-                    normal=1, rotations=[0, 0, 0], translation=[0, 0, 0], nparticles=0, gpu=0, nthreads=0,
+                    normal=1, rotations=[0, 0, 0], translation=[0, 0, 0], nparticles=0, gpu=0, nthreads=0, ret=False,
                     title='Power Density', xlim=None, ylim=None, zlim=None, colorbar=True, figsize=None, alpha=0.4, ofile=None, show=True, view_init=None, axis=None, transparent=True):
     """calculate power density for and plot a parametric surface in 3d"""
 
@@ -92,8 +92,10 @@ def power_density_3d(srs, surface,
 
     if show is True:
         plt.show()
-    
-    return plt
+
+    if ret:
+        return plt
+    return
 
 
 
@@ -153,6 +155,8 @@ def plot_bfield2D (srs, xlim=[-0.001, 0.001], zlim=[-1, 1], nx=20, nz=50):
     plt.show()
 
     return
+
+
 def plot_bfield3D (srs, xlim=[-0.02, 0.02], ylim=[-0.02, 0.02], zlim=[-0.2, 0.02], nx=10, ny=10, nz=10):
     """plot the bfield in 3D vector form"""
 

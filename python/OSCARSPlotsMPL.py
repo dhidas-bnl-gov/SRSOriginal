@@ -34,6 +34,8 @@ def write_power_density_csv (P, fileName) :
                 else:
                     f.write(str(z[i * nx + j]) + '\n')
 
+    return
+
 
 
 
@@ -115,7 +117,7 @@ def plot_trajectory_position(trajectory, show=True, ofile='', axis='Z', figsize=
     return
 
 
-def plot_trajectory_velocity(trajectory, show=True, ofile=''):
+def plot_trajectory_velocity(trajectory, show=True, ofile='', ret=False):
     """Plot the trajectory"""
 
     # Get coordinate lists
@@ -150,10 +152,12 @@ def plot_trajectory_velocity(trajectory, show=True, ofile=''):
     if show == True:
         plt.show()
 
-    return plt
+    if ret:
+        return plt
+    return
     
     
-def plot_power_density(V, title='Power Density [$W / mm^2$]', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile='', figsize=None):
+def plot_power_density(V, title='Power Density [$W / mm^2$]', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile='', figsize=None, ret=False):
     """Plot a 2D histogram with equal spacing"""
         
     X = [item[0][0] for item in V]
@@ -184,10 +188,12 @@ def plot_power_density(V, title='Power Density [$W / mm^2$]', xlabel='X1 Axis [$
     if show == True:
         plt.show()
 
-    return plt
+    if ret:
+        return plt
+    return
 
 
-def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile='', figsize=None, ylim=None, xlim=None, colorbar=True, ret=True):
+def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [$m$]', ylabel='X2 Axis [$m$]', show=True, ofile='', figsize=None, ylim=None, xlim=None, colorbar=True, ret=False):
     """Plot a 2D histogram with equal spacing"""
         
     X = [item[0][0] for item in V]
@@ -223,10 +229,9 @@ def plot_flux(V, title='Flux [$\gamma / mm^2 / 0.1\%bw / s]$', xlabel='X1 Axis [
     if show == True:
         plt.show()
 
-    if ret is False:
-        return
-
-    return plt
+    if ret:
+        return plt
+    return
 
 
 def plot_spectrum(S, log=False, show=True, ofile='', title='Spectrum', figsize=None, ylim=None, xlim=None, transparent=True, ret=False):
@@ -312,7 +317,7 @@ def plot_spectra(spectra, label, show=True, ofile='', title='', loc='upper left'
 
 
 
-def plot_magnetic_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', npoints=20000, between_two_points=None):
+def plot_magnetic_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', npoints=20000, between_two_points=None, ret=False):
     """Plot the magnetic field as a function of Z"""
 
 
@@ -377,7 +382,9 @@ def plot_magnetic_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', n
     if show == True:
         plt.show()
 
-    return plt
+    if ret:
+        return plt
+    return
 
 
 
@@ -385,7 +392,7 @@ def plot_magnetic_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', n
 
 
 
-def plot_electric_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', npoints=20000, between_two_points=None):
+def plot_electric_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', npoints=20000, between_two_points=None, ret=False):
     """Plot the magnetic field as a function of Z"""
 
 
@@ -450,7 +457,9 @@ def plot_electric_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', n
     if show == True:
         plt.show()
 
-    return plt
+    if ret:
+        return plt
+    return
 
 
 
@@ -478,7 +487,7 @@ def total_power(pd):
 
 
 
-def plot_electric_field_vs_time(efield, show=True, ofile=''):
+def plot_electric_field_vs_time(efield, show=True, ofile='', ret=False):
     """Plot the electric field as a function of time"""
 
     T  = [item[0]    for item in efield]
@@ -507,7 +516,9 @@ def plot_electric_field_vs_time(efield, show=True, ofile=''):
     plt.ylabel('Ez')
     plt.title('Electric Field (Ez)')
 
-    return plt
+    if ret:
+        return plt
+    return
     
     
     
