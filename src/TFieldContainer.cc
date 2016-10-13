@@ -114,6 +114,15 @@ TVector3D TFieldContainer::GetF (TVector3D const& X) const
 
 
 
+size_t TFieldContainer::GetNFields () const
+{
+  // Return the number of fields input
+  return fFields.size();
+}
+
+
+
+
 void TFieldContainer::Clear ()
 {
   for (std::vector<TField*>::iterator it = fFields.begin(); it != fFields.end(); ++it) {

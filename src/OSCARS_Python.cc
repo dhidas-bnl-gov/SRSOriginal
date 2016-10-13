@@ -846,7 +846,7 @@ static PyObject* OSCARS_AddElectricFieldGaussian (OSCARSObject* self, PyObject* 
   try {
     Field = OSCARS_ListAsTVector3D(List_Field);
   } catch (std::length_error e) {
-    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'bfield'");
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'efield'");
     return NULL;
   }
 

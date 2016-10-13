@@ -11,6 +11,10 @@
 //
 ////////////////////////////////////////////////////////////////////
 
+#define OSCARS_VMAJOR 1
+#define OSCARS_VMINOR 31
+#define OSCARS_REVISION 00d
+
 #include "TOSCARS.h"
 
 #include <string>
@@ -75,6 +79,7 @@ class OSCARS
     TParticleTrajectoryPoints const& GetTrajectory ();
 
     void SetNPointsTrajectory (size_t const);
+    void SetNPointsPerMeter (size_t const);
     void SetCTStartStop (double const, double const);
 
     size_t GetNPointsTrajectory () const;
@@ -144,10 +149,15 @@ class OSCARS
 
   private:
     TBFieldContainer fBFieldContainer;
-    TFieldContainer fEFieldContainer;
+    TFieldContainer  fEFieldContainer;
 
     TParticleBeamContainer fParticleBeamContainer;
 
+    void SetDerivativesFunction ();
+
+    void DerivativesE (double t, double x[], double dxdt[], TParticleA const&);
+    void DerivativesB (double t, double x[], double dxdt[], TParticleA const&);
+    void DerivativesEB (double t, double x[], double dxdt[], TParticleA const&);
     void Derivatives (double t, double x[], double dxdt[], TParticleA const&);
     void RK4 (double y[], double dydx[], int n, double x, double h, double yout[], TParticleA const&);
 
@@ -171,8 +181,8 @@ class OSCARS
     int fNThreadsGlobal;
     bool fUseGPUGlobal;
 
-
-
+    // Function pointer for which function to use in the RK4 propogation
+    void (OSCARS::*fDerivativesFunction)(double, double*, double*, TParticleA const&);
 
 };
 

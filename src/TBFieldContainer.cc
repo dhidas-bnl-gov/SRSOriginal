@@ -114,6 +114,15 @@ TVector3D TBFieldContainer::GetB (TVector3D const& X) const
 
 
 
+size_t TBFieldContainer::GetNFields () const
+{
+  // Return the number of fields that have been inserted
+  return fBFields.size();
+}
+
+
+
+
 void TBFieldContainer::Clear ()
 {
   for (std::vector<TBField*>::iterator it = fBFields.begin(); it != fBFields.end(); ++it) {

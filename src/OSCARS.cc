@@ -38,6 +38,9 @@ OSCARS::OSCARS ()
   fNPointsTrajectory = 0;
   fNPointsPerMeter = 10000;
 
+  // Set derivs function default to E&B (to avoid anything nasty)
+  SetDerivativesFunction();
+
   // Set Global compute settings
   SetUseGPUGlobal(0);   // GPU off by default
   SetNThreadsGlobal(2); // Use N threads for calculations by default
@@ -131,6 +134,8 @@ void OSCARS::AddMagneticField (std::string const FileName, std::string const For
     throw std::invalid_argument("Not implemented yet");
   }
 
+  // Set the derivs function accordingly
+  this->SetDerivativesFunction();
 
   return;
 }
@@ -144,6 +149,9 @@ void OSCARS::AddMagneticField (TBField* Field)
 
   this->fBFieldContainer.AddField(Field);
 
+  // Set the derivs function accordingly
+  this->SetDerivativesFunction();
+
   return;
 }
 
@@ -155,6 +163,9 @@ void OSCARS::ClearMagneticFields ()
   // Add a magnetic field from a file to the field container
 
   this->fBFieldContainer.Clear();
+
+  // Set the derivs function accordingly
+  this->SetDerivativesFunction();
 
   return;
 }
@@ -220,6 +231,9 @@ void OSCARS::AddElectricField (std::string const FileName, std::string const For
   // Add a electric field from a file to the field container
   this->fEFieldContainer.AddField( new TField3DGrid(FileName, Format, Rotations, Translation) );
 
+  // Set the derivs function accordingly
+  this->SetDerivativesFunction();
+
   return;
 }
 
@@ -229,6 +243,9 @@ void OSCARS::AddElectricField (TField* F)
   // Add a electric field from a file to the field container
   this->fEFieldContainer.AddField(F);
 
+  // Set the derivs function accordingly
+  this->SetDerivativesFunction();
+
   return;
 }
 
@@ -237,6 +254,10 @@ void OSCARS::AddElectricField (TField* F)
 void OSCARS::ClearElectricFields ()
 {
   this->fEFieldContainer.Clear();
+
+  // Set the derivs function accordingly
+  this->SetDerivativesFunction();
+
   return;
 }
 
@@ -417,11 +438,28 @@ void OSCARS::SetNPointsTrajectory (size_t const N)
 
 
 
+void OSCARS::SetNPointsPerMeter (size_t const N)
+{
+  // Set this number of points for any trajectory calculations
+  fNPointsPerMeter = N;
+
+  // Set NPoints trajectory if CTStart and CTStop are set
+  if (fCTStart != fCTStop) {
+    this->SetCTStartStop(fCTStart, fCTStop);
+  }
+
+
+  return;
+}
+
+
+
+
 void OSCARS::SetCTStartStop (double const Start, double const Stop)
 {
   // Set the start and stop time in units of m (where v = c)
 
-  // If npoints is zero set this to some default value
+  // Use number of points per meter to scare the trajectory
   fNPointsTrajectory = fNPointsPerMeter * (Stop - Start);
 
   fCTStart = Start;
@@ -587,7 +625,8 @@ void OSCARS::CalculateTrajectory (TParticleA& P)
     ParticleTrajectory.AddPoint(x[0], x[2], x[4], x[1] / TOSCARS::C(), x[3] / TOSCARS::C(), x[5] / TOSCARS::C(), dxdt[1] / TOSCARS::C(), dxdt[3] / TOSCARS::C(), dxdt[5] / TOSCARS::C());
 
     // Propogate
-    this->Derivatives(t, x, dxdt, P);
+    (this->*fDerivativesFunction)(t, x, dxdt, P);
+    //this->DerivativesB(t, x, dxdt, P);
     RK4(x, dxdt, N, t, DeltaT, x, P);
   }
 
@@ -612,7 +651,8 @@ void OSCARS::CalculateTrajectory (TParticleA& P)
     double t = P.GetT0() + DeltaTReversed * (i + 1);
 
     // Propogate backward in time!
-    this->Derivatives(t, x, dxdt, P);
+    (this->*fDerivativesFunction)(t, x, dxdt, P);
+    //this->DerivativesB(t, x, dxdt, P);
     RK4(x, dxdt, N, t, DeltaTReversed, x, P);
 
     // Add the point to the trajectory
@@ -640,8 +680,114 @@ TParticleTrajectoryPoints const& OSCARS::GetTrajectory ()
 
 
 
+void OSCARS::SetDerivativesFunction ()
+{
+  // Set the derivatives function for RK4 depending on what fields exist
+
+  if (fBFieldContainer.GetNFields() == 0 && fEFieldContainer.GetNFields() > 0) {
+    std::cout << "E Field" << std::endl;
+    fDerivativesFunction = &OSCARS::DerivativesE;
+  } else if (fBFieldContainer.GetNFields() > 0 && fEFieldContainer.GetNFields() == 0) {
+    std::cout << "B Field" << std::endl;
+    fDerivativesFunction = &OSCARS::DerivativesB;
+  } else {
+    std::cout << "EB Field" << std::endl;
+    fDerivativesFunction = &OSCARS::DerivativesEB;
+  }
+
+  return;
+}
 
 
+
+
+
+
+
+
+
+void OSCARS::DerivativesE (double t, double x[], double dxdt[], TParticleA const& P)
+{
+  // This is a second order differential equation.  It does not account for the loss in energy due to
+  // radiation.  Although 't' is not used it would be easy to implement a time dependent field
+
+  // The values correspond to:
+  // x[0] - x
+  // x[1] - Vx
+  // x[2] - y
+  // x[3] - Vy
+  // x[4] - z
+  // x[5] - Vz
+
+  // BField at this point
+  TVector3D const E = this->GetE(x[0], x[2], x[4]);
+
+  dxdt[0] = x[1];
+  dxdt[1] = P.GetQoverMGamma() * E.GetX();
+  dxdt[2] = x[3];                                                        
+  dxdt[3] = P.GetQoverMGamma() * E.GetY();
+  dxdt[4] = x[5];                                                        
+  dxdt[5] = P.GetQoverMGamma() * E.GetZ();
+
+  return;
+}
+
+
+
+void OSCARS::DerivativesB (double t, double x[], double dxdt[], TParticleA const& P)
+{
+  // This is a second order differential equation.  It does not account for the loss in energy due to
+  // radiation.  Although 't' is not used it would be easy to implement a time dependent field
+
+  // The values correspond to:
+  // x[0] - x
+  // x[1] - Vx
+  // x[2] - y
+  // x[3] - Vy
+  // x[4] - z
+  // x[5] - Vz
+
+  // BField at this point
+  TVector3D const B = this->GetB(x[0], x[2], x[4]);
+
+  dxdt[0] = x[1];
+  dxdt[1] = P.GetQoverMGamma() * (-x[5] * B.GetY() + x[3] * B.GetZ());
+  dxdt[2] = x[3];                                                                                            
+  dxdt[3] = P.GetQoverMGamma() * ( x[5] * B.GetX() - x[1] * B.GetZ());
+  dxdt[4] = x[5];                                                                                            
+  dxdt[5] = P.GetQoverMGamma() * ( x[1] * B.GetY() - x[3] * B.GetX());
+
+  return;
+}
+
+
+
+void OSCARS::DerivativesEB (double t, double x[], double dxdt[], TParticleA const& P)
+{
+  // This is a second order differential equation.  It does not account for the loss in energy due to
+  // radiation.  Although 't' is not used it would be easy to implement a time dependent field
+
+  // The values correspond to:
+  // x[0] - x
+  // x[1] - Vx
+  // x[2] - y
+  // x[3] - Vy
+  // x[4] - z
+  // x[5] - Vz
+
+  // BField at this point
+  TVector3D const B = this->GetB(x[0], x[2], x[4]);
+  TVector3D const E = this->GetE(x[0], x[2], x[4]);
+
+  dxdt[0] = x[1];
+  dxdt[1] = P.GetQoverMGamma() * (E.GetX() - x[5] * B.GetY() + x[3] * B.GetZ());
+  dxdt[2] = x[3];                                                                                            
+  dxdt[3] = P.GetQoverMGamma() * (E.GetY() + x[5] * B.GetX() - x[1] * B.GetZ());
+  dxdt[4] = x[5];                                                                                            
+  dxdt[5] = P.GetQoverMGamma() * (E.GetZ() + x[1] * B.GetY() - x[3] * B.GetX());
+
+  return;
+}
 
 
 
@@ -694,20 +840,23 @@ void OSCARS::RK4 (double y[], double dydx[], int n, double x, double h, double y
     yt[i] = y[i] + hh * dydx[i];
   }
 
-  this->Derivatives(xh, yt, dyt, P);
+  (this->*fDerivativesFunction)(xh, yt, dyt, P);
+  //this->DerivativesB(xh, yt, dyt, P);
 
   for (i = 0; i < n; ++i) {
     yt[i] = y[i] + hh * dyt[i];
   }
 
-  this->Derivatives(xh, yt, dym, P);
+  (this->*fDerivativesFunction)(xh, yt, dym, P);
+  //this->DerivativesB(xh, yt, dym, P);
 
   for (i = 0; i < n; ++i) {
     yt[i] = y[i] + h * dym[i];
     dym[i] += dyt[i];
   }
 
-  this->Derivatives(x + h, yt, dyt, P);
+  (this->*fDerivativesFunction)(x + h, yt, dyt, P);
+  //this->DerivativesB(x + h, yt, dyt, P);
 
   for (i = 0; i < n; ++i) {
     yout[i] = y[i] + h6 * (dydx[i] + dyt[i] + 2.0 * dym[i]);

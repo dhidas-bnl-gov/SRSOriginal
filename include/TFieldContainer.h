@@ -32,6 +32,8 @@ class TFieldContainer
     TVector3D GetF  (double const, double const, double const) const;
     TVector3D GetF  (TVector3D const&) const;
 
+    size_t GetNFields () const;
+
     void      Clear ();
 
   private:
