@@ -15,8 +15,8 @@
 #include <thread>
 
 #include "TVector3DC.h"
-#include "TBField1DZRegularized.h"
-#include "TBField3DZRegularized.h"
+//#include "TBField1DZRegularized.h"
+//#include "TBField3DZRegularized.h"
 #include "TField3DGrid.h"
 #include "TSpectrumContainer.h"
 #include "TSurfacePoints_Rectangle.h"
@@ -124,7 +124,8 @@ void OSCARS::AddMagneticField (std::string const FileName, std::string const For
     } else if (BDIM == 2) {
       throw std::invalid_argument("Not implemented yet");
     } else if (BDIM == 3) {
-      this->fBFieldContainer.AddField( new TBField3DZRegularized(FileName, Rotation, Translation, Scaling) );
+      // UPDATE: Put this back NOW!!
+      //this->fBFieldContainer.AddField( new TBField3DZRegularized(FileName, Rotation, Translation, Scaling) );
     }
   } else if (XDIM == 2) {
     throw std::invalid_argument("Not implemented yet");
@@ -143,7 +144,7 @@ void OSCARS::AddMagneticField (std::string const FileName, std::string const For
 
 
 
-void OSCARS::AddMagneticField (TBField* Field)
+void OSCARS::AddMagneticField (TField* Field)
 {
   // Add a magnetic field from a file to the field container
 
@@ -176,7 +177,7 @@ void OSCARS::ClearMagneticFields ()
 double OSCARS::GetBx (double const X, double const Y, double const Z) const
 {
   // Return summed Bx from container
-  return this->fBFieldContainer.GetBx(X, Y, Z);
+  return this->fBFieldContainer.GetFx(X, Y, Z);
 }
 
 
@@ -186,7 +187,7 @@ double OSCARS::GetBx (double const X, double const Y, double const Z) const
 double OSCARS::GetBy (double const X, double const Y, double const Z) const
 {
   // Return summed By from container
-  return this->fBFieldContainer.GetBy(X, Y, Z);
+  return this->fBFieldContainer.GetFy(X, Y, Z);
 }
 
 
@@ -196,7 +197,7 @@ double OSCARS::GetBy (double const X, double const Y, double const Z) const
 double OSCARS::GetBz (double const X, double const Y, double const Z) const
 {
   // Return summed Bx from container
-  return this->fBFieldContainer.GetBz(X, Y, Z);
+  return this->fBFieldContainer.GetFz(X, Y, Z);
 }
 
 
@@ -205,7 +206,7 @@ double OSCARS::GetBz (double const X, double const Y, double const Z) const
 TVector3D OSCARS::GetB (double const X, double const Y, double const Z) const
 {
   // Return summed Bx from container
-  return this->fBFieldContainer.GetB(X, Y, Z);
+  return this->fBFieldContainer.GetF(X, Y, Z);
 }
 
 
@@ -214,7 +215,7 @@ TVector3D OSCARS::GetB (double const X, double const Y, double const Z) const
 TVector3D OSCARS::GetB (TVector3D const& X) const
 {
   // Return summed Bx from container
-  return this->fBFieldContainer.GetB(X);
+  return this->fBFieldContainer.GetF(X);
 }
 
 

@@ -1,10 +1,10 @@
-#include "TBFieldPythonFunction.h"
+#include "TFieldPythonFunction.h"
 
 #include <stdexcept>
 
 // UPDATE: exceptions
 
-TBFieldPythonFunction::TBFieldPythonFunction (PyObject* Function)
+TFieldPythonFunction::TFieldPythonFunction (PyObject* Function)
 {
   // Constructor takes a python object, which should be a function
   // Increment reference because we're going to keep it..
@@ -21,7 +21,7 @@ TBFieldPythonFunction::TBFieldPythonFunction (PyObject* Function)
 
 
 
-TBFieldPythonFunction::~TBFieldPythonFunction ()
+TFieldPythonFunction::~TFieldPythonFunction ()
 {
   // When exit, decrement reference since we're done with it
   Py_DECREF(fPythonFunction);
@@ -30,7 +30,7 @@ TBFieldPythonFunction::~TBFieldPythonFunction ()
 
 
 
-TVector3D TBFieldPythonFunction::GetB (TVector3D const& X) const
+TVector3D TFieldPythonFunction::GetF (TVector3D const& X) const
 {
   // Get the magnetic field from a python function.
 
@@ -84,31 +84,31 @@ TVector3D TBFieldPythonFunction::GetB (TVector3D const& X) const
 
 
 
-TVector3D TBFieldPythonFunction::GetB (double const X, double const Y, double const Z) const
+TVector3D TFieldPythonFunction::GetF (double const X, double const Y, double const Z) const
 {
-  return this->GetB(TVector3D(X, Y, Z));
+  return this->GetF(TVector3D(X, Y, Z));
 }
 
 
 
 
-double TBFieldPythonFunction::GetBx (double const X, double const Y, double const Z) const
+double TFieldPythonFunction::GetFx (double const X, double const Y, double const Z) const
 {
-  return this->GetB(X, Y, Z).GetX();
+  return this->GetF(X, Y, Z).GetX();
 }
 
 
 
 
-double TBFieldPythonFunction::GetBy (double const X, double const Y, double const Z) const
+double TFieldPythonFunction::GetFy (double const X, double const Y, double const Z) const
 {
-  return this->GetB(X, Y, Z).GetY();
+  return this->GetF(X, Y, Z).GetY();
 }
 
 
 
 
-double TBFieldPythonFunction::GetBz (double const X, double const Y, double const Z) const
+double TFieldPythonFunction::GetFz (double const X, double const Y, double const Z) const
 {
-  return this->GetB(X, Y, Z).GetZ();
+  return this->GetF(X, Y, Z).GetZ();
 }

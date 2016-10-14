@@ -20,7 +20,6 @@
 #include <string>
 
 #include "OSCARS_Cuda.h"
-#include "TBFieldContainer.h"
 #include "TFieldContainer.h"
 #include "TParticleBeamContainer.h"
 #include "TSurfacePoints.h"
@@ -41,7 +40,7 @@ class OSCARS
 
     // Functions related to the magnetic field
     void AddMagneticField (std::string const, std::string const, TVector3D const& R = TVector3D(0, 0, 0), TVector3D const& D = TVector3D(0, 0, 0), std::vector<double> const& S = std::vector<double>());
-    void AddMagneticField (TBField*);
+    void AddMagneticField (TField*);
     void ClearMagneticFields ();
 
     void AddElectricField (std::string const, std::string const, TVector3D const& R = TVector3D(0, 0, 0), TVector3D const& D = TVector3D(0, 0, 0), std::vector<double> const& S = std::vector<double>());
@@ -148,7 +147,7 @@ class OSCARS
     void CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer&, TParticleA& Particle);
 
   private:
-    TBFieldContainer fBFieldContainer;
+    TFieldContainer  fBFieldContainer;
     TFieldContainer  fEFieldContainer;
 
     TParticleBeamContainer fParticleBeamContainer;

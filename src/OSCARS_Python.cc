@@ -19,11 +19,10 @@
 #include "TSurfacePoints_Rectangle.h"
 #include "TSurfacePoints_3D.h"
 #include "T3DScalarContainer.h"
-#include "TBFieldPythonFunction.h"
-#include "TBField3D_Gaussian.h"
+#include "TFieldPythonFunction.h"
 #include "TField3D_Gaussian.h"
-#include "TBField3D_UniformBox.h"
-#include "TBField3D_IdealUndulator.h"
+#include "TField3D_UniformBox.h"
+#include "TField3D_IdealUndulator.h"
 #include "TRandomA.h"
 
 #include <iostream>
@@ -399,7 +398,7 @@ static PyObject* OSCARS_AddMagneticFieldFunction (OSCARSObject* self, PyObject* 
 
   // Add the function as a field to the OSCARS object
   try {
-    self->obj->AddMagneticField( (TBField*) new TBFieldPythonFunction(Function));
+    self->obj->AddMagneticField( (TField*) new TFieldPythonFunction(Function));
   } catch (std::invalid_argument e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
@@ -485,7 +484,7 @@ static PyObject* OSCARS_AddMagneticFieldGaussian (OSCARSObject* self, PyObject* 
   }
 
   // Add field
-  self->obj->AddMagneticField( (TBField*) new TBField3D_Gaussian(BField, Translation, Sigma, Rotations));
+  self->obj->AddMagneticField( (TField*) new TField3D_Gaussian(BField, Translation, Sigma, Rotations));
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -565,7 +564,7 @@ static PyObject* OSCARS_AddMagneticFieldUniform (OSCARSObject* self, PyObject* a
   }
 
   // Add the field
-  self->obj->AddMagneticField((TBField*) new TBField3D_UniformBox(BField, Width, Translation, Rotations));
+  self->obj->AddMagneticField((TField*) new TField3D_UniformBox(BField, Width, Translation, Rotations));
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -669,7 +668,7 @@ static PyObject* OSCARS_AddMagneticFieldIdealUndulator (OSCARSObject* self, PyOb
 
 
   // Add field
-  self->obj->AddMagneticField( (TBField*) new TBField3D_IdealUndulator(BField, Period, NPeriods, Translation, Phase));
+  self->obj->AddMagneticField( (TField*) new TField3D_IdealUndulator(BField, Period, NPeriods, Translation, Phase));
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);

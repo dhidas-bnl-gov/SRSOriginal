@@ -8,13 +8,13 @@
 //
 ////////////////////////////////////////////////////////////////////
 
-#include "TBField3D_UniformBox.h"
+#include "TField3D_UniformBox.h"
 
 #include <cmath>
 
-TBField3D_UniformBox::TBField3D_UniformBox (double const Bx, double const By, double const Bz)
+TField3D_UniformBox::TField3D_UniformBox (double const Fx, double const Fy, double const Fz)
 {
-  fBField = TVector3D(Bx, By, Bz);
+  fField = TVector3D(Fx, Fy, Fz);
   fWidth  = TVector3D(0, 0, 0);
   fCenter = TVector3D(0, 0, 0);
   fRotated = TVector3D(0, 0, 0);
@@ -27,10 +27,10 @@ TBField3D_UniformBox::TBField3D_UniformBox (double const Bx, double const By, do
 
 
 
-TBField3D_UniformBox::TBField3D_UniformBox (TVector3D const& BField, TVector3D const& Width, TVector3D const& Center, TVector3D const& Rotations)
+TField3D_UniformBox::TField3D_UniformBox (TVector3D const& Field, TVector3D const& Width, TVector3D const& Center, TVector3D const& Rotations)
 {
-  fBField = BField;
-  fBField.RotateSelfXYZ(Rotations);
+  fField = Field;
+  fField.RotateSelfXYZ(Rotations);
 
   fWidth  = Width;
   fCenter = Center;
@@ -52,49 +52,49 @@ TBField3D_UniformBox::TBField3D_UniformBox (TVector3D const& BField, TVector3D c
 }
 
 
-TBField3D_UniformBox::~TBField3D_UniformBox ()
+TField3D_UniformBox::~TField3D_UniformBox ()
 {
   // Destruction!
 }
 
 
-double TBField3D_UniformBox::GetBx (double const X, double const Y, double const Z) const
+double TField3D_UniformBox::GetFx (double const X, double const Y, double const Z) const
 {
-  return this->GetB(TVector3D(X, Y, Z)).GetX();
+  return this->GetF(TVector3D(X, Y, Z)).GetX();
 }
 
 
 
 
-double TBField3D_UniformBox::GetBy (double const X, double const Y, double const Z) const
+double TField3D_UniformBox::GetFy (double const X, double const Y, double const Z) const
 {
-  return this->GetB(TVector3D(X, Y, Z)).GetY();
+  return this->GetF(TVector3D(X, Y, Z)).GetY();
 }
 
 
 
 
-double TBField3D_UniformBox::GetBz (double const X, double const Y, double const Z) const
+double TField3D_UniformBox::GetFz (double const X, double const Y, double const Z) const
 {
-  return this->GetB(TVector3D(X, Y, Z)).GetZ();
+  return this->GetF(TVector3D(X, Y, Z)).GetZ();
 }
 
 
 
 
-TVector3D TBField3D_UniformBox::GetB (double const X, double const Y, double const Z) const
+TVector3D TField3D_UniformBox::GetF (double const X, double const Y, double const Z) const
 {
-  return this->GetB(TVector3D(X, Y, Z));
+  return this->GetF(TVector3D(X, Y, Z));
 }
 
 
 
 
-TVector3D TBField3D_UniformBox::GetB (TVector3D const& X) const
+TVector3D TField3D_UniformBox::GetF (TVector3D const& X) const
 {
   // Get the magnetic field at a point in space.
 
-  // If you rotate the object the field is rotated in fBField and the coordinate rotation is done here
+  // If you rotate the object the field is rotated in fField and the coordinate rotation is done here
 
   // Translate back into box frame
   TVector3D XInBoxCoordinates = X;
@@ -107,7 +107,7 @@ TVector3D TBField3D_UniformBox::GetB (TVector3D const& X) const
     return TVector3D(0, 0, 0);
   }
 
-  return fBField;
+  return fField;
 }
 
 
