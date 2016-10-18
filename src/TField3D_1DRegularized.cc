@@ -1,11 +1,11 @@
-#include "TBField3DZRegularized.h"
+#include "TField3D_1DRegularized.h"
 
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <algorithm>
 
-TBField3DZRegularized::TBField3DZRegularized ()
+TField3D_1DRegularized::TField3D_1DRegularized ()
 {
   // Default constructor
 
@@ -15,7 +15,7 @@ TBField3DZRegularized::TBField3DZRegularized ()
 
 
 
-TBField3DZRegularized::TBField3DZRegularized (std::string const& InFileName)
+TField3D_1DRegularized::TField3D_1DRegularized (std::string const& InFileName)
 {
   // Constructor.
 
@@ -28,7 +28,7 @@ TBField3DZRegularized::TBField3DZRegularized (std::string const& InFileName)
 
 
 
-TBField3DZRegularized::TBField3DZRegularized (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
+TField3D_1DRegularized::TField3D_1DRegularized (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Constructor.
 
@@ -41,7 +41,7 @@ TBField3DZRegularized::TBField3DZRegularized (std::string const& InFileName, TVe
 
 
 
-TBField3DZRegularized::TBField3DZRegularized (std::string const& InFileName, size_t const N)
+TField3D_1DRegularized::TField3D_1DRegularized (std::string const& InFileName, size_t const N)
 {
   // Constructor.
 
@@ -54,7 +54,7 @@ TBField3DZRegularized::TBField3DZRegularized (std::string const& InFileName, siz
 
 
 
-TBField3DZRegularized::TBField3DZRegularized (TBField3DZ& BF)
+TField3D_1DRegularized::TField3D_1DRegularized (TField3D_1D& F)
 {
   // Constructor.
 
@@ -62,12 +62,12 @@ TBField3DZRegularized::TBField3DZRegularized (TBField3DZ& BF)
   fZNPointsPerMeter = 0;
 
   // Regularize
-  this->RegularizeField(BF);
+  this->RegularizeField(F);
 }
 
 
 
-TBField3DZRegularized::TBField3DZRegularized (TBField3DZ& BF, size_t const N)
+TField3D_1DRegularized::TField3D_1DRegularized (TField3D_1D& F, size_t const N)
 {
   // Constructor.
 
@@ -75,42 +75,42 @@ TBField3DZRegularized::TBField3DZRegularized (TBField3DZ& BF, size_t const N)
   fZNPointsPerMeter = N;
 
   // Regularize
-  this->RegularizeField(BF);
+  this->RegularizeField(F);
 }
 
 
 
-TBField3DZRegularized::~TBField3DZRegularized ()
+TField3D_1DRegularized::~TField3D_1DRegularized ()
 {
   // Destructor!!
 }
 
 
 
-bool TBField3DZRegularized::ReadFile (std::string const& InFileName)
+bool TField3D_1DRegularized::ReadFile (std::string const& InFileName)
 {
-  // This function will take a field in any order, create a TBField3DZ, and
-  // store the regularized field while discarding the TBField3DZ.
+  // This function will take a field in any order, create a TField3D_1D, and
+  // store the regularized field while discarding the TField3D_1D.
 
-  TBField3DZ BF(InFileName);
-  this->RegularizeField(BF);
+  TField3D_1D F(InFileName);
+  this->RegularizeField(F);
   return true;
 }
 
 
 
-bool TBField3DZRegularized::ReadFile (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
+bool TField3D_1DRegularized::ReadFile (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // UPDATE: Comment function
 
-  TBField3DZ BF(InFileName, Rotation, Translation, Scaling);
-  this->RegularizeField(BF);
+  TField3D_1D F(InFileName, Rotation, Translation, Scaling);
+  this->RegularizeField(F);
   return true;
 }
 
 
 
-bool TBField3DZRegularized::ReadFileRegularized (std::string const& InFileName)
+bool TField3D_1DRegularized::ReadFileRegularized (std::string const& InFileName)
 {
   // Read an input file in the format of:
   //   Z Bx By Bz
@@ -124,7 +124,7 @@ bool TBField3DZRegularized::ReadFileRegularized (std::string const& InFileName)
   // Open the input file.  If !f return a false
   std::ifstream f(InFileName.c_str());
   if (!f) {
-    std::cerr << "ERROR: TBField3DZ::ReadFile cannot open file: " << InFileName << std::endl;
+    std::cerr << "ERROR: TField3D_1D::ReadFile cannot open file: " << InFileName << std::endl;
     return false;
   }
 
@@ -156,7 +156,7 @@ bool TBField3DZRegularized::ReadFileRegularized (std::string const& InFileName)
 
     // Check the stream to see if it is not good
     if (Iine.fail()) {
-      std::cerr << "ERROR: TBField3DZRegularized::ReadFileRegularized: data format error on this line: " << Line << std::endl;
+      std::cerr << "ERROR: TField3D_1DRegularized::ReadFileRegularized: data format error on this line: " << Line << std::endl;
       throw;
     }
 
@@ -170,10 +170,10 @@ bool TBField3DZRegularized::ReadFileRegularized (std::string const& InFileName)
     }
 
     // Save in field vector
-    //fBField.push_back({ {Bx, By, Bz} });
+    //fField.push_back({ {Bx, By, Bz} });
     // For nvcc compatibility
     std::array<double, 3> myarray = { {Bx, By, Bz} };
-    fBField.push_back(myarray);
+    fField.push_back(myarray);
 
 
   }
@@ -183,7 +183,7 @@ bool TBField3DZRegularized::ReadFileRegularized (std::string const& InFileName)
 
   // Basic check of inputs
   if (fZNPoints <= 1 || fZLastPoint <= fZFirstPoint) {
-    std::cerr << "ERROR: TBField3DZRegularized::ReadFile data format problem in input file" << std::endl;
+    std::cerr << "ERROR: TField3D_1DRegularized::ReadFile data format problem in input file" << std::endl;
     throw;
     return false;
   }
@@ -199,18 +199,18 @@ bool TBField3DZRegularized::ReadFileRegularized (std::string const& InFileName)
 
 
 
-bool TBField3DZRegularized::SaveAs (std::string const& OutFileName, std::string const& Comment)
+bool TField3D_1DRegularized::SaveAs (std::string const& OutFileName, std::string const& Comment)
 {
   // Save the magnetic field data as a text file with the name given
   // A comment can be placed at the top in addition to the format comment
 
   // Print message about saving file
-  std::cout << "TBField3DZRegularized::SaveAs saving file as: " << OutFileName << std::endl;
+  std::cout << "TField3D_1DRegularized::SaveAs saving file as: " << OutFileName << std::endl;
 
   // Open the output file
   std::ofstream f(OutFileName.c_str());
   if (!f) {
-    std::cerr << "ERROR: TBField3DZRegularized::SaveAs cannot open file for writing: " << OutFileName << std::endl;
+    std::cerr << "ERROR: TField3D_1DRegularized::SaveAs cannot open file for writing: " << OutFileName << std::endl;
     return false;
   }
 
@@ -220,11 +220,11 @@ bool TBField3DZRegularized::SaveAs (std::string const& OutFileName, std::string 
   }
   f << "# [Z in meters] [By in Tesla]" << std::endl;
 
-  // Write BField
+  // Write Field
   double Z;
-  for (size_t i = 0; i != fBField.size(); ++i) {
+  for (size_t i = 0; i != fField.size(); ++i) {
     Z = fZFirstPoint + fZStepSize * (double) i;
-    f << Z << " " << fBField[i][0] << " " << fBField[i][1]<< " " << fBField[i][2] << "\n";
+    f << Z << " " << fField[i][0] << " " << fField[i][1]<< " " << fField[i][2] << "\n";
   }
 
   // Close file
@@ -237,40 +237,40 @@ bool TBField3DZRegularized::SaveAs (std::string const& OutFileName, std::string 
 
 
 
-double TBField3DZRegularized::GetBx (double const X, double const Y, double const Z) const
+double TField3D_1DRegularized::GetFx (double const X, double const Y, double const Z) const
 {
-  return this->GetBxAtZ(Z);
+  return this->GetFxAtZ(Z);
 }
 
 
 
-double TBField3DZRegularized::GetBy (double const X, double const Y, double const Z) const
+double TField3D_1DRegularized::GetFy (double const X, double const Y, double const Z) const
 {
-  return this->GetByAtZ(Z);
-}
-
-
-
-
-double TBField3DZRegularized::GetBz (double const X, double const Y, double const Z) const
-{
-  return this->GetBzAtZ(Z);
+  return this->GetFyAtZ(Z);
 }
 
 
 
 
-TVector3D TBField3DZRegularized::GetB (double const X, double const Y, double const Z) const
+double TField3D_1DRegularized::GetFz (double const X, double const Y, double const Z) const
 {
-  return this->GetB(TVector3D(X, Y, Z));
+  return this->GetFzAtZ(Z);
 }
 
 
 
 
-TVector3D TBField3DZRegularized::GetB (TVector3D const& P) const
+TVector3D TField3D_1DRegularized::GetF (double const X, double const Y, double const Z) const
 {
-  return TVector3D(this->GetBxAtZ(P.GetZ()), this->GetByAtZ(P.GetZ()), this->GetBzAtZ(P.GetZ()));
+  return this->GetF(TVector3D(X, Y, Z));
+}
+
+
+
+
+TVector3D TField3D_1DRegularized::GetF (TVector3D const& P) const
+{
+  return TVector3D(this->GetFxAtZ(P.GetZ()), this->GetFyAtZ(P.GetZ()), this->GetFzAtZ(P.GetZ()));
 }
 
 
@@ -280,7 +280,7 @@ TVector3D TBField3DZRegularized::GetB (TVector3D const& P) const
 
 
 
-double TBField3DZRegularized::GetBxAtZ (double const Z) const
+double TField3D_1DRegularized::GetFxAtZ (double const Z) const
 {
   // Return the estimated Bx at a given Z based on grid and linear interpolation.
   // If the requested Z position is outside of fZFirstPoint and fZLastPoint zero is
@@ -296,12 +296,12 @@ double TBField3DZRegularized::GetBxAtZ (double const Z) const
   int    const j = (int) i;
 
   // Return linear estimate of the field based on the two points on either side
-  return fBField[j][0] + ((fBField[j+1][0] - fBField[j][0]) * (i - (double) j));
+  return fField[j][0] + ((fField[j+1][0] - fField[j][0]) * (i - (double) j));
 }
 
 
 
-double TBField3DZRegularized::GetByAtZ (double const Z) const
+double TField3D_1DRegularized::GetFyAtZ (double const Z) const
 {
   // Return the estimated By at a given Z based on grid and linear interpolation.
   // If the requested Z position is outside of fZFirstPoint and fZLastPoint zero is
@@ -317,12 +317,12 @@ double TBField3DZRegularized::GetByAtZ (double const Z) const
   int    const j = (int) i;
 
   // Return linear estimate of the field based on the two points on either side
-  return fBField[j][1] + ((fBField[j+1][1] - fBField[j][1]) * (i - (double) j));
+  return fField[j][1] + ((fField[j+1][1] - fField[j][1]) * (i - (double) j));
 }
 
 
 
-double TBField3DZRegularized::GetBzAtZ (double const Z) const
+double TField3D_1DRegularized::GetFzAtZ (double const Z) const
 {
   // Return the estimated Bz at a given Z based on grid and linear interpolation.
   // If the requested Z position is outside of fZFirstPoint and fZLastPoint zero is
@@ -338,12 +338,12 @@ double TBField3DZRegularized::GetBzAtZ (double const Z) const
   int    const j = (int) i;
 
   // Return linear estimate of the field based on the two points on either side
-  return fBField[j][2] + ((fBField[j+1][2] - fBField[j][2]) * (i - (double) j));
+  return fField[j][2] + ((fField[j+1][2] - fField[j][2]) * (i - (double) j));
 }
 
 
 
-void TBField3DZRegularized::SetZNPointsPerMeter (size_t const N)
+void TField3D_1DRegularized::SetZNPointsPerMeter (size_t const N)
 {
   // Set the number of points per meter in z direction
   fZNPointsPerMeter = N;
@@ -354,13 +354,13 @@ void TBField3DZRegularized::SetZNPointsPerMeter (size_t const N)
 
 
 
-bool TBField3DZRegularized::RegularizeField (TBField3DZ& InField)
+bool TField3D_1DRegularized::RegularizeField (TField3D_1D& InField)
 {
-  // If the number of points per meter is specified use it, otherwise use the default in TBField3DZ
+  // If the number of points per meter is specified use it, otherwise use the default in TField3D_1D
   if (fZNPointsPerMeter != 0) {
-    InField.Regularize(fBField, fZFirstPoint, fZLastPoint, fZStepSize, fZNPointsPerMeter);
+    InField.Regularize(fField, fZFirstPoint, fZLastPoint, fZStepSize, fZNPointsPerMeter);
   } else {
-    InField.Regularize(fBField, fZFirstPoint, fZLastPoint, fZStepSize);
+    InField.Regularize(fField, fZFirstPoint, fZLastPoint, fZStepSize);
   }
   return true;
 }

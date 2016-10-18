@@ -17,8 +17,7 @@
 #include <sstream>
 
 #include "TVector3DC.h"
-#include "TBField1DZRegularized.h"
-#include "TBField3DZRegularized.h"
+#include "TField3D_1DRegularized.h"
 #include "TSpectrumContainer.h"
 
 

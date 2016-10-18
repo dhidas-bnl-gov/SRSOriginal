@@ -15,9 +15,9 @@
 #include <thread>
 
 #include "TVector3DC.h"
-//#include "TBField1DZRegularized.h"
-//#include "TBField3DZRegularized.h"
-#include "TField3DGrid.h"
+//#include "TField1D_1DRegularized.h"
+#include "TField3D_1DRegularized.h"
+#include "TField3D_Grid.h"
 #include "TSpectrumContainer.h"
 #include "TSurfacePoints_Rectangle.h"
 
@@ -55,84 +55,106 @@ OSCARS::~OSCARS ()
 
 
 
-void OSCARS::AddMagneticField (std::string const FileName, std::string const Format, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
+
+std::string OSCARS::GetVersionString ()
+{
+  char ver[200];
+  sprintf(ver, "%i.%02i.%02i", OSCARS_VMAJOR, OSCARS_VMINOR, OSCARS_REVISION);
+  return std::string(ver);
+}
+
+
+
+
+void OSCARS::AddMagneticField (std::string const FileName, std::string const Format, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Add a magnetic field from a file to the field container
 
-  std::vector<bool> HasXB(6, false);
+  // Format string all upper-case (just in case you like to type L.C.).
+  std::string FormatUpperCase = Format;
+  std::transform(FormatUpperCase.begin(), FormatUpperCase.end(), FormatUpperCase.begin(), ::toupper);
 
-  std::vector<int> Order(6, -1);
-
-  std::istringstream s;
-  s.str(Format);
-
-  std::string c;
-  int i = 0;
-  int XDIM = 0;
-  int BDIM = 0;
-  while (s >> c) {
-
-
-    if (c == "X") {
-      Order[0] = i;
-      ++XDIM;
-    } else if (c == "Y") {
-      Order[1] = i;
-      ++XDIM;
-    } else if (c == "Z") {
-      Order[2] = i;
-      ++XDIM;
-    } else if (c == "Bx") {
-      Order[3] = i;
-      ++BDIM;
-    } else if (c == "By") {
-      Order[4] = i;
-      ++BDIM;
-    } else if (c == "Bz") {
-      Order[5] = i;
-      ++BDIM;
-    } else {
-      std::cerr << "ERROR: Incorrect format" << std::endl;
-      throw std::invalid_argument("only excepts X Y Z Bx By Bz");
-    }
-
-    ++i;
-  }
-
-
-  if (XDIM > 3 || BDIM > 3) {
-    std::cerr << "ERROR: spatial or B-field dimensions are too large(>3)" << std::endl;
-    throw std::out_of_range("spatial or B-field dimensions are too large");
-  }
-
-  std::vector<size_t> PrefOrder;
-  for (size_t j = 0; j != 6; ++j) {
-    if (Order[j] != -1) {
-      HasXB[i] = true;
-
-      PrefOrder.push_back(Order[j]);
-    }
-  }
-
-  // UPDATE: This needs to be fully 3D
-
-  if (XDIM == 1) {
-    if (BDIM == 1) {
-      throw std::invalid_argument("Not implemented yet");
-      //this->fBFieldContainer.AddField( new TBField1DZRegularized(FileName) );
-      //this->fBFieldContainer.AddField( new TBField1DZRegularized(FileName, Rotation, Translation, Scaling) );
-    } else if (BDIM == 2) {
-      throw std::invalid_argument("Not implemented yet");
-    } else if (BDIM == 3) {
-      // UPDATE: Put this back NOW!!
-      //this->fBFieldContainer.AddField( new TBField3DZRegularized(FileName, Rotation, Translation, Scaling) );
-    }
-  } else if (XDIM == 2) {
-    throw std::invalid_argument("Not implemented yet");
-  } else if (XDIM == 3) {
-    throw std::invalid_argument("Not implemented yet");
+  if (FormatUpperCase == "OSCARS" || FormatUpperCase == "SRW" || FormatUpperCase == "SPECTRA") {
+    this->fBFieldContainer.AddField( new TField3D_Grid(FileName, Format, Rotations, Translation) );
   } else {
-    throw std::invalid_argument("Not implemented yet");
+
+
+
+
+    std::vector<bool> HasXB(6, false);
+
+    std::vector<int> Order(6, -1);
+
+    std::istringstream s;
+    s.str(Format);
+
+    std::string c;
+    int i = 0;
+    int XDIM = 0;
+    int BDIM = 0;
+    while (s >> c) {
+
+
+      if (c == "X") {
+        Order[0] = i;
+        ++XDIM;
+      } else if (c == "Y") {
+        Order[1] = i;
+        ++XDIM;
+      } else if (c == "Z") {
+        Order[2] = i;
+        ++XDIM;
+      } else if (c == "Bx") {
+        Order[3] = i;
+        ++BDIM;
+      } else if (c == "By") {
+        Order[4] = i;
+        ++BDIM;
+      } else if (c == "Bz") {
+        Order[5] = i;
+        ++BDIM;
+      } else {
+        std::cerr << "ERROR: Incorrect format" << std::endl;
+        throw std::invalid_argument("only excepts X Y Z Bx By Bz");
+      }
+
+      ++i;
+    }
+
+    // At the moment only support 1D irregular grid
+    if (XDIM != 1) {
+      std::cerr << "ERROR: spatial or B-field dimensions are too large(>3)" << std::endl;
+      throw std::out_of_range("spatial or B-field dimensions are too large");
+    }
+
+    // Order of inputs as read from format line
+    std::vector<size_t> PrefOrder;
+    for (size_t j = 0; j != 6; ++j) {
+      if (Order[j] != -1) {
+        HasXB[i] = true;
+
+        PrefOrder.push_back(Order[j]);
+      }
+    }
+
+    if (XDIM == 1) {
+      if (BDIM == 1) {
+        throw std::invalid_argument("Not implemented yet");
+        //this->fBFieldContainer.AddField( new TField1DZRegularized(FileName) );
+        //this->fBFieldContainer.AddField( new TField1DZRegularized(FileName, Rotations, Translation, Scaling) );
+      } else if (BDIM == 2) {
+        throw std::invalid_argument("Not implemented yet");
+      } else if (BDIM == 3) {
+        // UPDATE: Put this back NOW!!
+        this->fBFieldContainer.AddField( new TField3D_1DRegularized(FileName, Rotations, Translation, Scaling) );
+      }
+    } else if (XDIM == 2) {
+      throw std::invalid_argument("Not implemented yet");
+    } else if (XDIM == 3) {
+      throw std::invalid_argument("Not implemented yet");
+    } else {
+      throw std::invalid_argument("Not implemented yet");
+    }
   }
 
   // Set the derivs function accordingly
@@ -230,7 +252,7 @@ TVector3D OSCARS::GetB (TVector3D const& X) const
 void OSCARS::AddElectricField (std::string const FileName, std::string const Format, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Add a electric field from a file to the field container
-  this->fEFieldContainer.AddField( new TField3DGrid(FileName, Format, Rotations, Translation) );
+  this->fEFieldContainer.AddField( new TField3D_Grid(FileName, Format, Rotations, Translation) );
 
   // Set the derivs function accordingly
   this->SetDerivativesFunction();
@@ -1009,8 +1031,6 @@ void OSCARS::CalculateSpectrumPoint (TParticleA& Particle, TVector3D const& Obse
     throw std::length_error("no points in trajectory.  Is particle or beam defined?");
   }
 
-  // Number of points in the spectrum container
-  size_t const NEPoints = Spectrum.GetNPoints();
 
   // Constant C0 for calculation
   double const C0 = Particle.GetQ() / (TOSCARS::FourPi() * TOSCARS::C() * TOSCARS::Epsilon0() * TOSCARS::Sqrt2Pi());
@@ -1022,51 +1042,48 @@ void OSCARS::CalculateSpectrumPoint (TParticleA& Particle, TVector3D const& Obse
   std::complex<double> const I(0, 1);
   std::complex<double> const One(1, 0);
 
+  // Angular frequency
+  double const Omega = Spectrum.GetAngularFrequency(i);
 
-  // Loop over all points in the spectrum container
+  // Constant for field calculation
+  std::complex<double> ICoverOmega = I * TOSCARS::C() / Omega;
 
-    // Angular frequency
-    double const Omega = Spectrum.GetAngularFrequency(i);
+  // Constant for calculation
+  std::complex<double> const C1(0, C0 * Omega);
 
-    // Constant for field calculation
-    std::complex<double> ICoverOmega = I * TOSCARS::C() / Omega;
+  // Electric field summation in frequency space
+  TVector3DC SumE(0, 0, 0);
 
-    // Constant for calculation
-    std::complex<double> const C1(0, C0 * Omega);
+  // Loop over all points in trajectory
+  for (int iT = 0; iT != NTPoints; ++iT) {
 
-    // Electric field summation in frequency space
-    TVector3DC SumE(0, 0, 0);
+    // Particle position
+    TVector3D const& X = T.GetX(iT);
 
-    // Loop over all points in trajectory
-    for (int iT = 0; iT != NTPoints; ++iT) {
+    // Particle "Beta" (velocity over speed of light)
+    TVector3D const& B = T.GetB(iT);
 
-      // Particle position
-      TVector3D const& X = T.GetX(iT);
+    // Vector pointing from particle to observer
+    TVector3D const R = ObservationPoint - X;
 
-      // Particle "Beta" (velocity over speed of light)
-      TVector3D const& B = T.GetB(iT);
+    // Unit vector pointing from particl to observer
+    TVector3D const N = R.UnitVector();
 
-      // Vector pointing from particle to observer
-      TVector3D const R = ObservationPoint - X;
+    // Distance from particle to observer
+    double const D = R.Mag();
 
-      // Unit vector pointing from particl to observer
-      TVector3D const N = R.UnitVector();
+    // Exponent for fourier transformed field
+    std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARS::C()));
 
-      // Distance from particle to observer
-      double const D = R.Mag();
+    // Sum in fourier transformed field (integral)
+    SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
+  }
 
-      // Exponent for fourier transformed field
-      std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARS::C()));
+  // Multiply field by Constant C1 and time step
+  SumE *= C1 * DeltaT;
 
-      // Sum in fourier transformed field (integral)
-      SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
-    }
-
-    // Multiply field by Constant C1 and time step
-    SumE *= C1 * DeltaT;
-
-    // Set the flux for this frequency / energy point
-    Spectrum.AddToFlux(i, C2 *  SumE.Dot( SumE.CC() ).real() * Weight);
+  // Set the flux for this frequency / energy point
+  Spectrum.AddToFlux(i, C2 *  SumE.Dot( SumE.CC() ).real() * Weight);
 
 
 
@@ -1097,7 +1114,7 @@ void OSCARS::CalculateSpectrumThreads (TParticleA& Particle, TVector3D const& Ob
   this->CalculateTrajectory(Particle);
 
   // Check if NThreads is overriding the default nthreads
-  int const NThreadsToUse = NThreads > 0 ? NThreads : fNThreadsGlobal;
+  size_t const NThreadsToUse = (size_t) NThreads > 0 ? NThreads : fNThreadsGlobal;
 
   // Calculate the trajectory from scratch
   this->CalculateTrajectory(Particle);
@@ -1108,23 +1125,20 @@ void OSCARS::CalculateSpectrumThreads (TParticleA& Particle, TVector3D const& Ob
   // Number of points in spectrum
   size_t const NPoints = Spectrum.GetNPoints();
 
-  // The stuff left over, like arnold in twins.
-  int const Remainder = NPoints % NThreadsToUse;
-
   // How many threads to start in the first for loop
-  int const NFirst = NPoints > NThreadsToUse ? NThreadsToUse : NPoints;
+  size_t const NFirst = NPoints > NThreadsToUse ? NThreadsToUse : NPoints;
 
   // Start threads and keep in vector
-  for (int io = 0; io != NFirst; ++io) {
+  for (size_t io = 0; io != NFirst; ++io) {
     Threads.push_back(std::thread(&OSCARS::CalculateSpectrumPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), io, Weight));
   }
 
   // Look for threads that end in order, once joined replace with a new thread if we're not yet at the end
-  for (int io = NFirst; io != NPoints + NFirst; ++io) {
-    int const it = io % NFirst;
+  for (size_t io = NFirst; io != NPoints + NFirst; ++io) {
+    size_t const it = io % NFirst;
     Threads[it].join();
     if (io < NPoints) {
-      Threads[it] = std::thread(&OSCARS::CalculateSpectrumPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), io, Weight);
+      Threads[it] = std::thread(&OSCARS::CalculateSpectrumPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), (int) io, Weight);
     }
   }
 
@@ -1821,24 +1835,20 @@ void OSCARS::CalculatePowerDensityThreads (TParticleA& Particle, TSurfacePoints 
   // Number of points in spectrum
   size_t const NPoints = Surface.GetNPoints();
 
-
-  // The stuff left over, like arnold in twins.
-  int const Remainder = NPoints % NThreadsToUse;
-
   // How many threads to start in the first for loop
-  int const NFirst = NPoints > NThreadsToUse ? NThreadsToUse : NPoints;
+  size_t const NFirst = (size_t) NPoints > NThreadsToUse ? NThreadsToUse : NPoints;
 
   // Start threads and keep in vector
-  for (int io = 0; io != NFirst; ++io) {
-    Threads.push_back(std::thread(&OSCARS::CalculatePowerDensityPoint, this, std::ref(Particle), std::ref(Surface), std::ref(PowerDensityContainer), io, Dimension, Directional, Weight));
+  for (size_t io = 0; io != NFirst; ++io) {
+    Threads.push_back(std::thread(&OSCARS::CalculatePowerDensityPoint, this, std::ref(Particle), std::ref(Surface), std::ref(PowerDensityContainer), (int) io, Dimension, Directional, Weight));
   }
 
   // Look for threads that end in order, once joined replace with a new thread if we're not yet at the end
-  for (int io = NFirst; io != NPoints + NFirst; ++io) {
-    int const it = io % NFirst;
+  for (size_t io = NFirst; io != NPoints + NFirst; ++io) {
+    size_t const it = io % NFirst;
     Threads[it].join();
     if (io < NPoints) {
-      Threads[it] = std::thread(&OSCARS::CalculatePowerDensityPoint, this, std::ref(Particle), std::ref(Surface), std::ref(PowerDensityContainer), io, Dimension, Directional, Weight);
+      Threads[it] = std::thread(&OSCARS::CalculatePowerDensityPoint, this, std::ref(Particle), std::ref(Surface), std::ref(PowerDensityContainer), (int) io, Dimension, Directional, Weight);
     }
   }
 
@@ -2125,9 +2135,6 @@ void OSCARS::CalculateFluxPoint (TParticleA& Particle, TSurfacePoints const& Sur
     throw std::length_error("no points in trajectory.  Is particle or beam defined?");
   }
 
-  // Number of points in the spectrum container
-  size_t const NSPoints = Surface.GetNPoints();
-
   // Constant C0 for calculation
   double const C0 = Particle.GetQ() / (TOSCARS::FourPi() * TOSCARS::C() * TOSCARS::Epsilon0() * TOSCARS::Sqrt2Pi());
 
@@ -2148,57 +2155,55 @@ void OSCARS::CalculateFluxPoint (TParticleA& Particle, TSurfacePoints const& Sur
   // Constant for calculation
   std::complex<double> const C1(0, C0 * Omega);
 
-  // Loop over all points in the spectrum container
+  // Obs point
+  TVector3D ObservationPoint = Surface.GetPoint(i).GetPoint();
 
-    // Obs point
-    TVector3D ObservationPoint = Surface.GetPoint(i).GetPoint();
+  // Electric field summation in frequency space
+  TVector3DC SumE(0, 0, 0);
 
-    // Electric field summation in frequency space
-    TVector3DC SumE(0, 0, 0);
+  // Loop over all points in trajectory
+  for (int iT = 0; iT != NTPoints; ++iT) {
 
-    // Loop over all points in trajectory
-    for (int iT = 0; iT != NTPoints; ++iT) {
+    // Particle position
+    TVector3D const& X = T.GetX(iT);
 
-      // Particle position
-      TVector3D const& X = T.GetX(iT);
+    // Particle "Beta" (velocity over speed of light)
+    TVector3D const& B = T.GetB(iT);
 
-      // Particle "Beta" (velocity over speed of light)
-      TVector3D const& B = T.GetB(iT);
+    // Vector pointing from particle to observer
+    TVector3D const R = ObservationPoint - X;
 
-      // Vector pointing from particle to observer
-      TVector3D const R = ObservationPoint - X;
+    // Unit vector pointing from particl to observer
+    TVector3D const N = R.UnitVector();
 
-      // Unit vector pointing from particl to observer
-      TVector3D const N = R.UnitVector();
+    // Distance from particle to observer
+    double const D = R.Mag();
 
-      // Distance from particle to observer
-      double const D = R.Mag();
+    // Exponent for fourier transformed field
+    std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARS::C()));
 
-      // Exponent for fourier transformed field
-      std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARS::C()));
-
-      // Sum in fourier transformed field (integral)
-      SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
-    }
+    // Sum in fourier transformed field (integral)
+    SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
+  }
 
 
-    // Multiply field by Constant C1 and time step
-    SumE *= C1 * DeltaT;
+  // Multiply field by Constant C1 and time step
+  SumE *= C1 * DeltaT;
 
-    //double const EXSquared = (SumE.GetX() * std::conj(SumE.GetX())).real();
-    //double const EYSquared = (SumE.GetY() * std::conj(SumE.GetY())).real();
-    //double const EX2PlusEY2 = EXSquared + EYSquared;
-    //double LinearFraction = EXSquared / EX2PlusEY2;// - EYSquared / EX2PlusEY2;
+  //double const EXSquared = (SumE.GetX() * std::conj(SumE.GetX())).real();
+  //double const EYSquared = (SumE.GetY() * std::conj(SumE.GetY())).real();
+  //double const EX2PlusEY2 = EXSquared + EYSquared;
+  //double LinearFraction = EXSquared / EX2PlusEY2;// - EYSquared / EX2PlusEY2;
 
-    // Fraction in direction of Normal
-    //double const NormallyIncidentEFraction = sqrt(std::norm(SumE.UnitVector().Dot(Surface.GetPoint(i).GetNormal())));
-    //std::cout << ObservationPoint << " " << NormallyIncidentEFraction << std::endl;
+  // Fraction in direction of Normal
+  //double const NormallyIncidentEFraction = sqrt(std::norm(SumE.UnitVector().Dot(Surface.GetPoint(i).GetNormal())));
+  //std::cout << ObservationPoint << " " << NormallyIncidentEFraction << std::endl;
 
-    // Set the flux for this frequency / energy point
-    double const ThisFlux = C2 *  SumE.Dot( SumE.CC() ).real() * Weight;
-    //double const ThisFlux = LinearFraction;
+  // Set the flux for this frequency / energy point
+  double const ThisFlux = C2 *  SumE.Dot( SumE.CC() ).real() * Weight;
+  //double const ThisFlux = LinearFraction;
 
-    FluxContainer.AddToPoint(i, ThisFlux);
+  FluxContainer.AddToPoint(i, ThisFlux);
 
   return;
 }
@@ -2533,24 +2538,20 @@ void OSCARS::CalculateFluxThreads (TParticleA& Particle, TSurfacePoints const& S
   // Number of points in spectrum
   size_t const NPoints = Surface.GetNPoints();
 
-
-  // The stuff left over, like arnold in twins.
-  int const Remainder = NPoints % NThreadsToUse;
-
   // How many threads to start in the first for loop
-  int const NFirst = NPoints > NThreadsToUse ? NThreadsToUse : NPoints;
+  size_t const NFirst = (size_t) NPoints > NThreadsToUse ? NThreadsToUse : NPoints;
 
   // Start threads and keep in vector
-  for (int io = 0; io != NFirst; ++io) {
-    Threads.push_back(std::thread(&OSCARS::CalculateFluxPoint, this, std::ref(Particle), std::ref(Surface), Energy_eV, std::ref(FluxContainer), io, Dimension, Weight));
+  for (size_t io = 0; io != NFirst; ++io) {
+    Threads.push_back(std::thread(&OSCARS::CalculateFluxPoint, this, std::ref(Particle), std::ref(Surface), Energy_eV, std::ref(FluxContainer), (int) io, Dimension, Weight));
   }
 
   // Look for threads that end in order, once joined replace with a new thread if we're not yet at the end
-  for (int io = NFirst; io != NPoints + NFirst; ++io) {
-    int const it = io % NFirst;
+  for (size_t io = NFirst; io != NPoints + NFirst; ++io) {
+    size_t const it = io % NFirst;
     Threads[it].join();
     if (io < NPoints) {
-      Threads[it] = std::thread(&OSCARS::CalculateFluxPoint, this, std::ref(Particle), std::ref(Surface), Energy_eV, std::ref(FluxContainer), io, Dimension, Weight);
+      Threads[it] = std::thread(&OSCARS::CalculateFluxPoint, this, std::ref(Particle), std::ref(Surface), Energy_eV, std::ref(FluxContainer), (int) io, Dimension, Weight);
     }
   }
 

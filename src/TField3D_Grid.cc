@@ -6,13 +6,13 @@
 //
 ////////////////////////////////////////////////////////////////////
 
-#include "TField3DGrid.h"
+#include "TField3D_Grid.h"
 
 #include <fstream>
 #include <sstream>
 #include <algorithm>
 
-TField3DGrid::TField3DGrid ()
+TField3D_Grid::TField3D_Grid ()
 {
   fRotated.SetXYZ(0, 0, 0);
   fTranslation.SetXYZ(0, 0, 0);
@@ -21,7 +21,7 @@ TField3DGrid::TField3DGrid ()
 
 
 
-TField3DGrid::TField3DGrid (std::string const& InFileName, std::string const& FileFormat, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
+TField3D_Grid::TField3D_Grid (std::string const& InFileName, std::string const& FileFormat, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
 {
   // I will accept lower-case
   std::string format = FileFormat;
@@ -41,14 +41,14 @@ TField3DGrid::TField3DGrid (std::string const& InFileName, std::string const& Fi
 
 
 
-TField3DGrid::~TField3DGrid ()
+TField3D_Grid::~TField3D_Grid ()
 {
 }
 
 
 
 
-double TField3DGrid::GetFx (double const X, double const Y, double const Z) const
+double TField3D_Grid::GetFx (double const X, double const Y, double const Z) const
 {
   return this->GetF(TVector3D(X, Y, Z)).GetX();
 }
@@ -56,7 +56,7 @@ double TField3DGrid::GetFx (double const X, double const Y, double const Z) cons
 
 
 
-double TField3DGrid::GetFy (double const X, double const Y, double const Z) const
+double TField3D_Grid::GetFy (double const X, double const Y, double const Z) const
 {
   return this->GetF(TVector3D(X, Y, Z)).GetY();
 }
@@ -64,7 +64,7 @@ double TField3DGrid::GetFy (double const X, double const Y, double const Z) cons
 
 
 
-double TField3DGrid::GetFz (double const X, double const Y, double const Z) const
+double TField3D_Grid::GetFz (double const X, double const Y, double const Z) const
 {
   return this->GetF(TVector3D(X, Y, Z)).GetZ();
 }
@@ -73,21 +73,21 @@ double TField3DGrid::GetFz (double const X, double const Y, double const Z) cons
 
 
 
-TVector3D TField3DGrid::GetF (double const X, double const Y, double const Z) const
+TVector3D TField3D_Grid::GetF (double const X, double const Y, double const Z) const
 {
   return this->GetF(TVector3D(X, Y, Z));
 }
 
 
 
-size_t TField3DGrid::GetIndex (size_t const ix, size_t const iy, size_t const iz) const
+size_t TField3D_Grid::GetIndex (size_t const ix, size_t const iy, size_t const iz) const
 {
   return ix * fNY * fNZ + iy * fNZ + iz;
 }
 
 
 
-TVector3D TField3DGrid::GetF (TVector3D const& XIN) const
+TVector3D TField3D_Grid::GetF (TVector3D const& XIN) const
 {
   // Get the field at a point in space.  Must rotate point into coordinate system, then translate it.
 
@@ -217,7 +217,7 @@ TVector3D TField3DGrid::GetF (TVector3D const& XIN) const
 
 
 
-double TField3DGrid::GetHeaderValue (std::string const& L) const
+double TField3D_Grid::GetHeaderValue (std::string const& L) const
 {
   // Get the value after comment character
 
@@ -245,7 +245,7 @@ double TField3DGrid::GetHeaderValue (std::string const& L) const
 
 
 
-double TField3DGrid::GetHeaderValueSRW (std::string const& L, const char CommentChar) const
+double TField3D_Grid::GetHeaderValueSRW (std::string const& L, const char CommentChar) const
 {
   // Get the value after comment character
 
@@ -281,7 +281,7 @@ double TField3DGrid::GetHeaderValueSRW (std::string const& L, const char Comment
 
 
 
-void TField3DGrid::ReadFile (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
+void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
 {
   // Read file with the best format in the entire world, OSCARSv1.0
 
@@ -467,7 +467,7 @@ void TField3DGrid::ReadFile (std::string const& InFileName, TVector3D const& Rot
 
 
 
-void TField3DGrid::ReadFile_SRW (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
+void TField3D_Grid::ReadFile_SRW (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
 {
   // Read file with SRW field input format
 
@@ -638,7 +638,7 @@ void TField3DGrid::ReadFile_SRW (std::string const& InFileName, TVector3D const&
 
 
 
-void TField3DGrid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
+void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
 {
   // Read file with SPECTRA field input format
 

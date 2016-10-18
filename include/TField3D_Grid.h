@@ -1,5 +1,5 @@
-#ifndef GUARD_TField3DGrid_h
-#define GUARD_TField3DGrid_h
+#ifndef GUARD_TField3D_Grid_h
+#define GUARD_TField3D_Grid_h
 ////////////////////////////////////////////////////////////////////
 //
 // Dean Andrew Hidas <dhidas@bnl.gov>
@@ -13,13 +13,13 @@
 #include <string>
 #include <vector>
 
-class TField3DGrid : public TField
+class TField3D_Grid : public TField
 {
 
   public:
-    TField3DGrid ();
-    TField3DGrid (std::string const&, std::string const& FileFormat = "OSCARS", TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
-    ~TField3DGrid ();
+    TField3D_Grid ();
+    TField3D_Grid (std::string const&, std::string const& FileFormat = "OSCARS", TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
+    ~TField3D_Grid ();
 
     double GetFx (double const, double const, double const) const;
     double GetFy (double const, double const, double const) const;
@@ -36,7 +36,7 @@ class TField3DGrid : public TField
     void ReadFile_SRW     (std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
     void ReadFile_SPECTRA (std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
 
-    enum TField3DGrid_DIMX {
+    enum TField3D_Grid_DIMX {
       kDIMX_X,
       kDIMX_Y,
       kDIMX_Z,
@@ -68,7 +68,7 @@ class TField3DGrid : public TField
     bool fHasZ;
     int  fXDIM;
 
-    TField3DGrid_DIMX fDIMX;
+    TField3D_Grid_DIMX fDIMX;
 
     // Rotations and Translations.  Field is stored rotated, point must be rotated into grid
     // coordinate system before asking for field, but remember field is already rotated.

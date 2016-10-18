@@ -1,4 +1,4 @@
-#include "TBField3DZ.h"
+#include "TField3D_1D.h"
 
 #include <iostream>
 #include <sstream>
@@ -6,14 +6,14 @@
 #include <algorithm>
 #include <cmath>
 
-TBField3DZ::TBField3DZ ()
+TField3D_1D::TField3D_1D ()
 {
   // Default constructor
 }
 
 
 
-TBField3DZ::TBField3DZ (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
+TField3D_1D::TField3D_1D (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Constructor.  Reads input file
   this->ReadFile(InFileName, Rotation, Translation, Scaling);
@@ -24,20 +24,20 @@ TBField3DZ::TBField3DZ (std::string const& InFileName, TVector3D const& Rotation
 
 
 
-TBField3DZ::~TBField3DZ ()
+TField3D_1D::~TField3D_1D ()
 {
   // Destructor!!
 }
 
 
 
-bool TBField3DZ::Add (double const Z, double const Bx, double const By, double const Bz)
+bool TField3D_1D::Add (double const Z, double const Bx, double const By, double const Bz)
 {
   // Add an element to the array and mark that it is now not necessairly sorted
-  //fBField.push_back( std::array<double, 4>{ {Z, Bx, By, Bz} } );
+  //fField.push_back( std::array<double, 4>{ {Z, Bx, By, Bz} } );
   // For compatibility with nvcc
   std::array<double, 4> a = { {Z, Bx, By, Bz} };
-  fBField.push_back(a);
+  fField.push_back(a);
 
   fIsSorted = false;
 
@@ -46,10 +46,10 @@ bool TBField3DZ::Add (double const Z, double const Bx, double const By, double c
 
 
 
-bool TBField3DZ::Sort()
+bool TField3D_1D::Sort()
 {
   // Sort the field vector by Z, and change IsSorted flag to true
-  std::sort(fBField.begin(), fBField.end(), this->CompareBField3DZ);
+  std::sort(fField.begin(), fField.end(), this->CompareField3D_1D);
   fIsSorted = true;
 
   return true;
@@ -57,7 +57,7 @@ bool TBField3DZ::Sort()
 
 
 
-bool TBField3DZ::IsSorted ()
+bool TField3D_1D::IsSorted ()
 {
   // Return the state of the IsSorted flag
   return fIsSorted;
@@ -65,30 +65,30 @@ bool TBField3DZ::IsSorted ()
 
 
 
-double TBField3DZ::GetFirstZ ()
+double TField3D_1D::GetFirstZ ()
 {
-  // Return the first Z value in the fBField vector.  Make sure it is sorted first
+  // Return the first Z value in the fField vector.  Make sure it is sorted first
   if (!this->IsSorted()) {
     throw;
   }
-  return (*(fBField.begin()))[0];
+  return (*(fField.begin()))[0];
 }
 
 
 
-double TBField3DZ::GetLastZ ()
+double TField3D_1D::GetLastZ ()
 {
-  // Return the last Z value in the fBField vector.  Make sure it is sorted first
+  // Return the last Z value in the fField vector.  Make sure it is sorted first
   if (!this->IsSorted()) {
     throw;
   }
-  return (*(fBField.end()))[0];
+  return (*(fField.end()))[0];
 }
 
 
 
 
-bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
+bool TField3D_1D::ReadFile (std::string const& InFileName, TVector3D const& Rotation, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Read an input file in the format of:
   //   Z By
@@ -99,8 +99,8 @@ bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotat
   // Open the input file.  If !f, throw
   std::ifstream f(InFileName.c_str());
   if (!f) {
-    std::cerr << "ERROR: TBField3DZ::ReadFile cannot open file: " << InFileName << std::endl;
-    throw std::ifstream::failure("TBField3DZ::ReadFile cannot open file");
+    std::cerr << "ERROR: TField3D_1D::ReadFile cannot open file: " << InFileName << std::endl;
+    throw std::ifstream::failure("TField3D_1D::ReadFile cannot open file");
   }
 
   // Because we are reading a file this is not necessairly sorted data
@@ -140,7 +140,7 @@ bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotat
           Bz *= Scaling[3];
           break;
         default:
-          throw std::ifstream::failure("TBField3DZ::ReadFile scaling is incorrect");
+          throw std::ifstream::failure("TField3D_1D::ReadFile scaling is incorrect");
       }
     }
 
@@ -160,15 +160,15 @@ bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotat
 
     // Check the stream to see if it is not good
     if (Iine.fail()) {
-      std::cerr << "ERROR: TBField3DZ::ReadFile: data format error on this line: " << Line << std::endl;
-      throw std::ifstream::failure("TBField3DZ::ReadFile read error");
+      std::cerr << "ERROR: TField3D_1D::ReadFile: data format error on this line: " << Line << std::endl;
+      throw std::ifstream::failure("TField3D_1D::ReadFile read error");
     }
 
     // Save in field vector
-    //fBField.push_back(std::array<double, 4>{ {Z, Bx, By, Bz} });
+    //fField.push_back(std::array<double, 4>{ {Z, Bx, By, Bz} });
     // Compatibility with nvcc
     std::array<double, 4> a = { {Z, Bx, By, Bz} };
-    fBField.push_back(a);
+    fField.push_back(a);
 
   }
 
@@ -180,18 +180,18 @@ bool TBField3DZ::ReadFile (std::string const& InFileName, TVector3D const& Rotat
 
 
 
-bool TBField3DZ::SaveAs (std::string const& OutFileName, std::string const& Comment)
+bool TField3D_1D::SaveAs (std::string const& OutFileName, std::string const& Comment)
 {
   // Save the magnetic field data as a text file with the name given.
   // A comment can be placed at the top in addition to the format comment
 
   // Print message about saving file
-  std::cout << "TBField3DZ::SaveAs saving file as: " << OutFileName << std::endl;
+  std::cout << "TField3D_1D::SaveAs saving file as: " << OutFileName << std::endl;
 
   // Open the output file
   std::ofstream f(OutFileName.c_str());
   if (!f) {
-    std::cerr << "ERROR: TBField3DZ::SaveAs cannot open file for writing: " << OutFileName << std::endl;
+    std::cerr << "ERROR: TField3D_1D::SaveAs cannot open file for writing: " << OutFileName << std::endl;
     return false;
   }
 
@@ -201,8 +201,8 @@ bool TBField3DZ::SaveAs (std::string const& OutFileName, std::string const& Comm
   }
   f << "# [Z in meters] [Bx By Bz in Tesla]" << std::endl;
 
-  // Write BField
-  for (std::vector< std::array<double, 4> >::iterator it = fBField.begin(); it != fBField.end(); ++it) {
+  // Write Field
+  for (std::vector< std::array<double, 4> >::iterator it = fField.begin(); it != fField.end(); ++it) {
     f << (*it)[0] << " " << (*it)[1] << " " << (*it)[2] << " " << (*it)[3] << "\n";
   }
 
@@ -214,9 +214,9 @@ bool TBField3DZ::SaveAs (std::string const& OutFileName, std::string const& Comm
 }
 
 
-bool TBField3DZ::Regularize (std::vector<std::array<double, 3> >& oV, double& oFirstZ, double& oLastZ, double& oStepSizeZ, size_t const NPointsPerMeter)
+bool TField3D_1D::Regularize (std::vector<std::array<double, 3> >& oV, double& oFirstZ, double& oLastZ, double& oStepSizeZ, size_t const NPointsPerMeter)
 {
-  // Regularize the data in fBField and save it in oV.  also save the first
+  // Regularize the data in fField and save it in oV.  also save the first
   // and last Z values.  The input for resolution is in points per meter.
 
 
@@ -227,19 +227,19 @@ bool TBField3DZ::Regularize (std::vector<std::array<double, 3> >& oV, double& oF
   }
 
   // Check to see there are at least 2 data points
-  if (fBField.size() < 2) {
-    std::cerr << "ERROR: TBField3DZ::Regularize: not enough data points" << std::endl;
-    throw std::length_error("TBField3DZ::Regularize not enough points");
+  if (fField.size() < 2) {
+    std::cerr << "ERROR: TField3D_1D::Regularize: not enough data points" << std::endl;
+    throw std::length_error("TField3D_1D::Regularize not enough points");
   }
 
   // Grab the first and last Z
-  double const First = fBField[0][0];
-  double const Last  = fBField[fBField.size() - 1][0];
+  double const First = fField[0][0];
+  double const Last  = fField[fField.size() - 1][0];
 
   // Get the number of points and the step size
   size_t const NPoints  = (Last - First) * NPointsPerMeter;
   double const StepSize = (Last - First) / (double) (NPoints - 1);
-  std::cout << "MESSAGE: TBField3DZ::Regularize StepSize: " << StepSize << std::endl;
+  std::cout << "MESSAGE: TField3D_1D::Regularize StepSize: " << StepSize << std::endl;
 
   // Clear the output vector and allocated space
   oV.clear();
@@ -266,8 +266,8 @@ bool TBField3DZ::Regularize (std::vector<std::array<double, 3> >& oV, double& oF
   // For each desired point find the bin before and after the desired Z position
   for (size_t i = 0; i != NPoints; ++i) {
     ThisZ = i * StepSize + First;
-    for (size_t j = MinBin + 1; j != fBField.size(); ++j) {
-      if (fBField[j][0] > ThisZ) {
+    for (size_t j = MinBin + 1; j != fField.size(); ++j) {
+      if (fField[j][0] > ThisZ) {
         AfterBin  = j;
         BeforeBin = j - 1;
         MinBin = j - 1;
@@ -277,12 +277,12 @@ bool TBField3DZ::Regularize (std::vector<std::array<double, 3> >& oV, double& oF
 
 
     // Calculate the By at desired position based on linear interpolation
-    SlopeX = (fBField[AfterBin][1] - fBField[BeforeBin][1]) /  (fBField[AfterBin][0] - fBField[BeforeBin][0]);
-    SlopeY = (fBField[AfterBin][2] - fBField[BeforeBin][2]) /  (fBField[AfterBin][0] - fBField[BeforeBin][0]);
-    SlopeZ = (fBField[AfterBin][3] - fBField[BeforeBin][3]) /  (fBField[AfterBin][0] - fBField[BeforeBin][0]);
-    NewBx = fBField[BeforeBin][1] + (ThisZ - fBField[BeforeBin][0]) * SlopeX;
-    NewBy = fBField[BeforeBin][2] + (ThisZ - fBField[BeforeBin][0]) * SlopeY;
-    NewBz = fBField[BeforeBin][3] + (ThisZ - fBField[BeforeBin][0]) * SlopeZ;
+    SlopeX = (fField[AfterBin][1] - fField[BeforeBin][1]) /  (fField[AfterBin][0] - fField[BeforeBin][0]);
+    SlopeY = (fField[AfterBin][2] - fField[BeforeBin][2]) /  (fField[AfterBin][0] - fField[BeforeBin][0]);
+    SlopeZ = (fField[AfterBin][3] - fField[BeforeBin][3]) /  (fField[AfterBin][0] - fField[BeforeBin][0]);
+    NewBx = fField[BeforeBin][1] + (ThisZ - fField[BeforeBin][0]) * SlopeX;
+    NewBy = fField[BeforeBin][2] + (ThisZ - fField[BeforeBin][0]) * SlopeY;
+    NewBz = fField[BeforeBin][3] + (ThisZ - fField[BeforeBin][0]) * SlopeZ;
 
     // Append the new BxByBz to the output vector
     //oV.push_back(std::array<double, 3>{ {NewBx, NewBy, NewBz} });
@@ -302,7 +302,7 @@ bool TBField3DZ::Regularize (std::vector<std::array<double, 3> >& oV, double& oF
 
 
 
-bool TBField3DZ::CompareBField3DZ (std::array<double, 4> const& A, std::array<double, 4> const& B)
+bool TField3D_1D::CompareField3D_1D (std::array<double, 4> const& A, std::array<double, 4> const& B)
 {
   // This function is used for sorting the field in 'Z' cood.  It is a comparison function
   return A[0] < B[0];

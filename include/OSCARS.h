@@ -13,7 +13,7 @@
 
 #define OSCARS_VMAJOR 1
 #define OSCARS_VMINOR 31
-#define OSCARS_REVISION 00d
+#define OSCARS_REVISION 3
 
 #include "TOSCARS.h"
 
@@ -37,6 +37,7 @@ class OSCARS
     OSCARS ();
     ~OSCARS ();
 
+    static std::string GetVersionString ();
 
     // Functions related to the magnetic field
     void AddMagneticField (std::string const, std::string const, TVector3D const& R = TVector3D(0, 0, 0), TVector3D const& D = TVector3D(0, 0, 0), std::vector<double> const& S = std::vector<double>());

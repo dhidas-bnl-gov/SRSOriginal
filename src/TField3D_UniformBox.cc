@@ -103,7 +103,7 @@ TVector3D TField3D_UniformBox::GetF (TVector3D const& X) const
   // Position in the box frame with respect to the center
   TVector3D const RX = XInBoxCoordinates - fCenter;
 
-  if (!fIgnoreAxisX && fabs(RX.GetX()) > fabs(fWidth.GetX() / 2.) || !fIgnoreAxisY && fabs(RX.GetY()) > fabs(fWidth.GetY() / 2.) || !fIgnoreAxisZ && fabs(RX.GetZ()) > fabs(fWidth.GetZ() / 2.)) {
+  if ((!fIgnoreAxisX && fabs(RX.GetX()) > fabs(fWidth.GetX() / 2.)) || (!fIgnoreAxisY && fabs(RX.GetY()) > fabs(fWidth.GetY() / 2.)) || (!fIgnoreAxisZ && fabs(RX.GetZ()) > fabs(fWidth.GetZ() / 2.))) {
     return TVector3D(0, 0, 0);
   }
 

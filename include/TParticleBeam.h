@@ -13,7 +13,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <random>
 
 #include "TVector3D.h"
 #include "TVector2D.h"
@@ -57,12 +56,6 @@ class TParticleBeam : public TParticleA
 
     TVector3D fHorizontalDirection;
     TVector3D fVerticalDirection;
-
-    std::random_device* rd;
-    std::mt19937 e2;
-    std::normal_distribution<> dist;
-
-
 };
 
 

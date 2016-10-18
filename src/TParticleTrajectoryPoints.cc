@@ -300,9 +300,6 @@ void TParticleTrajectoryPoints::ReadFromFileBinary (std::string const& FileName)
   double x, y, z;
   double bx, by, bz;
 
-  size_t n = 0;
-
-
   while (!f.eof()) {
 
     f.read( (char*)  &t, sizeof(double));

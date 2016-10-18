@@ -190,7 +190,7 @@ static PyObject* OSCARS_SetSeed (OSCARSObject* self, PyObject* arg)
 static PyObject* OSCARS_SetGPUGlobal (OSCARSObject* self, PyObject* arg)
 {
   // Grab the value from input
-  int const GPU = PyInt_AsLong(arg);
+  int const GPU = (int) PyInt_AsLong(arg);
 
   self->obj->SetUseGPUGlobal(GPU);
 
@@ -206,7 +206,7 @@ static PyObject* OSCARS_SetGPUGlobal (OSCARSObject* self, PyObject* arg)
 static PyObject* OSCARS_SetNThreadsGlobal (OSCARSObject* self, PyObject* arg)
 {
   // Grab the value from input
-  int const NThreads = PyInt_AsLong(arg);
+  int const NThreads = (int) PyInt_AsLong(arg);
 
   self->obj->SetNThreadsGlobal(NThreads);
 
@@ -331,7 +331,7 @@ static PyObject* OSCARS_AddMagneticField (OSCARSObject* self, PyObject* args, Py
   }
 
   // Check that filename and format exist
-  if (FileName == "" || FileFormat == "") {
+  if (std::strlen(FileName) == 0 || std::strlen(FileFormat) == 0) {
     PyErr_SetString(PyExc_ValueError, "'ifile' or 'iformat' is blank");
     return NULL;
   }
@@ -359,7 +359,7 @@ static PyObject* OSCARS_AddMagneticField (OSCARSObject* self, PyObject* args, Py
 
   // Get any scaling factors
   // UPDATE: Check against fileformat number of strings
-  for (int i = 0; i < PyList_Size(List_Scaling); ++i) {
+  for (size_t i = 0; i < PyList_Size(List_Scaling); ++i) {
     Scaling.push_back(PyFloat_AsDouble(PyList_GetItem(List_Scaling, i)));
   }
 
@@ -761,7 +761,7 @@ static PyObject* OSCARS_AddElectricField (OSCARSObject* self, PyObject* args, Py
   }
 
   // Check that filename and format exist
-  if (FileName == "" || FileFormat == "") {
+  if (std::strlen(FileName) == 0 || std::strlen(FileFormat) == 0) {
     PyErr_SetString(PyExc_ValueError, "'ifile' or 'iformat' is blank");
     return NULL;
   }
@@ -789,7 +789,7 @@ static PyObject* OSCARS_AddElectricField (OSCARSObject* self, PyObject* args, Py
 
   // Get any scaling factors
   // UPDATE: Check against fileformat number of strings
-  for (int i = 0; i < PyList_Size(List_Scaling); ++i) {
+  for (size_t i = 0; i < PyList_Size(List_Scaling); ++i) {
     Scaling.push_back(PyFloat_AsDouble(PyList_GetItem(List_Scaling, i)));
   }
 
@@ -1154,7 +1154,7 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
 
 
   // Check that type and name exist
-  if (Type == "" || Name == "") {
+  if (std::strlen(Type) == 0 || std::strlen(Name) == 0) {
     PyErr_SetString(PyExc_ValueError, "'type' or 'name' is blank");
     return NULL;
   }
@@ -1547,14 +1547,14 @@ TSpectrumContainer OSCARS_GetSpectrumFromList (PyObject* List)
   Py_INCREF(List);
 
   // Get size of input list
-  int const NPoints = PyList_Size(List);
+  size_t const NPoints = PyList_Size(List);
   if (NPoints <= 0) {
     throw;
   }
 
   TSpectrumContainer S;
 
-  for (int ip = 0; ip != NPoints; ++ip) {
+  for (size_t ip = 0; ip != NPoints; ++ip) {
     PyObject* List_Point = PyList_GetItem(List, ip);
     if (PyList_Size(List_Point) == 2) {
       S.AddPoint(PyFloat_AsDouble(PyList_GetItem(List_Point, 0)), PyFloat_AsDouble(PyList_GetItem(List_Point, 1)));
@@ -1585,7 +1585,7 @@ T3DScalarContainer OSCARS_GetT3DScalarContainerFromList (PyObject* List)
   Py_INCREF(List);
 
   // Get size of input list
-  int const NPoints = PyList_Size(List);
+  size_t const NPoints = PyList_Size(List);
   if (NPoints <= 0) {
     throw;
   }
@@ -1689,7 +1689,7 @@ static PyObject* OSCARS_CalculateSpectrum (OSCARSObject* self, PyObject* args, P
 
   // Add all values to a vector
   std::vector<double> VPoints_eV;
-  for (int i = 0; i < PyList_Size(List_Points_eV); ++i) {
+  for (size_t i = 0; i < PyList_Size(List_Points_eV); ++i) {
     VPoints_eV.push_back(PyFloat_AsDouble(PyList_GetItem(List_Points_eV, i)));
   }
 
@@ -1892,7 +1892,7 @@ static PyObject* OSCARS_CalculatePowerDensity (OSCARSObject* self, PyObject* arg
 
   // Look for arbitrary shape 3D points
   TSurfacePoints_3D Surface;
-  for (int i = 0; i < PyList_Size(List_Points); ++i) {
+  for (size_t i = 0; i < PyList_Size(List_Points); ++i) {
     PyObject* LXN = PyList_GetItem(List_Points, i);
     TVector3D X;
     TVector3D N;
@@ -2104,9 +2104,9 @@ static PyObject* OSCARS_CalculatePowerDensityRectangle (OSCARSObject* self, PyOb
 
 
   // If you are requesting a simple surface plane, check that you have widths
-  if (SurfacePlane != "" && Width_X1 > 0 && Width_X2 > 0) {
+  if (std::strlen(SurfacePlane) != 0 && Width_X1 > 0 && Width_X2 > 0) {
     try {
-      Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
+      Surface.Init(SurfacePlane, (int) NX1, (int) NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
     } catch (std::invalid_argument e) {
       PyErr_SetString(PyExc_ValueError, e.what());
       return NULL;
@@ -2141,7 +2141,7 @@ static PyObject* OSCARS_CalculatePowerDensityRectangle (OSCARSObject* self, PyOb
     }
 
     // UPDATE: Check for orthogonality
-    Surface.Init(NX1, NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
+    Surface.Init((int) NX1, (int) NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
   }
 
 
@@ -2219,187 +2219,6 @@ static PyObject* OSCARS_CalculatePowerDensityRectangle (OSCARSObject* self, PyOb
 
 
 
-static PyObject* OSCARS_CalculatePowerDensityRectangleGPU (OSCARSObject* self, PyObject* args, PyObject *keywds)
-{
-  // Calculate the spectrum given an observation point, and energy range
-
-  // UPDATE: Unused function
-  throw;
-
-  char const* SurfacePlane = "";
-  size_t      NX1 = 0;
-  size_t      NX2 = 0;
-  double      Width_X1 = 0;
-  double      Width_X2 = 0;
-  PyObject*   List_NPoints     = PyList_New(0);
-  PyObject*   List_Width       = PyList_New(0);
-  PyObject*   List_Translation = PyList_New(0);
-  PyObject*   List_Rotations   = PyList_New(0);
-  PyObject*   List_X0X1X2      = PyList_New(0);
-  int         NormalDirection = 0;
-  int         Dim = 2;
-  char*       OutFileName = "";
-
-
-  static char *kwlist[] = {"npoints", "plane", "width", "x0x1x2", "rotations", "translation", "ofile", "normal", "dim",  NULL};
-
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|sOOOOsii", kwlist,
-                                                               &List_NPoints,
-                                                               &SurfacePlane,
-                                                               &List_Width,
-                                                               &List_X0X1X2,
-                                                               &List_Rotations,
-                                                               &List_Translation,
-                                                               &OutFileName,
-                                                               &NormalDirection,
-                                                               &Dim)) {
-    return NULL;
-  }
-
-  // Check if a beam is at least defined
-  if (self->obj->GetNParticleBeams() < 1) {
-    PyErr_SetString(PyExc_ValueError, "No particle beam defined");
-    return NULL;
-  }
-
-
-  // Check requested dimension
-  if (Dim != 2 & Dim != 3) {
-    PyErr_SetString(PyExc_ValueError, "'dim' must be 2 or 3");
-    return NULL;
-  }
-
-
-  // The rectangular surface object we'll use
-  TSurfacePoints_Rectangle Surface;
-
-  if (PyList_Size(List_NPoints) == 2) {
-    // NPoints in [m]
-    NX1 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 0));
-    NX2 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 1));
-  } else {
-    PyErr_SetString(PyExc_ValueError, "'npoints' must be [int, int]");
-    return NULL;
-  }
-
-
-
-  if (NX1 <= 0 || NX2 <= 0) {
-    PyErr_SetString(PyExc_ValueError, "an entry in 'npoints' is <= 0");
-    return NULL;
-  }
-
-  // Vectors for rotations and translations.  Default to 0
-  TVector3D Rotations(0, 0, 0);
-  TVector3D Translation(0, 0, 0);
-
-  // Check for Rotations in the input
-  if (PyList_Size(List_Rotations) != 0) {
-    try {
-      Rotations = OSCARS_ListAsTVector3D(List_Rotations);
-    } catch (std::length_error e) {
-      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
-      return NULL;
-    }
-  }
-
-
-  // Check for Translation in the input
-  if (PyList_Size(List_Translation) != 0) {
-    try {
-      Translation = OSCARS_ListAsTVector3D(List_Translation);
-    } catch (std::length_error e) {
-      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
-      return NULL;
-    }
-  }
-
-  if (PyList_Size(List_Width) == 2) {
-    // Width in [m]
-    Width_X1 = PyFloat_AsDouble(PyList_GetItem(List_Width, 0));
-    Width_X2 = PyFloat_AsDouble(PyList_GetItem(List_Width, 1));
-  }
-
-
-
-  // If you are requesting a simple surface plane, check that you have widths
-  if (SurfacePlane != "" && Width_X1 > 0 && Width_X2 > 0) {
-    try {
-      Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
-    } catch (std::invalid_argument e) {
-      PyErr_SetString(PyExc_ValueError, e.what());
-      return NULL;
-    }
-  }
-
-
-
-  // If X0X1X2 defined
-  std::vector<TVector3D> X0X1X2;
-
-  if (PyList_Size(List_X0X1X2) != 0) {
-    if (PyList_Size(List_X0X1X2) == 3) {
-      for (int i = 0; i != 3; ++i) {
-        PyObject* List_X = PyList_GetItem(List_X0X1X2, i);
-
-        try {
-          X0X1X2.push_back(OSCARS_ListAsTVector3D(List_X));
-        } catch (std::length_error e) {
-          PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0x1x2'");
-          return NULL;
-        }
-      }
-    } else {
-      PyErr_SetString(PyExc_ValueError, "'x0x1x2' must have 3 XYZ points defined correctly");
-      return NULL;
-    }
-
-    for (std::vector<TVector3D>::iterator it = X0X1X2.begin(); it != X0X1X2.end(); ++it) {
-      it->RotateSelfXYZ(Rotations);
-      *it += Translation;
-    }
-
-    // UPDATE: Check for orthogonality
-    Surface.Init(NX1, NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
-  }
-
-
-  // Container for Point plus scalar
-  T3DScalarContainer PowerDensityContainer;
-
-
-  // Actually calculate the spectrum
-  bool const Directional = NormalDirection == 0 ? false : true;
-  try {
-    self->obj->CalculatePowerDensityGPU(Surface, PowerDensityContainer, Dim, Directional, 1, OutFileName);
-  } catch (std::invalid_argument e) {
-    PyErr_SetString(PyExc_ValueError, e.what());
-    return NULL;
-  }
-
-
-  // Build the output list of: [[[x, y, z], PowerDensity], [...]]
-  // Create a python list
-  PyObject *PList = PyList_New(0);
-
-  size_t const NPoints = PowerDensityContainer.GetNPoints();
-
-  for (size_t i = 0; i != NPoints; ++i) {
-    T3DScalar P = PowerDensityContainer.GetPoint(i);
-
-    // Inner list for each point
-    PyObject *PList2 = PyList_New(0);
-
-
-    // Add position and value to list
-    PyList_Append(PList2, OSCARS_TVector3DAsList(P.GetX()));
-    PyList_Append(PList2, Py_BuildValue("f", P.GetV()));
-    PyList_Append(PList, PList2);
-
-  }
-
-  return PList;
-}
 
 
 
@@ -2490,7 +2309,7 @@ static PyObject* OSCARS_CalculateFlux (OSCARSObject* self, PyObject* args, PyObj
 
   // Look for arbitrary shape 3D points
   TSurfacePoints_3D Surface;
-  for (int i = 0; i < PyList_Size(List_Points); ++i) {
+  for (size_t i = 0; i < PyList_Size(List_Points); ++i) {
     PyObject* LXN = PyList_GetItem(List_Points, i);
     TVector3D X;
     TVector3D N;
@@ -2705,9 +2524,9 @@ static PyObject* OSCARS_CalculateFluxRectangle (OSCARSObject* self, PyObject* ar
 
 
   // If you are requesting a simple surface plane, check that you have widths
-  if (SurfacePlane != "" && Width_X1 > 0 && Width_X2 > 0) {
+  if (std::strlen(SurfacePlane) != 0 && Width_X1 > 0 && Width_X2 > 0) {
     try {
-      Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
+      Surface.Init(SurfacePlane, (int) NX1, (int) NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
     } catch (std::invalid_argument e) {
       PyErr_SetString(PyExc_ValueError, e.what());
       return NULL;
@@ -2742,7 +2561,7 @@ static PyObject* OSCARS_CalculateFluxRectangle (OSCARSObject* self, PyObject* ar
     }
 
     // UPDATE: Check for orthogonality
-    Surface.Init(NX1, NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
+    Surface.Init((int) NX1, (int) NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
   }
 
 
@@ -2779,7 +2598,8 @@ static PyObject* OSCARS_CalculateFluxRectangle (OSCARSObject* self, PyObject* ar
 
 
   // Actually calculate the spectrum
-  bool const Directional = NormalDirection == 0 ? false : true;
+  // UPDATE: Needed, directional?
+  //bool const Directional = NormalDirection == 0 ? false : true;
 
   try {
     self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, NParticles, NThreads, GPU, Dim, OutFileName);
@@ -2827,185 +2647,6 @@ static PyObject* OSCARS_CalculateFluxRectangle (OSCARSObject* self, PyObject* ar
 
 
 
-static PyObject* OSCARS_CalculateFluxRectangleGPU (OSCARSObject* self, PyObject* args, PyObject *keywds)
-{
-  // Calculate the spectrum given an observation point, and energy range
-
-  char const* SurfacePlane = "";
-  size_t      NX1 = 0;
-  size_t      NX2 = 0;
-  double      Width_X1 = 0;
-  double      Width_X2 = 0;
-  PyObject*   List_NPoints= PyList_New(0);
-  PyObject*   List_Width= PyList_New(0);
-  PyObject*   List_Translation = PyList_New(0);
-  PyObject*   List_Rotations = PyList_New(0);
-  PyObject*   List_X0X1X2 = PyList_New(0);
-  int         NormalDirection = 0;
-  int         Dim = 2;
-  double      Energy_eV = 0;
-  char const* Polarization = "";
-  char const* OutFileName = "";
-
-
-  static char *kwlist[] = {"energy_eV", "npoints", "plane", "normal", "dim", "width", "rotations", "translation", "x0x1x2", "polarization", "ofile", NULL};
-
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "dO|siiOOOOss", kwlist,
-                                                                 &Energy_eV,
-                                                                 &List_NPoints,
-                                                                 &SurfacePlane,
-                                                                 &NormalDirection,
-                                                                 &Dim,
-                                                                 &List_Width,
-                                                                 &List_Rotations,
-                                                                 &List_Translation,
-                                                                 &List_X0X1X2,
-                                                                 &Polarization,
-                                                                 &OutFileName)) {
-    return NULL;
-  }
-
-  // Check if a beam is at least defined
-  if (self->obj->GetNParticleBeams() < 1) {
-    PyErr_SetString(PyExc_ValueError, "No particle beam defined");
-    return NULL;
-  }
-
-
-  // Check requested dimension
-  if (Dim != 2 & Dim != 3) {
-    PyErr_SetString(PyExc_ValueError, "'dim' must be 2 or 3");
-    return NULL;
-  }
-
-
-  // The rectangular surface object we'll use
-  TSurfacePoints_Rectangle Surface;
-
-  if (PyList_Size(List_NPoints) == 2) {
-    // NPoints in [m]
-    NX1 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 0));
-    NX2 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 1));
-  } else {
-    PyErr_SetString(PyExc_ValueError, "'npoints' must be [int, int]");
-    return NULL;
-  }
-
-
-
-  if (NX1 <= 0 || NX2 <= 0) {
-    PyErr_SetString(PyExc_ValueError, "an entry in 'npoints' is <= 0");
-    return NULL;
-  }
-
-  // Vectors for rotations and translations.  Default to 0
-  TVector3D Rotations(0, 0, 0);
-  TVector3D Translation(0, 0, 0);
-
-  // Check for Rotations in the input
-  if (PyList_Size(List_Rotations) != 0) {
-    try {
-      Rotations = OSCARS_ListAsTVector3D(List_Rotations);
-    } catch (std::length_error e) {
-      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
-      return NULL;
-    }
-  }
-
-
-  // Check for Translation in the input
-  if (PyList_Size(List_Translation) != 0) {
-    try {
-      Translation = OSCARS_ListAsTVector3D(List_Translation);
-    } catch (std::length_error e) {
-      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
-      return NULL;
-    }
-  }
-
-  if (PyList_Size(List_Width) == 2) {
-    // Width in [m]
-    Width_X1 = PyFloat_AsDouble(PyList_GetItem(List_Width, 0));
-    Width_X2 = PyFloat_AsDouble(PyList_GetItem(List_Width, 1));
-  }
-
-
-
-  // If you are requesting a simple surface plane, check that you have widths
-  if (SurfacePlane != "" && Width_X1 > 0 && Width_X2 > 0) {
-    try {
-      Surface.Init(SurfacePlane, NX1, NX2, Width_X1, Width_X2, Rotations, Translation, NormalDirection);
-    } catch (std::invalid_argument e) {
-      PyErr_SetString(PyExc_ValueError, e.what());
-      return NULL;
-    }
-  }
-
-
-
-  // If X0X1X2 defined
-  std::vector<TVector3D> X0X1X2;
-
-  if (PyList_Size(List_X0X1X2) != 0) {
-    if (PyList_Size(List_X0X1X2) == 3) {
-      for (int i = 0; i != 3; ++i) {
-        PyObject* List_X = PyList_GetItem(List_X0X1X2, i);
-
-        try {
-          X0X1X2.push_back(OSCARS_ListAsTVector3D(List_X));
-        } catch (std::length_error e) {
-          PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0x1x2'");
-          return NULL;
-        }
-      }
-    } else {
-      PyErr_SetString(PyExc_ValueError, "'x0x1x2' must have 3 XYZ points defined correctly");
-      return NULL;
-    }
-
-    for (std::vector<TVector3D>::iterator it = X0X1X2.begin(); it != X0X1X2.end(); ++it) {
-      it->RotateSelfXYZ(Rotations);
-      *it += Translation;
-    }
-
-    // UPDATE: Check for orthogonality
-    Surface.Init(NX1, NX2, X0X1X2[0], X0X1X2[1], X0X1X2[2], NormalDirection);
-  }
-
-
-
-  // Container for Point plus scalar
-  T3DScalarContainer FluxContainer;
-
-
-  // Actually calculate the spectrum
-  bool const Directional = NormalDirection == 0 ? false : true;
-  //self->obj->CalculateFlux(Surface, Energy_eV, FluxContainer, Dim, Directional);
-  self->obj->CalculateFluxGPU(Surface, Energy_eV, FluxContainer);
-
-
-  // Build the output list of: [[[x, y, z], Flux], [...]]
-  // Create a python list
-  PyObject *PList = PyList_New(0);
-
-  size_t const NPoints = FluxContainer.GetNPoints();
-
-  for (size_t i = 0; i != NPoints; ++i) {
-    T3DScalar P = FluxContainer.GetPoint(i);
-
-    // Inner list for each point
-    PyObject *PList2 = PyList_New(0);
-
-
-    // Add position and value to list
-    PyList_Append(PList2, OSCARS_TVector3DAsList(P.GetX()));
-    PyList_Append(PList2, Py_BuildValue("f", P.GetV()));
-    PyList_Append(PList, PList2);
-
-  }
-
-  return PList;
-}
 
 
 
@@ -3033,8 +2674,8 @@ static PyObject* OSCARS_AverageSpectra (OSCARSObject* self, PyObject* args, PyOb
   }
 
   // Grab the number of input files for both text and binary lists
-  int const NFilesText = PyList_Size(List_InFileNamesText);
-  int const NFilesBinary = PyList_Size(List_InFileNamesBinary);
+  size_t const NFilesText = PyList_Size(List_InFileNamesText);
+  size_t const NFilesBinary = PyList_Size(List_InFileNamesBinary);
 
   // Doesn't allow for both binary and text input at the same time
   if (NFilesText != 0 && NFilesBinary !=0) {
@@ -3050,10 +2691,10 @@ static PyObject* OSCARS_AverageSpectra (OSCARSObject* self, PyObject* args, PyOb
 
   // Add file names to vector
   std::vector<std::string> FileNames;
-  for (int i = 0; i != NFilesText; ++i) {
+  for (size_t i = 0; i != NFilesText; ++i) {
     FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesText, i)) );
   }
-  for (int i = 0; i != NFilesBinary; ++i) {
+  for (size_t i = 0; i != NFilesBinary; ++i) {
     FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesBinary, i)) );
   }
 
@@ -3255,8 +2896,8 @@ static PyObject* OSCARS_AverageT3DScalars (OSCARSObject* self, PyObject* args, P
   }
 
   // Grab the number of input files for both text and binary lists
-  int const NFilesText = PyList_Size(List_InFileNamesText);
-  int const NFilesBinary = PyList_Size(List_InFileNamesBinary);
+  size_t const NFilesText = PyList_Size(List_InFileNamesText);
+  size_t const NFilesBinary = PyList_Size(List_InFileNamesBinary);
 
   // Doesn't allow for both binary and text input at the same time
   if (NFilesText != 0 && NFilesBinary !=0) {
@@ -3272,10 +2913,10 @@ static PyObject* OSCARS_AverageT3DScalars (OSCARSObject* self, PyObject* args, P
 
   // Add file names to vector
   std::vector<std::string> FileNames;
-  for (int i = 0; i != NFilesText; ++i) {
+  for (size_t i = 0; i != NFilesText; ++i) {
     FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesText, i)) );
   }
-  for (int i = 0; i != NFilesBinary; ++i) {
+  for (size_t i = 0; i != NFilesBinary; ++i) {
     FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesBinary, i)) );
   }
 
@@ -3488,11 +3129,9 @@ static PyMethodDef OSCARS_methods[] = {
 
   {"calculate_total_power",             (PyCFunction) OSCARS_CalculateTotalPower,             METH_NOARGS,  "calculate total power radiated"},
   {"calculate_power_density_rectangle", (PyCFunction) OSCARS_CalculatePowerDensityRectangle,  METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
-  {"calculate_power_density_rectangle_gpu", (PyCFunction) OSCARS_CalculatePowerDensityRectangleGPU,  METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_power_density",           (PyCFunction) OSCARS_CalculatePowerDensity,           METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_flux",                    (PyCFunction) OSCARS_CalculateFlux,                   METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
   {"calculate_flux_rectangle",          (PyCFunction) OSCARS_CalculateFluxRectangle,          METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
-  {"calculate_flux_rectangle_gpu",      (PyCFunction) OSCARS_CalculateFluxRectangleGPU,       METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
 
   {"average_spectra",                   (PyCFunction) OSCARS_AverageSpectra,                  METH_VARARGS | METH_KEYWORDS, "average spectra"},
   {"average_flux",                      (PyCFunction) OSCARS_AverageT3DScalars,               METH_VARARGS | METH_KEYWORDS, "average fluxes"},
@@ -3591,7 +3230,10 @@ PyMODINIT_FUNC initOSCARS ()
   // Print copyright notice
   PyObject* sys = PyImport_ImportModule( "sys");
   PyObject* s_out = PyObject_GetAttrString(sys, "stdout");
-  PyObject_CallMethod(s_out, "write", "s", "OSCARS v1.31.00 - Open Source Code for Advanced Radiation Simulation\nBrookhaven National Laboratory, Upton NY, USA\nhttp://oscars.bnl.gov\noscars@bnl.gov\n");
+
+  std::string Message = "OSCARS v" + OSCARS::GetVersionString() + " - Open Source Code for Advanced Radiation Simulation\nBrookhaven National Laboratory, Upton NY, USA\nhttp://oscars.bnl.gov\noscars@bnl.gov\n";
+
+  PyObject_CallMethod(s_out, "write", "s", Message.c_str());
 
 
 }

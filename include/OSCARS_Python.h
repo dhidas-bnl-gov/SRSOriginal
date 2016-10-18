@@ -29,10 +29,7 @@ static PyObject* OSCARS_new (PyTypeObject* type, PyObject* args, PyObject* kwds)
 static TVector3D OSCARS_ListAsTVector3D (PyObject* List);
 static PyObject* OSCARS_TVector3DAsList (TVector3D const& V);
 static PyObject* OSCARS_Pi (OSCARSObject* self, PyObject* arg);
-static PyObject* OSCARS_SetCTStart (OSCARSObject* self, PyObject* arg);
 static PyObject* OSCARS_GetCTStart (OSCARSObject* self);
-static PyObject* OSCARS_SetCTStop (OSCARSObject* self, PyObject* arg);
-static PyObject* OSCARS_SetCTStop2 (OSCARSObject* self, PyObject* args, PyObject *keywds);
 static PyObject* OSCARS_GetCTStop (OSCARSObject* self);
 static PyObject* OSCARS_SetCTStartStop (OSCARSObject* self, PyObject* args);
 static PyObject* OSCARS_GetNPointsTrajectory (OSCARSObject* self);
@@ -52,7 +49,6 @@ static PyObject* OSCARS_CalculateSpectrum (OSCARSObject* self, PyObject* args, P
 static PyObject* OSCARS_CalculateTotalPower (OSCARSObject* self);
 static PyObject* OSCARS_CalculatePowerDensityRectangle (OSCARSObject* self, PyObject* args, PyObject *keywds);
 static PyObject* OSCARS_CalculateFluxRectangle (OSCARSObject* self, PyObject* args, PyObject *keywds);
-static PyObject* OSCARS_CalculateFluxRectangle2 (OSCARSObject* self, PyObject* args);
 
 
 

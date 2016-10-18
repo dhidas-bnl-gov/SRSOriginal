@@ -7,7 +7,7 @@ PYPATH = /System/Library/Frameworks/Python.framework/Versions/$(PYVERSION)
 
 WSTPDIR = /Applications/Mathematica.app/Contents/SystemFiles/Links/WSTP/DeveloperKit/MacOSX-x86-64/CompilerAdditions/
 
-CFLAGS = -DCUDA -Wall -ansi -pedantic -O3 -pthread -std=c++11 -fPIC
+CFLAGS = -DCUDA -Wall -pedantic -O3 -pthread -std=c++11 -fPIC -Wno-write-strings
 CUDACFLAGS = -DCUDA -std=c++11
 LIBS = -Llib -L$(PYPATH)/lib/python$(PYVERSION) -lpython -L$(WSTPDIR) -lWSTPi4 -stdlib=libstdc++ -framework Foundation -lc++ -L/usr/local/cuda/lib -lcuda -lcudart_static
 INCLUDE = -Iinclude -I$(PYPATH)/include/python$(PYVERSION) -I$(WSTPDIR)
@@ -36,10 +36,10 @@ wstp/%_tm.cc : wstp/%.tm
 	$(WSPREP) $< -o $@
 
 lib/OSCARS.so : $(OBJS) $(CUDAOBJS) $(WSTPCCS) $(WSTPOBJS)
-	$(LD) -Wall -shared $(LIBS) $(WSTPOBJS) $(OBJS) $(CUDAOBJS) -o $@
+	$(LD) -shared $(LIBS) $(WSTPOBJS) $(OBJS) $(CUDAOBJS) -o $@
 
 lib/%.o : src/%.cc
-	$(CC) -Wall $(CFLAGS) $(INCLUDE) -c $< -o $@
+	$(CC) $(CFLAGS) $(INCLUDE) -c $< -o $@
 
 lib/%.o : src/%.cu
 	$(NVCC) $(CUDACFLAGS) $(INCLUDE) -c $< -o $@
