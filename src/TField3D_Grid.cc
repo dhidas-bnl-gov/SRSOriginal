@@ -656,6 +656,9 @@ void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D c
 
   // Initial line for comment
   std::getline(fi, L);
+
+  // Now header information
+  std::getline(fi, L);
   S.str(L);
 
   // Grab parameters and correct for [mm] -> [m] conversion.
@@ -676,9 +679,9 @@ void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D c
   }
 
   // Save position data to object variables
-  fXStart = -(fXStep * fNX) / 2;
-  fYStart = -(fYStep * fNX) / 2;
-  fZStart = -(fZStep * fNX) / 2;
+  fXStart = -(fXStep * (fNX - 1)) / 2;
+  fYStart = -(fYStep * (fNY - 1)) / 2;
+  fZStart = -(fZStep * (fNZ - 1)) / 2;
   fXStop  = fXStart + (fNX - 1) * fXStep;
   fYStop  = fYStart + (fNY - 1) * fYStep;
   fZStop  = fZStart + (fNZ - 1) * fZStep;
@@ -741,6 +744,7 @@ void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D c
 
         // Read data
         S.clear();
+        S.str("");
         S.str(L);
         S >> fx >> fy >> fz;
 
