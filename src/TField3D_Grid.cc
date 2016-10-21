@@ -97,13 +97,13 @@ TVector3D TField3D_Grid::GetF (TVector3D const& XIN) const
   X -= fTranslation;
 
   // If outside the range, return a zero
-  if (fNX > 1 && (X.GetX() < fXStart || X.GetX() > fXStop)) {
+  if (fNX > 1 && (X.GetX() <= fXStart || X.GetX() >= fXStop)) {
     return TVector3D(0, 0, 0);
   }
-  if (fNY > 1 && (X.GetY() < fYStart || X.GetY() > fYStop)) {
+  if (fNY > 1 && (X.GetY() <= fYStart || X.GetY() >= fYStop)) {
     return TVector3D(0, 0, 0);
   }
-  if (fNZ > 1 && (X.GetZ() < fZStart || X.GetZ() > fZStop)) {
+  if (fNZ > 1 && (X.GetZ() <= fZStart || X.GetZ() >= fZStop)) {
     return TVector3D(0, 0, 0);
   }
       
@@ -116,6 +116,7 @@ TVector3D TField3D_Grid::GetF (TVector3D const& XIN) const
 
   size_t const nz = fNZ > 1 ? (X.GetZ() - fZStart) / fZStep      : 0;
   double const dz = fNZ > 1 ? (X.GetZ() - fZStart) - nz * fZStep : 0;
+
 
   switch (fDIMX) {
     case kDIMX_XYZ:

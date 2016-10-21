@@ -1053,6 +1053,106 @@ static PyObject* OSCARS_AddFieldGaussian (OSCARSObject* self, PyObject* args, Py
 
 
 
+static PyObject* OSCARS_WriteMagneticField (OSCARSObject* self, PyObject* args, PyObject* keywds)
+{
+  // Add a magnetic field that is a gaussian
+
+  const char* OutFileName = "";
+  const char* OutFormat   = "";
+  const char* Comment     = "";
+
+  // Lists and variables
+  PyObject* List_XLim = PyList_New(0);
+  PyObject* List_YLim = PyList_New(0);
+  PyObject* List_ZLim = PyList_New(0);
+
+  int NX = 0;
+  int NY = 0;
+  int NZ = 0;
+
+  TVector2D XLim;
+  TVector2D YLim;
+  TVector2D ZLim;
+
+
+  // Input variables and parsing
+  static char *kwlist[] = {"ofile", "oformat", "xlim", "nx", "ylim", "ny", "zlim", "nz", "comment", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss|OiOiOis", kwlist,
+                                                               &OutFileName,
+                                                               &OutFormat,
+                                                               &List_XLim,
+                                                               &NX,
+                                                               &List_YLim,
+                                                               &NY,
+                                                               &List_ZLim,
+                                                               &NZ,
+                                                               &Comment)) {
+    return NULL;
+  }
+
+
+  // Check that filename and format exist
+  if (std::strlen(OutFileName) == 0 || std::strlen(OutFormat) == 0) {
+    PyErr_SetString(PyExc_ValueError, "'ofile' or 'oformat' is blank");
+    return NULL;
+  }
+
+  // Check for XLim in the input
+  if (PyList_Size(List_XLim) != 0) {
+    try {
+      XLim = OSCARS_ListAsTVector2D(List_XLim);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'xlim'");
+      return NULL;
+    }
+  }
+
+  // Check for YLim in the input
+  if (PyList_Size(List_YLim) != 0) {
+    try {
+      YLim = OSCARS_ListAsTVector2D(List_YLim);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'ylim'");
+      return NULL;
+    }
+  }
+
+  // Check for ZLim in the input
+  if (PyList_Size(List_ZLim) != 0) {
+    try {
+      ZLim = OSCARS_ListAsTVector2D(List_ZLim);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'zlim'");
+      return NULL;
+    }
+  }
+
+
+  try {
+    self->obj->WriteField("B", OutFileName, OutFormat, XLim, NX, YLim, NY, ZLim, NZ, Comment);
+  } catch (...) {
+    PyErr_SetString(PyExc_ValueError, "could not write output file");
+    return NULL;
+  }
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1110,33 +1210,33 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
   double      Weight                     = 1;
   double      Mass                       = 0;
   double      Charge                     = 0;
-  PyObject*   List_X0                    = PyList_New(0);
+  PyObject*   List_Position       = PyList_New(0);
   PyObject*   List_Direction             = PyList_New(0);
   PyObject*   List_Rotations             = PyList_New(0);
   PyObject*   List_Translation           = PyList_New(0);
   PyObject*   List_Horizontal_Direction  = PyList_New(0);
   PyObject*   List_Beta                  = PyList_New(0);
   PyObject*   List_Emittance             = PyList_New(0);
-  PyObject*   List_Lattice_Center        = PyList_New(0);
+  PyObject*   List_Lattice_Reference     = PyList_New(0);
 
-  TVector3D X0(0, 0, 0);
+  TVector3D Position(0, 0, 0);
   TVector3D Direction;
   TVector3D Rotations(0, 0, 0);
   TVector3D Translation(0, 0, 0);
   TVector3D Horizontal_Direction;
   TVector2D Beta(0, 0);
   TVector2D Emittance(0, 0);
-  TVector3D Lattice_Center(0, 0, 0);
+  TVector3D Lattice_Reference(0, 0, 0);
 
 
   // Input variables and parsing
-  static char *kwlist[] = {"type", "name", "energy_GeV", "direction", "x0", "sigma_energy_GeV", "t0", "current", "weight", "rotations", "translation", "horizontal_direction", "beta", "emittance", "lattice_center", "mass", "charge", NULL};
+  static char *kwlist[] = {"type", "name", "energy_GeV", "direction", "position", "sigma_energy_GeV", "t0", "current", "weight", "rotations", "translation", "horizontal_direction", "beta", "emittance", "lattice_reference", "mass", "charge", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssdO|OddddOOOOOOdd", kwlist,
                                                                        &Type,
                                                                        &Name,
                                                                        &Energy_GeV,
                                                                        &List_Direction,
-                                                                       &List_X0,
+                                                                       &List_Position,
                                                                        &Sigma_Energy_GeV,
                                                                        &T0,
                                                                        &Current,
@@ -1146,7 +1246,7 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
                                                                        &List_Horizontal_Direction,
                                                                        &List_Beta,
                                                                        &List_Emittance,
-                                                                       &List_Lattice_Center,
+                                                                       &List_Lattice_Reference,
                                                                        &Mass,
                                                                        &Charge)) {
     return NULL;
@@ -1160,12 +1260,12 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
   }
 
   // If this is a custom particle
-  if (PyList_Size(List_X0) != 0) {
+  if (PyList_Size(List_Position) != 0) {
     try {
-      X0 = OSCARS_ListAsTVector3D(List_X0);
+      Position = OSCARS_ListAsTVector3D(List_Position);
       Direction = OSCARS_ListAsTVector3D(List_Direction);
     } catch (std::length_error e) {
-      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0' or 'direction'");
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'position' or 'direction'");
       return NULL;
     }
   }
@@ -1236,12 +1336,12 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
   }
 
 
-  // Check for Lattice Center in the input
-  if (PyList_Size(List_Lattice_Center) != 0) {
+  // Check for Lattice reference in the input
+  if (PyList_Size(List_Lattice_Reference) != 0) {
     try {
-      Lattice_Center = OSCARS_ListAsTVector3D(List_Lattice_Center);
+      Lattice_Reference = OSCARS_ListAsTVector3D(List_Lattice_Reference);
     } catch (std::length_error e) {
-      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'lattice_center'");
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'lattice_reference'");
       return NULL;
     }
   }
@@ -1261,8 +1361,8 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
 
 
   // Rotate beam parameters
-  X0.RotateSelfXYZ(Rotations);
-  X0 += Translation;
+  Position.RotateSelfXYZ(Rotations);
+  Position += Translation;
 
   // UPDATE: An idea for later, use new variable "velocity"
   //if (Energy_GeV == 0) {
@@ -1281,9 +1381,9 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
         return NULL;
       }
       // UPDATE: for custom beams
-      self->obj->AddParticleBeam(Type, Name, X0, Direction, Energy_GeV, T0, Current, Weight, Charge, Mass);
+      self->obj->AddParticleBeam(Type, Name, Position, Direction, Energy_GeV, T0, Current, Weight, Charge, Mass);
     } else {
-      self->obj->AddParticleBeam(Type, Name, X0, Direction, Energy_GeV, T0, Current, Weight);
+      self->obj->AddParticleBeam(Type, Name, Position, Direction, Energy_GeV, T0, Current, Weight);
     }
   } catch (std::invalid_argument e) {
     PyErr_SetString(PyExc_ValueError, "invalid argument in adding particle beam.  possibly 'name' already exists");
@@ -1291,7 +1391,7 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
   }
 
   // UPDATE: Change me
-  self->obj->GetParticleBeam(Name).SetSigma(Horizontal_Direction, SigmaU, SigmaUPrime, Lattice_Center, Sigma_Energy_GeV);
+  self->obj->GetParticleBeam(Name).SetSigma(Horizontal_Direction, SigmaU, SigmaUPrime, Lattice_Reference, Sigma_Energy_GeV);
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -3111,6 +3211,8 @@ static PyMethodDef OSCARS_methods[] = {
   {"clear_electric_fields",             (PyCFunction) OSCARS_ClearElectricFields,             METH_NOARGS,  "clear all internal electric fields"},
  
   {"add_field_gaussian",                (PyCFunction) OSCARS_AddFieldGaussian,                METH_VARARGS | METH_KEYWORDS, "add a magnetic or electric field in form of 3D gaussian"},
+
+  {"write_magnetic_field",              (PyCFunction) OSCARS_WriteMagneticField,              METH_VARARGS | METH_KEYWORDS, "write the magnetic field to a file"},
 
                                                                                           
   {"set_particle_beam",                 (PyCFunction) OSCARS_SetParticleBeam,                 METH_VARARGS | METH_KEYWORDS, "add a particle beam"},

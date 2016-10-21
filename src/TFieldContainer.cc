@@ -8,6 +8,8 @@
 
 #include "TFieldContainer.h"
 
+#include <iostream>
+#include <fstream>
 
 
 
@@ -132,6 +134,78 @@ void TFieldContainer::Clear ()
   }
 
   fFields.clear();
+
+  return;
+}
+
+
+
+
+
+void TFieldContainer::WriteToFile (std::string const& OutFileName, std::string const& OutFormat, TVector2D const& XLim, int const NX, TVector2D const& YLim, int const NY, TVector2D const& ZLim, int const NZ, std::string const Comment)
+{
+  // Write the magnetic field in a given range to an output file of the chosen format
+
+  // Field for writing
+  TVector3D B;
+
+  // Position
+  TVector3D X;
+
+  // Open file for output
+  std::ofstream of(OutFileName.c_str());
+  if (!of.is_open()) {
+    throw;
+  }
+
+  // OSCARS format is text by default
+  if (OutFormat == "OSCARS") {
+
+    // UPDATE: Remove LF and CR from Comment
+    if (Comment == "") {
+      of << "# OSCARS format file" << std::endl;
+    } else {
+      of << "# " << Comment << std::endl;
+    }
+
+    double const XStep = (XLim[1] - XLim[0]) / (NX - 1);
+    double const YStep = (YLim[1] - YLim[0]) / (NY - 1);
+    double const ZStep = (ZLim[1] - ZLim[0]) / (NZ - 1);
+
+    of << XLim.GetX() << "  # X Start position" << std::endl;
+    of << XStep << std::endl;
+    of << NX << std::endl;
+    of << YLim.GetX() << "  # Y Start position" << std::endl;
+    of << YStep << std::endl;
+    of << NY << std::endl;
+    of << ZLim.GetX() << "  # Z Start position" << std::endl;
+    of << ZStep << std::endl;
+    of << NZ << std::endl;
+
+    // Set output format
+    of << std::scientific;
+
+    // Loop over all points and output
+    for (int i = 0; i < NX; ++i) {
+      for (int j = 0; j < NY; ++j) {
+        for (int k = 0; k < NZ; ++k) {
+
+          // Set current position
+          X.SetXYZ(XLim[0] + XStep * i, YLim[0] + YStep * j, ZLim[0] + ZStep * k);
+
+          // Get B Field
+          B = this->GetF(X);
+
+          // Print field to file
+          of << B.GetX() << " " << B.GetY() << " " << B.GetZ() << std::endl;
+        }
+      }
+    }
+  }
+
+
+  // Close output file
+  of.close();
 
   return;
 }

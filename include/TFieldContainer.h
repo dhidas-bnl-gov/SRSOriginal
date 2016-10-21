@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "TField.h"
+#include "TVector2D.h"
 #include "TVector3D.h"
 
 class TFieldContainer
@@ -35,6 +36,8 @@ class TFieldContainer
     size_t GetNFields () const;
 
     void      Clear ();
+
+    void WriteToFile (std::string const& OutFileName, std::string const& OutFormat, TVector2D const& XLim, int const NX, TVector2D const& YLim, int const NY, TVector2D const& ZLim, int const NZ, std::string const Comment = "");
 
   private:
     std::vector<TField*> fFields;

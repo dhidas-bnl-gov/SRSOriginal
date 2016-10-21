@@ -326,6 +326,7 @@ def plot_magnetic_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', n
     By = []
     Bz = []
 
+
     if between_two_points is not None:
         p0 = between_two_points[0]
         p1 = between_two_points[1]

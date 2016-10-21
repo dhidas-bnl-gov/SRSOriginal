@@ -48,6 +48,8 @@ class OSCARS
     void AddElectricField (TField*);
     void ClearElectricFields ();
 
+    void WriteField (std::string const&, std::string const&, std::string const&, TVector2D const&, int const, TVector2D const&, int const, TVector2D const&, int const, std::string const& Comment = "");
+
 
     double    GetBx (double const, double const, double const) const;
     double    GetBy (double const, double const, double const) const;

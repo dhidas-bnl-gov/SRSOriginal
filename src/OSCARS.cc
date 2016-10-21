@@ -139,13 +139,13 @@ void OSCARS::AddMagneticField (std::string const FileName, std::string const For
 
     if (XDIM == 1) {
       if (BDIM == 1) {
+        // UPDATE: 1 and 2D bfields
         throw std::invalid_argument("Not implemented yet");
         //this->fBFieldContainer.AddField( new TField1DZRegularized(FileName) );
         //this->fBFieldContainer.AddField( new TField1DZRegularized(FileName, Rotations, Translation, Scaling) );
       } else if (BDIM == 2) {
         throw std::invalid_argument("Not implemented yet");
       } else if (BDIM == 3) {
-        // UPDATE: Put this back NOW!!
         this->fBFieldContainer.AddField( new TField3D_1DRegularized(FileName, Rotations, Translation, Scaling) );
       }
     } else if (XDIM == 2) {
@@ -280,6 +280,22 @@ void OSCARS::ClearElectricFields ()
 
   // Set the derivs function accordingly
   this->SetDerivativesFunction();
+
+  return;
+}
+
+
+
+
+void OSCARS::WriteField (std::string const& BorE, std::string const& OutFileName, std::string const& OutFormat, TVector2D const& XLim, int const NX, TVector2D const& YLim, int const NY, TVector2D const& ZLim, int const NZ, std::string const& Comment)
+{
+  if (BorE == "B") {
+    fBFieldContainer.WriteToFile(OutFileName, OutFormat, XLim, NX, YLim, NY, ZLim, NZ, Comment);
+  } else if (BorE == "E") {
+    fEFieldContainer.WriteToFile(OutFileName, OutFormat, XLim, NX, YLim, NY, ZLim, NZ, Comment);
+  } else {
+    throw;
+  }
 
   return;
 }
@@ -708,13 +724,10 @@ void OSCARS::SetDerivativesFunction ()
   // Set the derivatives function for RK4 depending on what fields exist
 
   if (fBFieldContainer.GetNFields() == 0 && fEFieldContainer.GetNFields() > 0) {
-    std::cout << "E Field" << std::endl;
     fDerivativesFunction = &OSCARS::DerivativesE;
   } else if (fBFieldContainer.GetNFields() > 0 && fEFieldContainer.GetNFields() == 0) {
-    std::cout << "B Field" << std::endl;
     fDerivativesFunction = &OSCARS::DerivativesB;
   } else {
-    std::cout << "EB Field" << std::endl;
     fDerivativesFunction = &OSCARS::DerivativesEB;
   }
 

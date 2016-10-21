@@ -691,11 +691,6 @@ void OSCARS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& S
     throw std::invalid_argument("No GPU found");
   }
 
-  std::cout << "ngpu " << ngpu << std::endl;
-
-
-
-
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
 
@@ -1013,8 +1008,6 @@ void OSCARS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& Ob
   if (ngpu == 0) {
     throw std::invalid_argument("No GPU found");
   }
-
-  std::cout << "ngpu " << ngpu << std::endl;
 
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
@@ -1342,11 +1335,6 @@ void OSCARS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints 
   if (ngpu == 0) {
     throw std::invalid_argument("No GPU found");
   }
-
-  std::cout << "ngpu " << ngpu << std::endl;
-
-
-
 
   // Grab the Trajectory
   TParticleTrajectoryPoints& T = Particle.GetTrajectory();
