@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 #include <thread>
+#include <algorithm>
 
 #include "TVector3DC.h"
 //#include "TField1D_1DRegularized.h"
