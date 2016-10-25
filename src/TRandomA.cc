@@ -60,6 +60,5 @@ double TRandomA::Normal ()
 
 double TRandomA::Uniform ()
 {
-  return 0;
-  //return fUniformDist(*fMT);
+  return fUniformDist(*fMT);
 }

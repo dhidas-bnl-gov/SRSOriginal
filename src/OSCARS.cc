@@ -546,6 +546,17 @@ void OSCARS::SetUseGPUGlobal (int const in)
 
 
 
+int OSCARS::CheckGPU () const
+{
+  #ifdef CUDA
+    return OSCARS_Cuda_GetDeviceCount();
+  #endif
+  return -1;
+}
+
+
+
+
 void OSCARS::SetNThreadsGlobal (int const N)
 {
   fNThreadsGlobal = N;
@@ -610,6 +621,12 @@ void OSCARS::CalculateTrajectory (TParticleA& P)
   if (this->GetCTStart() > P.GetT0()) {
     std::cerr << "ERROR: start time is greater than T0" << std::endl;
     throw std::out_of_range("start time is greater than T0");
+  }
+
+  // Check that CTStart and CTStop are not the same (probably not defined if this is the case)
+  if (this->GetCTStart() >= this->GetCTStop()) {
+    std::cerr << "ERROR: start time is >= stop time" << std::endl;
+    throw std::out_of_range("start time is greater than stop time.  check that set_ctstartstop is set");
   }
 
   // Check that particle has been set yet.  If fType is "" it has not been set yet
