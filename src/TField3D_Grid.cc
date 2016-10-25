@@ -472,6 +472,8 @@ void TField3D_Grid::ReadFile_SRW (std::string const& InFileName, TVector3D const
 {
   // Read file with SRW field input format
 
+  std::cout << "Reading file SRW Format" << std::endl;
+
   // Open the input file and throw exception if not open
   std::ifstream fi(InFileName);
   if (!fi) {
@@ -524,6 +526,7 @@ void TField3D_Grid::ReadFile_SRW (std::string const& InFileName, TVector3D const
   // Number of points Z
   std::getline(fi, L);
   int const NZ = (int) GetHeaderValueSRW(L, CommentChar);
+  std::cout << NZ << std::endl;
 
 
   // Check Number of points is > 0 for all
@@ -597,19 +600,14 @@ void TField3D_Grid::ReadFile_SRW (std::string const& InFileName, TVector3D const
         // Grab a line from input file
         std::getline(fi, L);
 
-        // Check we did not hit an EOF
-        if (fi.eof()) {
-          std::cerr << "ERROR: bad input file" << std::endl;
-          throw;
-        }
-
         // Read data
         S.clear();
         S.str(L);
         S >> fx >> fy >> fz;
 
+
         // Check the stream did not hit an EOF
-        if (S.fail()) {
+        if (S.fail() || fi.fail()) {
           std::cerr << "ERRROR: input stream bad" << std::endl;
           throw;
         }

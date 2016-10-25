@@ -27,6 +27,19 @@
 
 
 
+
+int OSCARS_Cuda_GetDeviceCount ()
+{
+  int ngpu = 0;
+  cudaGetDeviceCount(&ngpu);
+
+  return ngpu;
+}
+
+
+
+
+
 __device__ static __inline__ void Orthogonal(double *a, double *b)
 {
   // Return a vector which is orthogonal vector a

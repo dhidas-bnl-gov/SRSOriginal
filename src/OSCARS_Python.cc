@@ -203,6 +203,29 @@ static PyObject* OSCARS_SetGPUGlobal (OSCARSObject* self, PyObject* arg)
 
 
 
+static PyObject* OSCARS_CheckGPU (OSCARSObject* self, PyObject* arg)
+{
+
+  int const NGPUStatus = self->obj->CheckGPU();
+
+  if (NGPUStatus == -1) {
+    // Print copyright notice
+    PyObject* sys = PyImport_ImportModule( "sys");
+    PyObject* s_out = PyObject_GetAttrString(sys, "stdout");
+    std::string Message = "It appears this binary version of OSCARS was not compiled with GPU capability turned on.";
+    PyObject_CallMethod(s_out, "write", "s", Message.c_str());
+  }
+
+  return PyInt_FromLong((long) NGPUStatus);
+}
+
+
+
+
+
+
+
+
 static PyObject* OSCARS_SetNThreadsGlobal (OSCARSObject* self, PyObject* arg)
 {
   // Grab the value from input
@@ -1183,13 +1206,14 @@ static PyObject* OSCARS_SetParticleBeam (OSCARSObject* self, PyObject* args, PyO
 
   self->obj->ClearParticleBeams();
 
-  OSCARS_AddParticleBeam(self, args, keywds);
+  PyObject* ret = OSCARS_AddParticleBeam(self, args, keywds);
+  if (ret == NULL) {
+    return ret;
+  }
 
   self->obj->SetNewParticle("", "ideal");
 
-  // Must return python object None in a special way
-  Py_INCREF(Py_None);
-  return Py_None;
+  return ret;
 }
 
 
@@ -1230,8 +1254,8 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
 
 
   // Input variables and parsing
-  static char *kwlist[] = {"type", "name", "energy_GeV", "direction", "position", "sigma_energy_GeV", "t0", "current", "weight", "rotations", "translation", "horizontal_direction", "beta", "emittance", "lattice_reference", "mass", "charge", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssdO|OddddOOOOOOdd", kwlist,
+  static char *kwlist[] = {"type", "name", "energy_GeV", "d0", "x0", "sigma_energy_GeV", "t0", "current", "weight", "rotations", "translation", "horizontal_direction", "beta", "emittance", "lattice_reference", "mass", "charge", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ssdOO|ddddOOOOOOdd", kwlist,
                                                                        &Type,
                                                                        &Name,
                                                                        &Energy_GeV,
@@ -1259,13 +1283,22 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
     return NULL;
   }
 
-  // If this is a custom particle
+  // Initial position
   if (PyList_Size(List_Position) != 0) {
     try {
       Position = OSCARS_ListAsTVector3D(List_Position);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'x0'");
+      return NULL;
+    }
+  }
+
+  // Initial direction
+  if (PyList_Size(List_Direction) != 0) {
+    try {
       Direction = OSCARS_ListAsTVector3D(List_Direction);
     } catch (std::length_error e) {
-      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'position' or 'direction'");
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'd0'");
       return NULL;
     }
   }
@@ -1390,7 +1423,7 @@ static PyObject* OSCARS_AddParticleBeam (OSCARSObject* self, PyObject* args, PyO
     return NULL;
   }
 
-  // UPDATE: Change me
+  // UPDATE: Change me to include sigma of beam
   self->obj->GetParticleBeam(Name).SetSigma(Horizontal_Direction, SigmaU, SigmaUPrime, Lattice_Reference, Sigma_Energy_GeV);
 
   // Must return python object None in a special way
@@ -3188,6 +3221,7 @@ static PyMethodDef OSCARS_methods[] = {
   {"norm",                              (PyCFunction) OSCARS_RandomNormal,                    METH_NOARGS,  "Normally distributed random number"},
   {"set_seed",                          (PyCFunction) OSCARS_SetSeed,                         METH_O,       "Set the random seed"},
   {"set_gpu_global",                    (PyCFunction) OSCARS_SetGPUGlobal,                    METH_O,       "Set global use GPU"},
+  {"check_gpu",                         (PyCFunction) OSCARS_CheckGPU,                        METH_NOARGS,  "returns the number of GPU units available for calculations, negative number for other errors"},
   {"set_nthreads_global",               (PyCFunction) OSCARS_SetNThreadsGlobal,               METH_O,       "Set global number of threads to use"},
 
 

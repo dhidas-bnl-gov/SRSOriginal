@@ -9,6 +9,7 @@
 #include "TFieldContainer.h"
 
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 
 
@@ -175,15 +176,16 @@ void TFieldContainer::WriteToFile (std::string const& OutFileName, std::string c
     double const YStep = (YLim[1] - YLim[0]) / (NY - 1);
     double const ZStep = (ZLim[1] - ZLim[0]) / (NZ - 1);
 
-    of << XLim.GetX() << "  # X Start position" << std::endl;
-    of << XStep << std::endl;
-    of << NX << std::endl;
-    of << YLim.GetX() << "  # Y Start position" << std::endl;
-    of << YStep << std::endl;
-    of << NY << std::endl;
-    of << ZLim.GetX() << "  # Z Start position" << std::endl;
-    of << ZStep << std::endl;
-    of << NZ << std::endl;
+    int const Width = 15;
+    of << std::setw(Width) << std::left << XLim.GetX() << "  # X Start position"      << std::endl;
+    of << std::setw(Width) << std::left << XStep       << "  # Step size in X"        << std::endl;
+    of << std::setw(Width) << std::left << NX          << "  # Number of points in X" << std::endl;
+    of << std::setw(Width) << std::left << YLim.GetX() << "  # Y Start position"      << std::endl;
+    of << std::setw(Width) << std::left << YStep       << "  # Step size in Y"        << std::endl;
+    of << std::setw(Width) << std::left << NY          << "  # Number of points in Y" << std::endl;
+    of << std::setw(Width) << std::left << ZLim.GetX() << "  # Z Start position"      << std::endl;
+    of << std::setw(Width) << std::left << ZStep       << "  # Step size in Z"        << std::endl;
+    of << std::setw(Width) << std::left << NZ          << "  # Number of points in Z" << std::endl;
 
     // Set output format
     of << std::scientific;
