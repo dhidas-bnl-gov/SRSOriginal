@@ -28,6 +28,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <cstring>
 
 
 // External global random generator
