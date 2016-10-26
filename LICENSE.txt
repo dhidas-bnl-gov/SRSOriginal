@@ -40,7 +40,7 @@ Each licensee is addressed as "you" or "Licensee."
            specific written permission. 
 
 5. The Software resulted from work developed under a U.S. Government Contract
-   No. DE-AC02-98CH10886 and are subject to the following license:  the U.S.
+   No. DE-SC0012704 and are subject to the following license:  the U.S.
    Government is granted for itself and others acting on its behalf a paid-up,
    nonexclusive, irrevocable worldwide license in this computer software and
    data to reproduce, prepare derivative works, and perform publicly and display
