@@ -11,6 +11,7 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <algorithm>
 
 
 
@@ -160,8 +161,8 @@ void TFieldContainer::WriteToFile (std::string const& OutFileName, std::string c
   }
 
   std::string CommentNoCRLF = Comment;
-  CommentNoCRLF.erase(std::remove(CommentNoCRLF.begin(), CommentNoCRLF.end(), '\n'), CommentNoCRLF.end());
-  CommentNoCRLF.erase(std::remove(CommentNoCRLF.begin(), CommentNoCRLF.end(), '\r'), CommentNoCRLF.end());
+  std::replace(CommentNoCRLF.begin(), CommentNoCRLF.end(), '\n', ' ');
+  std::replace(CommentNoCRLF.begin(), CommentNoCRLF.end(), '\r', ' ');
 
   // OSCARS format is text by default
   if (OutFormat == "OSCARS") {

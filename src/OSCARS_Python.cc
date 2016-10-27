@@ -620,17 +620,17 @@ static PyObject* OSCARS_ClearMagneticFields (OSCARSObject* self)
 
 static PyObject* OSCARS_AddMagneticFieldIdealUndulator (OSCARSObject* self, PyObject* args, PyObject* keywds)
 {
-  // Set the start and stop times for OSCARS in [m]
+  // Add a magnetic field for undulator
 
   // Lists and variables
-  PyObject* List_BField      = PyList_New(0);
+  PyObject* List_Field      = PyList_New(0);
   PyObject* List_Period      = PyList_New(0);
   PyObject* List_Rotations   = PyList_New(0);
   PyObject* List_Translation = PyList_New(0);
   int       NPeriods = 0;
   double    Phase = 0;
 
-  TVector3D BField(0, 0, 0);
+  TVector3D Field(0, 0, 0);
   TVector3D Period(0, 0, 0);
   TVector3D Rotations(0, 0, 0);
   TVector3D Translation(0, 0, 0);
@@ -638,7 +638,7 @@ static PyObject* OSCARS_AddMagneticFieldIdealUndulator (OSCARSObject* self, PyOb
   // Input variables and parsing
   static char *kwlist[] = {"bfield", "period", "nperiods", "phase", "rotations", "translation", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, keywds, "OOi|dOO", kwlist,
-                                                            &List_BField,
+                                                            &List_Field,
                                                             &List_Period,
                                                             &NPeriods,
                                                             &Phase,
@@ -648,9 +648,9 @@ static PyObject* OSCARS_AddMagneticFieldIdealUndulator (OSCARSObject* self, PyOb
   }
 
 
-  // Check BField
+  // Check Field
   try {
-    BField = OSCARS_ListAsTVector3D(List_BField);
+    Field = OSCARS_ListAsTVector3D(List_Field);
   } catch (std::length_error e) {
     PyErr_SetString(PyExc_ValueError, "Incorrect format in 'bfield'");
     return NULL;
@@ -687,12 +687,12 @@ static PyObject* OSCARS_AddMagneticFieldIdealUndulator (OSCARSObject* self, PyOb
 
   // Rotate field and sigma
   // UPDATE: check this
-  BField.RotateSelfXYZ(Rotations);
+  Field.RotateSelfXYZ(Rotations);
   Period.RotateSelfXYZ(Rotations);
 
 
   // Add field
-  self->obj->AddMagneticField( (TField*) new TField3D_IdealUndulator(BField, Period, NPeriods, Translation, Phase));
+  self->obj->AddMagneticField( (TField*) new TField3D_IdealUndulator(Field, Period, NPeriods, Translation, Phase));
 
   // Must return python object None in a special way
   Py_INCREF(Py_None);
@@ -837,9 +837,45 @@ static PyObject* OSCARS_AddElectricField (OSCARSObject* self, PyObject* args, Py
 
 
 
+static PyObject* OSCARS_AddElectricFieldFunction (OSCARSObject* self, PyObject* args)
+{
+  // Add a python function as an electric field object
+
+  // Grab the function
+  PyObject* Function;
+  if (! PyArg_ParseTuple(args, "O:set_callback", &Function)) {
+    return NULL;
+  }
+
+  // Increment ref to function for python
+  Py_INCREF(Function);
+
+  // Add the function as a field to the OSCARS object
+  try {
+    self->obj->AddElectricField( (TField*) new TFieldPythonFunction(Function));
+  } catch (std::invalid_argument e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  }
+
+  // Decrement reference to function for python
+  Py_DECREF(Function);
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
+
 static PyObject* OSCARS_AddElectricFieldGaussian (OSCARSObject* self, PyObject* args, PyObject* keywds)
 {
-  // Add a magnetic field that is a gaussian
+  // Add an electric field that is a gaussian
 
   // Lists and variables
   PyObject* List_Field       = PyList_New(0);
@@ -908,6 +944,179 @@ static PyObject* OSCARS_AddElectricFieldGaussian (OSCARSObject* self, PyObject* 
   Py_INCREF(Py_None);
   return Py_None;
 }
+
+
+
+
+
+
+
+
+static PyObject* OSCARS_AddElectricFieldUniform (OSCARSObject* self, PyObject* args, PyObject* keywds)
+{
+  // Add a uniform field with a given width in a given direction, or for all space
+
+  // Lists and vectors
+  PyObject* List_Field       = PyList_New(0);
+  PyObject* List_Translation = PyList_New(0);
+  PyObject* List_Rotations   = PyList_New(0);
+  PyObject* List_Width       = PyList_New(0);
+
+  TVector3D Field(0, 0, 0);
+  TVector3D Width (0, 0, 0);
+  TVector3D Rotations(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+
+  // Input variables and parsing
+  static char *kwlist[] = {"efield", "width", "rotations", "translation", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|OOO", kwlist,
+                                                          &List_Field,
+                                                          &List_Width,
+                                                          &List_Rotations,
+                                                          &List_Translation)) {
+    return NULL;
+  }
+
+
+  // Check Field
+  try {
+    Field = OSCARS_ListAsTVector3D(List_Field);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'efield'");
+    return NULL;
+  }
+
+  // Check Width
+  if (PyList_Size(List_Width) != 0) {
+    try {
+      Width = OSCARS_ListAsTVector3D(List_Width);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'width'");
+      return NULL;
+    }
+  }
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = OSCARS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
+  }
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = OSCARS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
+  }
+
+  // Add the field
+  self->obj->AddElectricField((TField*) new TField3D_UniformBox(Field, Width, Translation, Rotations));
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
+
+
+
+
+static PyObject* OSCARS_AddElectricFieldIdealUndulator (OSCARSObject* self, PyObject* args, PyObject* keywds)
+{
+  // Add an electric field undulator to OSCARS
+
+  // Lists and variables
+  PyObject* List_Field       = PyList_New(0);
+  PyObject* List_Period      = PyList_New(0);
+  PyObject* List_Rotations   = PyList_New(0);
+  PyObject* List_Translation = PyList_New(0);
+  int       NPeriods = 0;
+  double    Phase = 0;
+
+  TVector3D Field(0, 0, 0);
+  TVector3D Period(0, 0, 0);
+  TVector3D Rotations(0, 0, 0);
+  TVector3D Translation(0, 0, 0);
+
+  // Input variables and parsing
+  static char *kwlist[] = {"efield", "period", "nperiods", "phase", "rotations", "translation", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "OOi|dOO", kwlist,
+                                                            &List_Field,
+                                                            &List_Period,
+                                                            &NPeriods,
+                                                            &Phase,
+                                                            &List_Rotations,
+                                                            &List_Translation)) {
+    return NULL;
+  }
+
+
+  // Check Field
+  try {
+    Field = OSCARS_ListAsTVector3D(List_Field);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'efield'");
+    return NULL;
+  }
+
+  // Check Period
+  try {
+    Period = OSCARS_ListAsTVector3D(List_Period);
+  } catch (std::length_error e) {
+    PyErr_SetString(PyExc_ValueError, "Incorrect format in 'period'");
+    return NULL;
+  }
+
+  // Check for Rotations in the input
+  if (PyList_Size(List_Rotations) != 0) {
+    try {
+      Rotations = OSCARS_ListAsTVector3D(List_Rotations);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'rotations'");
+      return NULL;
+    }
+  }
+
+  // Check for Translation in the input
+  if (PyList_Size(List_Translation) != 0) {
+    try {
+      Translation = OSCARS_ListAsTVector3D(List_Translation);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'translation'");
+      return NULL;
+    }
+  }
+
+
+  // Rotate field and sigma
+  // UPDATE: check this
+  Field.RotateSelfXYZ(Rotations);
+  Period.RotateSelfXYZ(Rotations);
+
+
+  // Add field
+  self->obj->AddElectricField( (TField*) new TField3D_IdealUndulator(Field, Period, NPeriods, Translation, Phase));
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
 
 
 
@@ -1163,6 +1372,116 @@ static PyObject* OSCARS_WriteMagneticField (OSCARSObject* self, PyObject* args, 
   Py_INCREF(Py_None);
   return Py_None;
 }
+
+
+
+
+
+static PyObject* OSCARS_WriteElectricField (OSCARSObject* self, PyObject* args, PyObject* keywds)
+{
+  // Add a magnetic field that is a gaussian
+
+  const char* OutFileName = "";
+  const char* OutFormat   = "";
+  const char* Comment     = "";
+
+  // Lists and variables
+  PyObject* List_XLim = PyList_New(0);
+  PyObject* List_YLim = PyList_New(0);
+  PyObject* List_ZLim = PyList_New(0);
+
+  int NX = 0;
+  int NY = 0;
+  int NZ = 0;
+
+  TVector2D XLim;
+  TVector2D YLim;
+  TVector2D ZLim;
+
+
+  // Input variables and parsing
+  static char *kwlist[] = {"ofile", "oformat", "xlim", "nx", "ylim", "ny", "zlim", "nz", "comment", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss|OiOiOis", kwlist,
+                                                               &OutFileName,
+                                                               &OutFormat,
+                                                               &List_XLim,
+                                                               &NX,
+                                                               &List_YLim,
+                                                               &NY,
+                                                               &List_ZLim,
+                                                               &NZ,
+                                                               &Comment)) {
+    return NULL;
+  }
+
+
+  // Check that filename and format exist
+  if (std::strlen(OutFileName) == 0 || std::strlen(OutFormat) == 0) {
+    PyErr_SetString(PyExc_ValueError, "'ofile' or 'oformat' is blank");
+    return NULL;
+  }
+
+  // Check for XLim in the input
+  if (PyList_Size(List_XLim) != 0) {
+    try {
+      XLim = OSCARS_ListAsTVector2D(List_XLim);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'xlim'");
+      return NULL;
+    }
+  }
+
+  // Check for YLim in the input
+  if (PyList_Size(List_YLim) != 0) {
+    try {
+      YLim = OSCARS_ListAsTVector2D(List_YLim);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'ylim'");
+      return NULL;
+    }
+  }
+
+  // Check for ZLim in the input
+  if (PyList_Size(List_ZLim) != 0) {
+    try {
+      ZLim = OSCARS_ListAsTVector2D(List_ZLim);
+    } catch (std::length_error e) {
+      PyErr_SetString(PyExc_ValueError, "Incorrect format in 'zlim'");
+      return NULL;
+    }
+  }
+
+
+  try {
+    self->obj->WriteField("E", OutFileName, OutFormat, XLim, NX, YLim, NY, ZLim, NZ, Comment);
+  } catch (...) {
+    PyErr_SetString(PyExc_ValueError, "could not write output file");
+    return NULL;
+  }
+
+  // Must return python object None in a special way
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3215,56 +3534,59 @@ static PyMethodDef OSCARS_methods[] = {
   // We must tell python about the function we allow access as well as give them nice
   // python names, and tell python the method of input parameters.
 
-  {"pi",                                (PyCFunction) OSCARS_Pi,                              METH_NOARGS,  "do you want some pi?"},
-  {"qe",                                (PyCFunction) OSCARS_Qe,                              METH_NOARGS,  "elementary charge in [C]"},
-  {"me",                                (PyCFunction) OSCARS_Me,                              METH_NOARGS,  "electron mass in [kg]"},
-  {"rand",                              (PyCFunction) OSCARS_Random,                          METH_NOARGS,  "uniformally distributed random number [0, 1)"},
-  {"norm",                              (PyCFunction) OSCARS_RandomNormal,                    METH_NOARGS,  "Normally distributed random number"},
-  {"set_seed",                          (PyCFunction) OSCARS_SetSeed,                         METH_O,       "Set the random seed"},
-  {"set_gpu_global",                    (PyCFunction) OSCARS_SetGPUGlobal,                    METH_O,       "Set global use GPU"},
-  {"check_gpu",                         (PyCFunction) OSCARS_CheckGPU,                        METH_NOARGS,  "returns the number of GPU units available for calculations, negative number for other errors"},
-  {"set_nthreads_global",               (PyCFunction) OSCARS_SetNThreadsGlobal,               METH_O,       "Set global number of threads to use"},
-
-
-  {"get_ctstart",                       (PyCFunction) OSCARS_GetCTStart,                      METH_NOARGS,  "get the start time in [m]"},
-  {"get_ctstop",                        (PyCFunction) OSCARS_GetCTStop,                       METH_NOARGS,  "get the stop time in [m]"},
-  {"set_ctstartstop",                   (PyCFunction) OSCARS_SetCTStartStop,                  METH_VARARGS, "set the start and stop time in [m]"},
-  {"set_npoints_trajectory",            (PyCFunction) OSCARS_SetNPointsTrajectory,            METH_O,       "set the total number of points for the trajectory"},
-  {"get_npoints_trajectory",            (PyCFunction) OSCARS_GetNPointsTrajectory,            METH_NOARGS,  "get the total number of points for the trajectory"},
+  {"pi",                                (PyCFunction) OSCARS_Pi,                              METH_NOARGS,                  "do you want some pi?"},
+  {"qe",                                (PyCFunction) OSCARS_Qe,                              METH_NOARGS,                  "elementary charge in [C]"},
+  {"me",                                (PyCFunction) OSCARS_Me,                              METH_NOARGS,                  "electron mass in [kg]"},
+  {"rand",                              (PyCFunction) OSCARS_Random,                          METH_NOARGS,                  "uniformally distributed random number [0, 1)"},
+  {"norm",                              (PyCFunction) OSCARS_RandomNormal,                    METH_NOARGS,                  "Normally distributed random number"},
+  {"set_seed",                          (PyCFunction) OSCARS_SetSeed,                         METH_O,                       "Set the random seed"},
+  {"set_gpu_global",                    (PyCFunction) OSCARS_SetGPUGlobal,                    METH_O,                       "Set global use GPU"},
+  {"check_gpu",                         (PyCFunction) OSCARS_CheckGPU,                        METH_NOARGS,                  "returns the number of GPU units available, negative for errors"},
+  {"set_nthreads_global",               (PyCFunction) OSCARS_SetNThreadsGlobal,               METH_O,                       "Set global number of threads to use"},
+                                                                                                                            
+  {"get_ctstart",                       (PyCFunction) OSCARS_GetCTStart,                      METH_NOARGS,                  "get the start time in [m]"},
+  {"get_ctstop",                        (PyCFunction) OSCARS_GetCTStop,                       METH_NOARGS,                  "get the stop time in [m]"},
+  {"set_ctstartstop",                   (PyCFunction) OSCARS_SetCTStartStop,                  METH_VARARGS,                 "set the start and stop time in [m]"},
+  {"set_npoints_trajectory",            (PyCFunction) OSCARS_SetNPointsTrajectory,            METH_O,                       "set the total number of points for the trajectory"},
+  {"get_npoints_trajectory",            (PyCFunction) OSCARS_GetNPointsTrajectory,            METH_NOARGS,                  "get the total number of points for the trajectory"},
                                                                                           
-  {"add_magnetic_field",                (PyCFunction) OSCARS_AddMagneticField,                METH_VARARGS | METH_KEYWORDS, "add a magnetic field from a file"},
-  {"add_magnetic_field_function",       (PyCFunction) OSCARS_AddMagneticFieldFunction,        METH_VARARGS, "add a magnetic field in form of python function"},
-  {"add_magnetic_field_gaussian",       (PyCFunction) OSCARS_AddMagneticFieldGaussian,        METH_VARARGS | METH_KEYWORDS, "add a magnetic field in form of 3D gaussian"},
-  {"add_magnetic_field_uniform",        (PyCFunction) OSCARS_AddMagneticFieldUniform,         METH_VARARGS | METH_KEYWORDS, "add a uniform magnetic field in 3D"},
-  {"add_undulator",                     (PyCFunction) OSCARS_AddMagneticFieldIdealUndulator,  METH_VARARGS | METH_KEYWORDS, "add magnetic field from ideal undulator in 3D"},
-  {"get_bfield",                        (PyCFunction) OSCARS_GetBField,                       METH_VARARGS, "get the magnetic field at a given position in space (and someday time?)"},
-  {"clear_magnetic_fields",             (PyCFunction) OSCARS_ClearMagneticFields,             METH_NOARGS,  "clear all internal magnetic fields"},
+  {"add_bfield_file",                   (PyCFunction) OSCARS_AddMagneticField,                METH_VARARGS | METH_KEYWORDS, "add a magnetic field from a file"},
+  {"add_bfield_function",               (PyCFunction) OSCARS_AddMagneticFieldFunction,        METH_VARARGS,                 "add a magnetic field in form of python function"},
+  {"add_bfield_gaussian",               (PyCFunction) OSCARS_AddMagneticFieldGaussian,        METH_VARARGS | METH_KEYWORDS, "add a magnetic field in form of 3D gaussian"},
+  {"add_bfield_uniform",                (PyCFunction) OSCARS_AddMagneticFieldUniform,         METH_VARARGS | METH_KEYWORDS, "add a uniform magnetic field in 3D"},
+  {"add_bfield_undulator",              (PyCFunction) OSCARS_AddMagneticFieldIdealUndulator,  METH_VARARGS | METH_KEYWORDS, "add magnetic field from ideal undulator in 3D"},
+  {"get_bfield",                        (PyCFunction) OSCARS_GetBField,                       METH_VARARGS,                 "get the magnetic field at a given position in space (and someday time?)"},
+  {"clear_bfields",                     (PyCFunction) OSCARS_ClearMagneticFields,             METH_NOARGS,                  "clear all internal magnetic fields"},
 
-  {"add_electric_field",                (PyCFunction) OSCARS_AddElectricField,                METH_VARARGS | METH_KEYWORDS, "add an electric field from a file"},
-  {"add_electric_field_gaussian",       (PyCFunction) OSCARS_AddElectricFieldGaussian,        METH_VARARGS | METH_KEYWORDS, "add an electric field in form of 3D gaussian"},
-  {"get_efield",                        (PyCFunction) OSCARS_GetEField,                       METH_VARARGS, "get the electric field at a given position in space (and someday time?)"},
-  {"clear_electric_fields",             (PyCFunction) OSCARS_ClearElectricFields,             METH_NOARGS,  "clear all internal electric fields"},
+  {"add_efield_file",                   (PyCFunction) OSCARS_AddElectricField,                METH_VARARGS | METH_KEYWORDS, "add an electric field from a file"},
+  {"add_efield_function",               (PyCFunction) OSCARS_AddElectricFieldFunction,        METH_VARARGS,                 "add an electric field in form of python function"},
+  {"add_efield_gaussian",               (PyCFunction) OSCARS_AddElectricFieldGaussian,        METH_VARARGS | METH_KEYWORDS, "add an electric field in form of 3D gaussian"},
+  {"add_efield_uniform",                (PyCFunction) OSCARS_AddElectricFieldUniform,         METH_VARARGS | METH_KEYWORDS, "add a uniform electric field in 3D"},
+  {"add_efield_undulator",              (PyCFunction) OSCARS_AddElectricFieldIdealUndulator,  METH_VARARGS | METH_KEYWORDS, "add magnetic field from ideal undulator in 3D"},
+  {"get_efield",                        (PyCFunction) OSCARS_GetEField,                       METH_VARARGS,                 "get the electric field at a given position in space (and someday time?)"},
+  {"clear_efields",                     (PyCFunction) OSCARS_ClearElectricFields,             METH_NOARGS,                  "clear all internal electric fields"},
  
   {"add_field_gaussian",                (PyCFunction) OSCARS_AddFieldGaussian,                METH_VARARGS | METH_KEYWORDS, "add a magnetic or electric field in form of 3D gaussian"},
 
-  {"write_magnetic_field",              (PyCFunction) OSCARS_WriteMagneticField,              METH_VARARGS | METH_KEYWORDS, "write the magnetic field to a file"},
+  {"write_bfield",                      (PyCFunction) OSCARS_WriteMagneticField,              METH_VARARGS | METH_KEYWORDS, "write the magnetic field to a file"},
+  {"write_efield",                      (PyCFunction) OSCARS_WriteElectricField,              METH_VARARGS | METH_KEYWORDS, "write the magnetic field to a file"},
 
                                                                                           
   {"set_particle_beam",                 (PyCFunction) OSCARS_SetParticleBeam,                 METH_VARARGS | METH_KEYWORDS, "add a particle beam"},
   {"add_particle_beam",                 (PyCFunction) OSCARS_AddParticleBeam,                 METH_VARARGS | METH_KEYWORDS, "add a particle beam"},
-  {"clear_particle_beams",              (PyCFunction) OSCARS_ClearParticleBeams,              METH_NOARGS,  "Clear all existing particle beams from OSCARS"},
+  {"clear_particle_beams",              (PyCFunction) OSCARS_ClearParticleBeams,              METH_NOARGS,                  "Clear all existing particle beams from OSCARS"},
                                                                                           
-  {"set_new_particle",                  (PyCFunction) OSCARS_SetNewParticle,                  METH_VARARGS | METH_KEYWORDS,  "Set the internal particle to a new random particle"},
-  {"get_particle_x0",                   (PyCFunction) OSCARS_GetParticleX0,                   METH_NOARGS,  "Get the position at t0"},
-  {"get_particle_beta0",                (PyCFunction) OSCARS_GetParticleBeta0,                METH_NOARGS,  "Get the beta at t0"},
-  {"get_particle_e0",                   (PyCFunction) OSCARS_GetParticleE0,                   METH_NOARGS,  "Get the Energy at t0"},
+  {"set_new_particle",                  (PyCFunction) OSCARS_SetNewParticle,                  METH_VARARGS | METH_KEYWORDS, "Set the internal particle to a new random particle"},
+  {"get_particle_x0",                   (PyCFunction) OSCARS_GetParticleX0,                   METH_NOARGS,                  "Get the position at t0"},
+  {"get_particle_beta0",                (PyCFunction) OSCARS_GetParticleBeta0,                METH_NOARGS,                  "Get the beta at t0"},
+  {"get_particle_e0",                   (PyCFunction) OSCARS_GetParticleE0,                   METH_NOARGS,                  "Get the Energy at t0"},
                                                                                           
-  {"calculate_trajectory",              (PyCFunction) OSCARS_CalculateTrajectory,             METH_NOARGS,  "Calclate the trajectory for the current particle"},
-  {"get_trajectory",                    (PyCFunction) OSCARS_GetTrajectory,                   METH_NOARGS,  "Get the trajectory for the current particle as 2 3D lists [[x, y, z], [BetaX, BetaY, BetaZ]]"},
+  {"calculate_trajectory",              (PyCFunction) OSCARS_CalculateTrajectory,             METH_NOARGS,                  "Calclate the trajectory for the current particle"},
+  {"get_trajectory",                    (PyCFunction) OSCARS_GetTrajectory,                   METH_NOARGS,                  "Get the trajectory for the current particle"},
 
   {"calculate_spectrum",                (PyCFunction) OSCARS_CalculateSpectrum,               METH_VARARGS | METH_KEYWORDS, "calculate the spectrum at an observation point"},
 
-  {"calculate_total_power",             (PyCFunction) OSCARS_CalculateTotalPower,             METH_NOARGS,  "calculate total power radiated"},
+  {"calculate_total_power",             (PyCFunction) OSCARS_CalculateTotalPower,             METH_NOARGS,                  "calculate total power radiated"},
   {"calculate_power_density_rectangle", (PyCFunction) OSCARS_CalculatePowerDensityRectangle,  METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_power_density",           (PyCFunction) OSCARS_CalculatePowerDensity,           METH_VARARGS | METH_KEYWORDS, "calculate the power density given a surface"},
   {"calculate_flux",                    (PyCFunction) OSCARS_CalculateFlux,                   METH_VARARGS | METH_KEYWORDS, "calculate the flux given a surface"},
@@ -3278,11 +3600,10 @@ static PyMethodDef OSCARS_methods[] = {
   {"get_spectrum",                      (PyCFunction) OSCARS_GetSpectrum,                     METH_VARARGS | METH_KEYWORDS, "get the internal to OSCARS spectrum"},
   {"add_to_flux",                       (PyCFunction) OSCARS_AddToFlux,                       METH_VARARGS | METH_KEYWORDS, "add to the running average of a flux"},
   {"get_flux",                          (PyCFunction) OSCARS_GetFlux,                         METH_VARARGS | METH_KEYWORDS, "get the internal to OSCARS flux"},
-  {"add_to_power_density",              (PyCFunction) OSCARS_AddToPowerDensity,                       METH_VARARGS | METH_KEYWORDS, "add to the running average of a flux"},
-  {"get_power_density",                 (PyCFunction) OSCARS_GetPowerDensity,                         METH_VARARGS | METH_KEYWORDS, "get the internal to OSCARS flux"},
+  {"add_to_power_density",              (PyCFunction) OSCARS_AddToPowerDensity,               METH_VARARGS | METH_KEYWORDS, "add to the running average of a flux"},
+  {"get_power_density",                 (PyCFunction) OSCARS_GetPowerDensity,                 METH_VARARGS | METH_KEYWORDS, "get the internal to OSCARS flux"},
 
-
-  {"calculate_electric_field",          (PyCFunction) OSCARS_CalculateElectricFieldTimeDomain,METH_VARARGS | METH_KEYWORDS, "calculate the electric field in the time domain"},
+  {"calculate_efield_vs_time",          (PyCFunction) OSCARS_CalculateElectricFieldTimeDomain,METH_VARARGS | METH_KEYWORDS, "calculate the electric field in the time domain"},
 
   {NULL}  /* Sentinel */
 };

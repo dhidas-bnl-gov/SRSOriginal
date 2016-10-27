@@ -317,7 +317,7 @@ def plot_spectra(spectra, label, show=True, ofile='', title='', loc='upper left'
 
 
 
-def plot_magnetic_field(osc, mymin=-1, mymax=1, ylim=None, show=True, ofile='', axis='Z', npoints=20000, between_two_points=None, ret=False):
+def plot_bfield(osc, mymin=-1, mymax=1, ylim=None, show=True, ofile='', axis='Z', npoints=20000, between_two_points=None, ret=False):
     """Plot the magnetic field as a function of Z"""
 
 
@@ -396,14 +396,15 @@ def plot_magnetic_field(osc, mymin=-1, mymax=1, ylim=None, show=True, ofile='', 
 
 
 
-def plot_electric_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', npoints=20000, between_two_points=None, ret=False):
-    """Plot the magnetic field as a function of Z"""
+def plot_efield(osc, mymin=-1, mymax=1, ylim=None, show=True, ofile='', axis='Z', npoints=20000, between_two_points=None, ret=False):
+    """Plot the electric field as a function of Z"""
 
 
     P = []
     Bx = []
     By = []
     Bz = []
+
 
     if between_two_points is not None:
         p0 = between_two_points[0]
@@ -443,17 +444,20 @@ def plot_electric_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', n
     plt.subplot(131)
     plt.plot(P, Bx)
     plt.xlabel(axis + ' [m]')
-    plt.ylabel('Bx [T]')
+    plt.ylabel('Ex [V/m]')
+    plt.ylim(ylim)
 
     plt.subplot(132)
     plt.plot(P, By)
     plt.xlabel(axis + ' [m]')
-    plt.ylabel('By [T]')
+    plt.ylabel('Ey [V/m]')
+    plt.ylim(ylim)
 
     plt.subplot(133)
     plt.plot(P, Bz)
     plt.xlabel(axis + ' [m]')
-    plt.ylabel('Bz [T]')
+    plt.ylabel('Ez [V/m]')
+    plt.ylim(ylim)
 
     if ofile != '':
         plt.savefig(ofile, bbox_inches='tight')
@@ -464,8 +468,6 @@ def plot_electric_field(osc, mymin=-1, mymax=1, show=True, ofile='', axis='Z', n
     if ret:
         return plt
     return
-
-
 
 
 
