@@ -147,6 +147,7 @@ void TFieldContainer::Clear ()
 void TFieldContainer::WriteToFile (std::string const& OutFileName, std::string const& OutFormat, TVector2D const& XLim, int const NX, TVector2D const& YLim, int const NY, TVector2D const& ZLim, int const NZ, std::string const Comment)
 {
   // Write the magnetic field in a given range to an output file of the chosen format
+  std::cout << "got format " << OutFormat << std::endl;
 
   // Field for writing
   TVector3D B;
@@ -207,6 +208,8 @@ void TFieldContainer::WriteToFile (std::string const& OutFileName, std::string c
         }
       }
     }
+  } else if (std::string(OutFormat.begin(), OutFormat.begin() + 8) == "OSCARS1D") {
+    std::cout << "Here on export" << std::endl;
   } else if (OutFormat == "SRW") {
 
     if (CommentNoCRLF == "") {

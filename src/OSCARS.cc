@@ -77,25 +77,33 @@ void OSCARS::AddMagneticField (std::string const FileName, std::string const For
 
   if (FormatUpperCase == "OSCARS" || FormatUpperCase == "SRW" || FormatUpperCase == "SPECTRA") {
     this->fBFieldContainer.AddField( new TField3D_Grid(FileName, Format, Rotations, Translation) );
-  } else {
+  } else if (FormatUpperCase.size() > 8 && std::string(FormatUpperCase.begin(), FormatUpperCase.begin() + 8) == std::string("OSCARS1D")) {
 
+    std::cout << "HERE" << std::endl;
 
-
-
+    // Just to keep track of which XYZ BxByBz we have seen
     std::vector<bool> HasXB(6, false);
 
+    // And this is for which order they come in
     std::vector<int> Order(6, -1);
 
+    // Make it a stream and set it to the format string minus the OSCARS1D
+    std::string const FormatString(Format.begin() + 9, Format.end());
     std::istringstream s;
-    s.str(Format);
+    s.str(FormatString);
 
+    // String for identifier
     std::string c;
+
+    // Counts
     int i = 0;
     int XDIM = 0;
     int BDIM = 0;
+
+    // Look at all input
     while (s >> c) {
 
-
+      // Check if it is XYZBxByBz and in which order
       if (c == "X") {
         Order[0] = i;
         ++XDIM;
@@ -138,24 +146,21 @@ void OSCARS::AddMagneticField (std::string const FileName, std::string const For
       }
     }
 
+    // Only support 1D in space, up to 3D in field
     if (XDIM == 1) {
       if (BDIM == 1) {
         // UPDATE: 1 and 2D bfields
         throw std::invalid_argument("Not implemented yet");
-        //this->fBFieldContainer.AddField( new TField1DZRegularized(FileName) );
-        //this->fBFieldContainer.AddField( new TField1DZRegularized(FileName, Rotations, Translation, Scaling) );
       } else if (BDIM == 2) {
         throw std::invalid_argument("Not implemented yet");
       } else if (BDIM == 3) {
         this->fBFieldContainer.AddField( new TField3D_1DRegularized(FileName, Rotations, Translation, Scaling) );
       }
-    } else if (XDIM == 2) {
-      throw std::invalid_argument("Not implemented yet");
-    } else if (XDIM == 3) {
-      throw std::invalid_argument("Not implemented yet");
     } else {
-      throw std::invalid_argument("Not implemented yet");
+      throw std::invalid_argument("Incorrect number of spatial dimensions.  Only 1 axis can be given.");
     }
+  } else {
+    throw std::invalid_argument("Incorrect format in format string");
   }
 
   // Set the derivs function accordingly
