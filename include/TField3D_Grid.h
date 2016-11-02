@@ -18,7 +18,7 @@ class TField3D_Grid : public TField
 
   public:
     TField3D_Grid ();
-    TField3D_Grid (std::string const&, std::string const& FileFormat = "OSCARS", TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
+    TField3D_Grid (std::string const&, std::string const& FileFormat = "OSCARS", TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), std::vector<double> const& Scaling = std::vector<double>(), char const CommentChar = '#');
     ~TField3D_Grid ();
 
     double GetFx (double const, double const, double const) const;
@@ -32,9 +32,11 @@ class TField3D_Grid : public TField
     double GetHeaderValue (std::string const&) const;
     double GetHeaderValueSRW (std::string const&, const char CommentChar = '#') const;
 
-    void ReadFile         (std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
-    void ReadFile_SRW     (std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
-    void ReadFile_SPECTRA (std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
+    void ReadFile           (std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), std::vector<double> const& Scaling = std::vector<double>(), char const CommentChar = '#');
+    void ReadFile_OSCARS1D  (std::string const&, std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), std::vector<double> const& Scaling = std::vector<double>(), char const CommentChar = '#');
+    void ReadFile_SRW       (std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
+    void ReadFile_SPECTRA   (std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
+    static bool CompareField1D (std::array<double, 4> const&, std::array<double, 4> const&);
 
     enum TField3D_Grid_DIMX {
       kDIMX_X,

@@ -76,89 +76,11 @@ void OSCARS::AddMagneticField (std::string const FileName, std::string const For
   std::transform(FormatUpperCase.begin(), FormatUpperCase.end(), FormatUpperCase.begin(), ::toupper);
 
   if (FormatUpperCase == "OSCARS" || FormatUpperCase == "SRW" || FormatUpperCase == "SPECTRA") {
-    this->fBFieldContainer.AddField( new TField3D_Grid(FileName, Format, Rotations, Translation) );
+    this->fBFieldContainer.AddField( new TField3D_Grid(FileName, Format, Rotations, Translation, Scaling) );
   } else if (FormatUpperCase.size() > 8 && std::string(FormatUpperCase.begin(), FormatUpperCase.begin() + 8) == std::string("OSCARS1D")) {
 
-    std::cout << "HERE" << std::endl;
+    this->fBFieldContainer.AddField( new TField3D_Grid(FileName, Format, Rotations, Translation, Scaling) );
 
-    // Just to keep track of which XYZ BxByBz we have seen
-    std::vector<bool> HasXB(6, false);
-
-    // And this is for which order they come in
-    std::vector<int> Order(6, -1);
-
-    // Make it a stream and set it to the format string minus the OSCARS1D
-    std::string const FormatString(Format.begin() + 9, Format.end());
-    std::istringstream s;
-    s.str(FormatString);
-
-    // String for identifier
-    std::string c;
-
-    // Counts
-    int i = 0;
-    int XDIM = 0;
-    int BDIM = 0;
-
-    // Look at all input
-    while (s >> c) {
-
-      // Check if it is XYZBxByBz and in which order
-      if (c == "X") {
-        Order[0] = i;
-        ++XDIM;
-      } else if (c == "Y") {
-        Order[1] = i;
-        ++XDIM;
-      } else if (c == "Z") {
-        Order[2] = i;
-        ++XDIM;
-      } else if (c == "Bx") {
-        Order[3] = i;
-        ++BDIM;
-      } else if (c == "By") {
-        Order[4] = i;
-        ++BDIM;
-      } else if (c == "Bz") {
-        Order[5] = i;
-        ++BDIM;
-      } else {
-        std::cerr << "ERROR: Incorrect format" << std::endl;
-        throw std::invalid_argument("only excepts X Y Z Bx By Bz");
-      }
-
-      ++i;
-    }
-
-    // At the moment only support 1D irregular grid
-    if (XDIM != 1) {
-      std::cerr << "ERROR: spatial or B-field dimensions are too large(>3)" << std::endl;
-      throw std::out_of_range("spatial or B-field dimensions are too large");
-    }
-
-    // Order of inputs as read from format line
-    std::vector<size_t> PrefOrder;
-    for (size_t j = 0; j != 6; ++j) {
-      if (Order[j] != -1) {
-        HasXB[i] = true;
-
-        PrefOrder.push_back(Order[j]);
-      }
-    }
-
-    // Only support 1D in space, up to 3D in field
-    if (XDIM == 1) {
-      if (BDIM == 1) {
-        // UPDATE: 1 and 2D bfields
-        throw std::invalid_argument("Not implemented yet");
-      } else if (BDIM == 2) {
-        throw std::invalid_argument("Not implemented yet");
-      } else if (BDIM == 3) {
-        this->fBFieldContainer.AddField( new TField3D_1DRegularized(FileName, Rotations, Translation, Scaling) );
-      }
-    } else {
-      throw std::invalid_argument("Incorrect number of spatial dimensions.  Only 1 axis can be given.");
-    }
   } else {
     throw std::invalid_argument("Incorrect format in format string");
   }
@@ -300,6 +222,7 @@ void OSCARS::WriteField (std::string const& BorE, std::string const& OutFileName
   } else if (BorE == "E") {
     fEFieldContainer.WriteToFile(OutFileName, OutFormat, XLim, NX, YLim, NY, ZLim, NZ, Comment);
   } else {
+    std::cerr << "Write failure because not B or E" << std::endl;
     throw;
   }
 
@@ -1675,6 +1598,7 @@ void OSCARS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarCont
       PowerDensityContainer.AddPoint( TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), 0);
     }
   } else {
+    std::cerr << "Wrong dimension" << std::endl;
     throw;
   }
 
@@ -1857,6 +1781,7 @@ void OSCARS::CalculatePowerDensityThreads (TParticleA& Particle, TSurfacePoints 
       PowerDensityContainer.AddPoint( TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), 0);
     }
   } else {
+    std::cerr << "wrong dimension" << std::endl;
     throw;
   }
 
@@ -2399,6 +2324,7 @@ void OSCARS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface,
       FluxContainer.AddPoint( TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), 0);
     }
   } else {
+    std::cerr << "wRong dimension" << std::endl;
     throw;
   }
 
@@ -2477,6 +2403,7 @@ void OSCARS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_e
       FluxContainer.AddPoint( TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), 0);
     }
   } else {
+    std::cerr << "wROng dimension" << std::endl;
     throw;
   }
 
@@ -2559,6 +2486,7 @@ void OSCARS::CalculateFluxThreads (TParticleA& Particle, TSurfacePoints const& S
         FluxContainer.AddPoint( TVector3D(Surface.GetX1(i), Surface.GetX2(i), 0), 0);
       }
     } else {
+      std::cerr << "wrOng dimension" << std::endl;
       throw;
     }
   }

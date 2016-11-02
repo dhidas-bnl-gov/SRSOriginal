@@ -1362,7 +1362,6 @@ static PyObject* OSCARS_WriteMagneticField (OSCARSObject* self, PyObject* args, 
 
 
   try {
-    std::cout << "Trying to write file" << std::endl;
     self->obj->WriteField("B", OutFileName, OutFormat, XLim, NX, YLim, NY, ZLim, NZ, Comment);
   } catch (...) {
     PyErr_SetString(PyExc_ValueError, "could not write output file");

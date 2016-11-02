@@ -11,6 +11,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <array>
 
 TField3D_Grid::TField3D_Grid ()
 {
@@ -21,7 +22,7 @@ TField3D_Grid::TField3D_Grid ()
 
 
 
-TField3D_Grid::TField3D_Grid (std::string const& InFileName, std::string const& FileFormat, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
+TField3D_Grid::TField3D_Grid (std::string const& InFileName, std::string const& FileFormat, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling, char const CommentChar)
 {
   // I will accept lower-case
   std::string format = FileFormat;
@@ -29,12 +30,16 @@ TField3D_Grid::TField3D_Grid (std::string const& InFileName, std::string const& 
 
   // Which file format are you looking at?
   if (format == "OSCARS") {
-    this->ReadFile(InFileName, Rotations, Translation);
+    this->ReadFile(InFileName, Rotations, Translation, Scaling);
+  } else if (std::string(format.begin(), format.begin() + 8) == "OSCARS1D") {
+    this->ReadFile_OSCARS1D(InFileName, FileFormat, Rotations, Translation, Scaling, CommentChar);
   } else if (format == "SPECTRA") {
     this->ReadFile_SPECTRA(InFileName, Rotations, Translation, CommentChar);
   } else if (format == "SRW") {
     this->ReadFile_SRW(InFileName, Rotations, Translation, CommentChar);
   } else {
+    std::cerr << "TField3D_Grid::TField3D_Grid format error format: " << FileFormat << std::endl;
+    throw;
   }
 }
 
@@ -282,7 +287,7 @@ double TField3D_Grid::GetHeaderValueSRW (std::string const& L, const char Commen
 
 
 
-void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
+void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling, char const CommentChar)
 {
   // Read file with the best format in the entire world, OSCARSv1.0
 
@@ -468,11 +473,312 @@ void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Ro
 
 
 
+void TField3D_Grid::ReadFile_OSCARS1D (std::string const& InFileName, std::string const& InFormat, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling, char const CommentChar)
+{
+  // Read file with OSCARS1D format
+
+  // Open the input file and throw exception if not open
+  std::ifstream fi(InFileName);
+  if (!fi) {
+    std::cerr << "ERROR: cannot open file" << std::endl;
+    throw;
+  }
+
+  // And this is for which order they come in
+  std::vector<int> Order(4, -1);
+
+  // Make it a stream and set it to the format string minus the OSCARS1D
+  std::string const FormatString(InFormat.begin() + 9, InFormat.end());
+  std::istringstream s;
+  s.str(FormatString);
+
+  // String for identifier
+  std::string c;
+
+  // Counts
+  int index = 0;
+  int XDIM = 0;
+  int FDIM = 0;
+
+  // Which fields we have
+  bool HasFx = false;
+  bool HasFy = false;
+  bool HasFz = false;
+
+  // Which axis is used
+  std::string Axis = "";
+
+  // Look at format string
+  while (s >> c) {
+
+    if (index > 3) {
+      std::cerr << "ERROR: spatial or B-field dimensions are too large(index>3)" << std::endl;
+      throw std::out_of_range("spatial or B-field dimensions are too large(index>3)");
+    }
+
+    // Check if it is XYZBxByBz and in which order
+    if (c == "X" || c == "Y" || c == "Z") {
+      Axis = c;
+      ++XDIM;
+      Order[index] = 0;
+      ++index;
+    } else if (c == "Bx" || c == "Ex" || c == "Fx") {
+      HasFx = true;
+      ++FDIM;
+      Order[index] = 1;
+      ++index;
+    } else if (c == "By" || c == "Ey" || c == "Fy") {
+      HasFy = true;
+      ++FDIM;
+      Order[index] = 2;
+      ++index;
+    } else if (c == "Bz" || c == "Ez" || c == "Fz") {
+      HasFz = true;
+      ++FDIM;
+      Order[index] = 3;
+      ++index;
+    } else {
+      std::cerr << "ERROR: Incorrect format" << std::endl;
+      throw std::invalid_argument("only excepts X Y Z Bx By Bz");
+    }
+  }
+
+  // How many cols to ouout
+  int InputCount = XDIM + FDIM;
+
+  // At the moment only support 1D irregular grid
+  if (XDIM != 1) {
+    std::cerr << "ERROR: spatial or B-field dimensions are too large(>3)" << std::endl;
+    throw std::out_of_range("spatial or B-field dimensions are too large");
+  }
+
+
+  // For reading lines of file
+  std::istringstream S;
+  std::string L;
+
+  // Initial line for comment
+  std::getline(fi, L);
+
+  // Vector for the data inputs
+  std::vector<std::array<double, 4> > InputData;
+
+  // Loop over all lines in file
+  for ( ; std::getline(fi, L); ) {
+
+    // Look for a blank line or comment line and skip if found.  You should never use tab btw.
+    size_t FirstChar = L.find_first_not_of(" \t");
+    if (FirstChar == std::string::npos || L[FirstChar] == CommentChar) {
+      continue;
+    }
+
+    // Clear and set the istringstream for this line
+    S.clear();
+    S.str(L);
+
+    // Vector for this line of input
+    std::vector<double> Value(4);
+
+    // Read this line of data
+    for (int i = 0; i < InputCount; ++i) {
+      S >> Value[Order[i]];
+      if (S.fail()) {
+        throw std::length_error("something is incorrect with data format or iformat string");
+      }
+    }
+
+    // Scale the input as requested
+    for (size_t iscale = 0; iscale != Scaling.size() && iscale < 4; ++iscale) {
+      Value[Order[iscale]] *= Scaling[iscale];
+    }
+
+    // Add to data array.
+    std::array<double, 4> a = { {Value[0], Value[1], Value[2], Value[3]} };
+    InputData.push_back(a);
+  }
+
+  // Close file
+  fi.close();
+
+  // Sort the field
+  std::sort(InputData.begin(), InputData.end(), this->CompareField1D);
+
+
+  // Now we need to make a regular 3D grid...
+
+  // Check to see there are at least 2 data points
+  if (InputData.size() < 2) {
+    std::cerr << "ERROR: not enough data points" << std::endl;
+    throw std::length_error("not enough data points");
+  }
+
+  // Grab the first and last Z
+  double const First = InputData[0][0];
+  double const Last  = InputData[InputData.size() - 1][0];
+
+
+  // UPDATE: VAR
+  int const NPointsPerMeter = 10000;
+
+  // Get the number of points and the step size
+  size_t const NPoints  = (Last - First) * NPointsPerMeter;
+  double const StepSize = (Last - First) / (double) (NPoints - 1);
+
+  // Set all to default values
+  fNX = 1;
+  fNY = 1;
+  fNZ = 1;
+  fXStart = 0;
+  fYStart = 0;
+  fZStart = 0;
+  fXStep = 0;
+  fYStep = 0;
+  fZStep = 0;
+  fXStop = 0;
+  fYStop = 0;
+  fZStop = 0;
+
+  // Set correct one for limits based on which axis was given
+  if (Axis == "X") {
+    fNX = NPoints;
+    fXStart = First;
+    fXStop = Last;
+    fXStep = StepSize;
+  } else if  (Axis == "Y") {
+    fNY = NPoints;
+    fYStart = First;
+    fYStop = Last;
+    fYStep = StepSize;
+  } else if  (Axis == "Z") {
+    fNZ = NPoints;
+    fZStart = First;
+    fZStop = Last;
+    fZStep = StepSize;
+  }
+
+
+  // Get dimensions correct
+  fHasX = fNX > 1 ? true : false;
+  fHasY = fNY > 1 ? true : false;
+  fHasZ = fNZ > 1 ? true : false;
+
+  if (fHasX && fHasY && fHasZ) {
+    fDIMX = kDIMX_XYZ;
+  } else if (fHasX && fHasY) {
+    fDIMX = kDIMX_XY;
+  } else if (fHasX && fHasZ) {
+    fDIMX = kDIMX_XZ;
+  } else if (fHasY && fHasZ) {
+    fDIMX = kDIMX_YZ;
+  } else if (fHasX) {
+    fDIMX = kDIMX_X;
+  } else if (fHasY) {
+    fDIMX = kDIMX_Y;
+  } else if (fHasZ) {
+    fDIMX = kDIMX_Z;
+  } else {
+    std::cerr << "ERROR: error in file header format" << std::endl;
+    throw;
+  }
+
+  fXDIM = 0;
+  if (fHasX) {
+    ++fXDIM;
+  }
+  if (fHasY) {
+    ++fXDIM;
+  }
+  if (fHasZ) {
+    ++fXDIM;
+  }
+
+
+
+  // Clear the internal data and reserve the number of points
+  fData.clear();
+  fData.reserve(NPoints);
+
+
+  // Variables to hold the slope between two real points and new By (linear interpolated)
+  double SlopeX;
+  double SlopeY;
+  double SlopeZ;
+  double NewBx;
+  double NewBy;
+  double NewBz;
+
+  // I only initialize to avoid compile-time warnings.  These are for finding the
+  // adj bins for linear interpolation
+  size_t MinBin    = 0;
+  size_t AfterBin  = 0;
+  size_t BeforeBin = 0;
+
+  // Variable to hold new calculated Z position
+  double ThisZ;
+
+  // For each desired point find the bin before and after the desired Z position
+  for (size_t i = 0; i != NPoints; ++i) {
+    ThisZ = i * StepSize + First;
+    for (size_t j = MinBin + 1; j != InputData.size(); ++j) {
+      if (InputData[j][0] > ThisZ) {
+        AfterBin  = j;
+        BeforeBin = j - 1;
+        MinBin = j - 1;
+        break;
+      }
+    }
+
+
+    // Calculate the By at desired position based on linear interpolation
+    SlopeX = !HasFx ? 0 : (InputData[AfterBin][1] - InputData[BeforeBin][1]) /  (InputData[AfterBin][0] - InputData[BeforeBin][0]);
+    SlopeY = !HasFy ? 0 : (InputData[AfterBin][2] - InputData[BeforeBin][2]) /  (InputData[AfterBin][0] - InputData[BeforeBin][0]);
+    SlopeZ = !HasFz ? 0 : (InputData[AfterBin][3] - InputData[BeforeBin][3]) /  (InputData[AfterBin][0] - InputData[BeforeBin][0]);
+    NewBx = !HasFx ? 0 : InputData[BeforeBin][1] + (ThisZ - InputData[BeforeBin][0]) * SlopeX;
+    NewBy = !HasFy ? 0 : InputData[BeforeBin][2] + (ThisZ - InputData[BeforeBin][0]) * SlopeY;
+    NewBz = !HasFz ? 0 : InputData[BeforeBin][3] + (ThisZ - InputData[BeforeBin][0]) * SlopeZ;
+
+
+    // Append the new BxByBz to the output vector
+    TVector3D F(NewBx, NewBy, NewBz);
+    F.RotateSelfXYZ(Rotations);
+    fData.push_back(F);
+  }
+
+  // Clear array data
+  InputData.clear();
+
+  // Store Rotations and Translation
+  fRotated = Rotations;
+  fTranslation = Translation;
+
+  return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void TField3D_Grid::ReadFile_SRW (std::string const& InFileName, TVector3D const& Rotations, TVector3D const& Translation, char const CommentChar)
 {
   // Read file with SRW field input format
-
-  std::cout << "Reading file SRW Format" << std::endl;
 
   // Open the input file and throw exception if not open
   std::ifstream fi(InFileName);
@@ -526,7 +832,6 @@ void TField3D_Grid::ReadFile_SRW (std::string const& InFileName, TVector3D const
   // Number of points Z
   std::getline(fi, L);
   int const NZ = (int) GetHeaderValueSRW(L, CommentChar);
-  std::cout << NZ << std::endl;
 
 
   // Check Number of points is > 0 for all
@@ -769,3 +1074,13 @@ void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D c
 
   return;
 }
+
+
+
+
+bool TField3D_Grid::CompareField1D (std::array<double, 4> const& A, std::array<double, 4> const& B)
+{
+  // This function is used for sorting the field in 'position' cood.  It is a comparison function
+  return A[0] < B[0];
+}
+

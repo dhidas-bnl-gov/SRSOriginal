@@ -46,6 +46,13 @@ TField3D_Gaussian::TField3D_Gaussian (TVector3D const& Field, TVector3D const& C
 
 
 
+TField3D_Gaussian::~TField3D_Gaussian ()
+{
+  // Anti-Constructor
+}
+
+
+
 double TField3D_Gaussian::GetFx (double const X, double const Y, double const Z) const
 {
   return this->GetF(TVector3D(X, Y, Z)).GetX();
