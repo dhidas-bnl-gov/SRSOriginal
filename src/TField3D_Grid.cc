@@ -308,11 +308,11 @@ void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Ro
 
   // Initial X
   std::getline(fi, L);
-  double const XStart = GetHeaderValue(L);
+  double const XStartIN = GetHeaderValue(L);
 
   // Step X
   std::getline(fi, L);
-  double const XStep = GetHeaderValue(L);
+  double const XStepIN = GetHeaderValue(L);
 
   // Number of points X
   std::getline(fi, L);
@@ -321,11 +321,11 @@ void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Ro
 
   // Initial Y
   std::getline(fi, L);
-  double const YStart = GetHeaderValue(L);
+  double const YStartIN = GetHeaderValue(L);
 
   // Step Y
   std::getline(fi, L);
-  double const YStep = GetHeaderValue(L);
+  double const YStepIN = GetHeaderValue(L);
 
   // Number of points Y
   std::getline(fi, L);
@@ -334,15 +334,33 @@ void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Ro
 
   // Initial Z
   std::getline(fi, L);
-  double const ZStart = GetHeaderValue(L);
+  double const ZStartIN = GetHeaderValue(L);
 
   // Step Z
   std::getline(fi, L);
-  double const ZStep = GetHeaderValue(L);
+  double const ZStepIN = GetHeaderValue(L);
 
   // Number of points Z
   std::getline(fi, L);
   int const NZ = (int) GetHeaderValue(L);
+
+  // If we're doing any scaling, scale spatial dimensions and fields.  Start with stepsize change
+  double const XStep = Scaling.size() > 0 ? XStepIN * Scaling[0] : XStepIN;
+  double const YStep = Scaling.size() > 1 ? YStepIN * Scaling[1] : YStepIN;
+  double const ZStep = Scaling.size() > 2 ? ZStepIN * Scaling[2] : ZStepIN;
+
+  // Get field scaling if it exists
+  double const FxScaling = Scaling.size() > 3 ? Scaling[3] : 1;
+  double const FyScaling = Scaling.size() > 4 ? Scaling[4] : 1;
+  double const FzScaling = Scaling.size() > 5 ? Scaling[5] : 1;
+
+  // Calculate new start point
+  double const MiddleX = XStartIN + XStepIN * (NX - 1) / 2.;
+  double const XStart  = MiddleX - XStep * (NX - 1) / 2.;
+  double const MiddleY = YStartIN + YStepIN * (NY - 1) / 2.;
+  double const YStart  = MiddleY - YStep * (NY -1) / 2.;
+  double const MiddleZ = ZStartIN + ZStepIN * (NZ - 1) / 2.;
+  double const ZStart  = MiddleZ - ZStep * (NZ - 1) / 2.;
 
 
   // Check Number of points is > 0 for all
@@ -426,6 +444,17 @@ void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Ro
         S.clear();
         S.str(L);
         S >> fx >> fy >> fz;
+
+        // Scale values?
+        if (FxScaling != 1) {
+          fx *= FxScaling;
+        }
+        if (FyScaling != 1) {
+          fy *= FyScaling;
+        }
+        if (FzScaling != 1) {
+          fz *= FzScaling;
+        }
 
         // Check the stream did not hit an EOF
         if (S.fail()) {

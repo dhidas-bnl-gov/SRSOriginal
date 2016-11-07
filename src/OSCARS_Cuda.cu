@@ -28,7 +28,7 @@
 
 
 
-int OSCARS_Cuda_GetDeviceCount ()
+extern "C" int OSCARS_Cuda_GetDeviceCount ()
 {
   int ngpu = 0;
   cudaGetDeviceCount(&ngpu);
@@ -694,7 +694,7 @@ __global__ void OSCARS_Cuda_FluxGPU (double *x, double *y, double *z, double *bx
 
 
 
-void OSCARS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
+extern "C" void OSCARS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   // Do the setup for and call the GPU calculation of flux.  Your limitation here is only GPU memory.
 
@@ -1013,7 +1013,7 @@ __global__ void OSCARS_Cuda_SpectrumGPU (double *x, double *y, double *z, double
 
 
 
-void OSCARS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
+extern "C" void OSCARS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
 {
 
   int ngpu = 0;
@@ -1340,7 +1340,7 @@ __global__ void OSCARS_Cuda_PowerDensityGPU (double *x, double *y, double *z, do
 
 
 
-void OSCARS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+extern "C" void OSCARS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
 
   int ngpu = 0;

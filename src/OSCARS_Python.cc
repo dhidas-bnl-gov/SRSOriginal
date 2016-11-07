@@ -43,7 +43,8 @@ static void OSCARS_dealloc(OSCARSObject* self)
   // Python needs to know how to deallocate things in the struct
 
   delete self->obj;
-  self->ob_type->tp_free((PyObject*)self);
+  //self->ob_type->tp_free((PyObject*) self);
+  Py_TYPE(self)->tp_free((PyObject*) self);
 }
 
 
@@ -64,6 +65,14 @@ static PyObject* OSCARS_new (PyTypeObject* type, PyObject* args, PyObject* kwds)
   return (PyObject*) self;
 }
 
+
+
+
+
+static int OSCARS_init(OSCARSObject* self, PyObject* args, PyObject* kwds)
+{
+  return 0;
+}
 
 
 
@@ -191,7 +200,7 @@ static PyObject* OSCARS_SetSeed (OSCARSObject* self, PyObject* arg)
 static PyObject* OSCARS_SetGPUGlobal (OSCARSObject* self, PyObject* arg)
 {
   // Grab the value from input
-  int const GPU = (int) PyInt_AsLong(arg);
+  int const GPU = (int) PyLong_AsLong(arg);
 
   self->obj->SetUseGPUGlobal(GPU);
 
@@ -217,7 +226,7 @@ static PyObject* OSCARS_CheckGPU (OSCARSObject* self, PyObject* arg)
     PyObject_CallMethod(s_out, "write", "s", Message.c_str());
   }
 
-  return PyInt_FromLong((long) NGPUStatus);
+  return PyLong_FromLong((long) NGPUStatus);
 }
 
 
@@ -230,7 +239,7 @@ static PyObject* OSCARS_CheckGPU (OSCARSObject* self, PyObject* arg)
 static PyObject* OSCARS_SetNThreadsGlobal (OSCARSObject* self, PyObject* arg)
 {
   // Grab the value from input
-  int const NThreads = (int) PyInt_AsLong(arg);
+  int const NThreads = (int) PyLong_AsLong(arg);
 
   self->obj->SetNThreadsGlobal(NThreads);
 
@@ -297,7 +306,7 @@ static PyObject* OSCARS_SetCTStartStop (OSCARSObject* self, PyObject* args)
 static PyObject* OSCARS_GetNPointsTrajectory (OSCARSObject* self)
 {
   // Get the numper of points for trajectory calculaton
-  return PyInt_FromSize_t(self->obj->GetNPointsTrajectory());
+  return PyLong_FromSize_t(self->obj->GetNPointsTrajectory());
 }
 
 
@@ -308,7 +317,7 @@ static PyObject* OSCARS_SetNPointsTrajectory (OSCARSObject* self, PyObject* arg)
   // Set the number of points for trajectory calculation
 
   // Grab the value from input
-  size_t N = PyInt_AsSsize_t(arg);
+  size_t N = PyLong_AsSsize_t(arg);
 
   // Set the object variable
   self->obj->SetNPointsTrajectory(N);
@@ -2509,8 +2518,8 @@ static PyObject* OSCARS_CalculatePowerDensityRectangle (OSCARSObject* self, PyOb
 
   if (PyList_Size(List_NPoints) == 2) {
     // NPoints in [m]
-    NX1 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 0));
-    NX2 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 1));
+    NX1 = PyLong_AsSsize_t(PyList_GetItem(List_NPoints, 0));
+    NX2 = PyLong_AsSsize_t(PyList_GetItem(List_NPoints, 1));
   } else {
     PyErr_SetString(PyExc_ValueError, "'npoints' must be [int, int]");
     return NULL;
@@ -2929,8 +2938,8 @@ static PyObject* OSCARS_CalculateFluxRectangle (OSCARSObject* self, PyObject* ar
 
   if (PyList_Size(List_NPoints) == 2) {
     // NPoints in [m]
-    NX1 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 0));
-    NX2 = PyInt_AsSsize_t(PyList_GetItem(List_NPoints, 1));
+    NX1 = PyLong_AsSsize_t(PyList_GetItem(List_NPoints, 0));
+    NX2 = PyLong_AsSsize_t(PyList_GetItem(List_NPoints, 1));
   } else {
     PyErr_SetString(PyExc_ValueError, "'npoints' must be [int, int]");
     return NULL;
@@ -3145,10 +3154,10 @@ static PyObject* OSCARS_AverageSpectra (OSCARSObject* self, PyObject* args, PyOb
   // Add file names to vector
   std::vector<std::string> FileNames;
   for (size_t i = 0; i != NFilesText; ++i) {
-    FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesText, i)) );
+    FileNames.push_back( PyBytes_AS_STRING(PyList_GetItem(List_InFileNamesText, i)) );
   }
   for (size_t i = 0; i != NFilesBinary; ++i) {
-    FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesBinary, i)) );
+    FileNames.push_back( PyBytes_AS_STRING(PyList_GetItem(List_InFileNamesBinary, i)) );
   }
 
   // Container for flux average
@@ -3367,10 +3376,10 @@ static PyObject* OSCARS_AverageT3DScalars (OSCARSObject* self, PyObject* args, P
   // Add file names to vector
   std::vector<std::string> FileNames;
   for (size_t i = 0; i != NFilesText; ++i) {
-    FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesText, i)) );
+    FileNames.push_back( PyBytes_AS_STRING(PyList_GetItem(List_InFileNamesText, i)) );
   }
   for (size_t i = 0; i != NFilesBinary; ++i) {
-    FileNames.push_back( PyString_AsString(PyList_GetItem(List_InFileNamesBinary, i)) );
+    FileNames.push_back( PyBytes_AS_STRING(PyList_GetItem(List_InFileNamesBinary, i)) );
   }
 
   // Container for flux average
@@ -3609,8 +3618,59 @@ static PyMethodDef OSCARS_methods[] = {
 };
 
 
+#if PY_MAJOR_VERSION >= 3
+PyMODINIT_FUNC PyInit_OSCARS(void);
+#else
+PyMODINIT_FUNC initOSCARS(OSCARSObject* self, PyObject* args, PyObject* kwds);
+#endif
 
 
+
+
+
+#if PY_MAJOR_VERSION >= 3
+static PyTypeObject OSCARSType = {
+  PyVarObject_HEAD_INIT(NULL, 0)
+  "OSCARS.OSCARS",            /* tp_name */
+  sizeof(OSCARSObject),       /* tp_basicsize */
+  0,                          /* tp_itemsize */
+  (destructor)OSCARS_dealloc, /* tp_dealloc */
+  0,                          /* tp_print */
+  0,                          /* tp_getattr */
+  0,                          /* tp_setattr */
+  0,                          /* tp_reserved */
+  0,                          /* tp_repr */
+  0,                          /* tp_as_number */
+  0,                          /* tp_as_sequence */
+  0,                          /* tp_as_mapping */
+  0,                          /* tp_hash  */
+  0,                          /* tp_call */
+  0,                          /* tp_str */
+  0,                          /* tp_getattro */
+  0,                          /* tp_setattro */
+  0,                          /* tp_as_buffer */
+  Py_TPFLAGS_DEFAULT |
+  Py_TPFLAGS_BASETYPE,        /* tp_flags */
+  "OSCARS objects",           /* tp_doc */
+  0,                          /* tp_traverse */
+  0,                          /* tp_clear */
+  0,                          /* tp_richcompare */
+  0,                          /* tp_weaklistoffset */
+  0,                          /* tp_iter */
+  0,                          /* tp_iternext */
+  OSCARS_methods,             /* tp_methods */
+  0,                          /* tp_members */
+  0,                          /* tp_getset */
+  0,                          /* tp_base */
+  0,                          /* tp_dict */
+  0,                          /* tp_descr_get */
+  0,                          /* tp_descr_set */
+  0,                          /* tp_dictoffset */
+  (initproc)PyInit_OSCARS,      /* tp_init */
+  0,                          /* tp_alloc */
+  OSCARS_new,                 /* tp_new */
+};
+#else
 static PyTypeObject OSCARSType = {
   // The python object.  Fully defined elsewhere.  only put here what you need,
   // otherwise default values
@@ -3645,16 +3705,17 @@ static PyTypeObject OSCARSType = {
   0,                                        /* tp_iternext */
   OSCARS_methods,                             /* tp_methods */
   0,                                        /* tp_members */
-  OSCARS_getseters,                           /* tp_getset */
+  0,                                        /* tp_getset */
   0,                                        /* tp_base */
   0,                                        /* tp_dict */
   0,                                        /* tp_descr_get */
   0,                                        /* tp_descr_set */
   0,                                        /* tp_dictoffset */
-  0,                                        /* tp_init */
+  (initproc)initOSCARS,                                        /* tp_init */
   0,                                        /* tp_alloc */
   OSCARS_new,                                  /* tp_new */
 };
+#endif
 
 
 
@@ -3665,35 +3726,59 @@ static PyMethodDef module_methods[] = {
 };
 
 
+#if PY_MAJOR_VERSION >= 3
+static PyModuleDef OSCARSmodule = {
+  PyModuleDef_HEAD_INIT,
+  "OSCARS",
+  "OSCARS module extension.",
+  -1,
+  NULL, NULL, NULL, NULL, NULL
+};
+#endif
 
 
-PyMODINIT_FUNC initOSCARS ()
+#if PY_MAJOR_VERSION >= 3
+PyMODINIT_FUNC PyInit_OSCARS(void)
+#else
+PyMODINIT_FUNC initOSCARS(OSCARSObject* self, PyObject* args, PyObject* kwds)
+#endif
 {
-  // Initialization of the module.
-
-
-  PyObject* m;
-
-  if (PyType_Ready(&OSCARSType) < 0)
+  if (PyType_Ready(&OSCARSType) < 0) {
+#if PY_MAJOR_VERSION >= 3
+    return NULL;
+#else
     return;
+#endif
+  }
 
-  m = Py_InitModule3("OSCARS", module_methods, "OSCARS Extension module for the OSCARS Python API.");
-  if (m == NULL)
+#if PY_MAJOR_VERSION >= 3
+  PyObject* m = PyModule_Create(&OSCARSmodule);
+#else
+  PyObject *m = Py_InitModule("OSCARS", OSCARS_methods);
+#endif
+  if (m == NULL) {
+#if PY_MAJOR_VERSION >= 3
+    return NULL;
+#else
     return;
+#endif
+  }
 
   Py_INCREF(&OSCARSType);
   PyModule_AddObject(m, "OSCARS", (PyObject *)&OSCARSType);
 
-
   // Print copyright notice
   PyObject* sys = PyImport_ImportModule( "sys");
   PyObject* s_out = PyObject_GetAttrString(sys, "stdout");
-
   std::string Message = "OSCARS v" + OSCARS::GetVersionString() + " - Open Source Code for Advanced Radiation Simulation\nBrookhaven National Laboratory, Upton NY, USA\nhttp://oscars.bnl.gov\noscars@bnl.gov\n";
-
   PyObject_CallMethod(s_out, "write", "s", Message.c_str());
 
-
+#if PY_MAJOR_VERSION >= 3
+  return m;
+#else
+  return;
+#endif
 }
+
 
 

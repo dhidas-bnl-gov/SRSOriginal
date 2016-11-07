@@ -1,5 +1,10 @@
 from distutils.core import setup, Extension
+import os
 
+os.environ["CC"] = "g++"
+os.environ["CXX"] = "g++"
+os.environ["LD"] = "g++"
+os.environ["LN"] = "g++"
 
 moduleOSCARS = Extension('OSCARS',
                       include_dirs = ['include'],

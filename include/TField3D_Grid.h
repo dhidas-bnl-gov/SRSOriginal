@@ -12,6 +12,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 
 class TField3D_Grid : public TField
 {
