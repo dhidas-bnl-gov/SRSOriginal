@@ -222,7 +222,7 @@ static PyObject* OSCARS_CheckGPU (OSCARSObject* self, PyObject* arg)
     // Print copyright notice
     PyObject* sys = PyImport_ImportModule( "sys");
     PyObject* s_out = PyObject_GetAttrString(sys, "stdout");
-    std::string Message = "It appears this binary version of OSCARS was not compiled with GPU capability turned on.";
+    std::string Message = "It appears this binary version of OSCARS was not compiled with GPU capability enabled.";
     PyObject_CallMethod(s_out, "write", "s", Message.c_str());
   }
 
@@ -3666,7 +3666,7 @@ static PyTypeObject OSCARSType = {
   0,                          /* tp_descr_get */
   0,                          /* tp_descr_set */
   0,                          /* tp_dictoffset */
-  (initproc)PyInit_OSCARS,      /* tp_init */
+  0,      /* tp_init */
   0,                          /* tp_alloc */
   OSCARS_new,                 /* tp_new */
 };
@@ -3711,7 +3711,7 @@ static PyTypeObject OSCARSType = {
   0,                                        /* tp_descr_get */
   0,                                        /* tp_descr_set */
   0,                                        /* tp_dictoffset */
-  (initproc)initOSCARS,                                        /* tp_init */
+  0,                                        /* tp_init */
   0,                                        /* tp_alloc */
   OSCARS_new,                                  /* tp_new */
 };

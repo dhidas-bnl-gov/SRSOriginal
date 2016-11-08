@@ -39,7 +39,7 @@ TField3D_Grid::TField3D_Grid (std::string const& InFileName, std::string const& 
     this->ReadFile_SRW(InFileName, Rotations, Translation, CommentChar);
   } else {
     std::cerr << "TField3D_Grid::TField3D_Grid format error format: " << FileFormat << std::endl;
-    throw;
+    throw std::invalid_argument("incorrect format given");
   }
 }
 
@@ -208,10 +208,10 @@ TVector3D TField3D_Grid::GetF (TVector3D const& XIN) const
       }
       break;
     default:
-      throw;
+      throw std::out_of_range("unknown dimension");
   }
 
-  throw;
+  throw std::out_of_range("unknown dimension");
 }
 
 
@@ -239,7 +239,7 @@ double TField3D_Grid::GetHeaderValue (std::string const& L) const
   // Check read state of input
   if (S.bad()) {
     std::cerr << "ERROR: S is bad" << std::endl;
-    throw;
+    throw std::ifstream::failure("cannot read header value");
   }
 
   return Value;
@@ -267,7 +267,7 @@ double TField3D_Grid::GetHeaderValueSRW (std::string const& L, const char Commen
 
   if (CC != CommentChar) {
     std::cerr << "ERROR: bad format in header" << std::endl;
-    throw;
+    throw std::ifstream::failure("something is wrong with the comment character, it was not seen");
   }
 
   S >> Value;
@@ -275,7 +275,7 @@ double TField3D_Grid::GetHeaderValueSRW (std::string const& L, const char Commen
   // Check read state of input
   if (S.bad()) {
     std::cerr << "ERROR: S is bad" << std::endl;
-    throw;
+    throw std::ifstream::failure("cannot read header value SRW format");
   }
 
   return Value;
@@ -295,7 +295,7 @@ void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Ro
   std::ifstream fi(InFileName);
   if (!fi) {
     std::cerr << "ERROR: cannot open file" << std::endl;
-    throw;
+    throw std::ifstream::failure("cannot open file for reading");
   }
 
   // For reading lines of file
@@ -366,7 +366,7 @@ void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Ro
   // Check Number of points is > 0 for all
   if (NX < 1 || NY < 1 || NY < 1) {
     std::cerr << "ERROR: invalid npoints" << std::endl;
-    throw;
+    throw std::out_of_range("invalid number of points in at least one dimension");
   }
 
   // Save position data to object variables
@@ -403,7 +403,7 @@ void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Ro
     fDIMX = kDIMX_Z;
   } else {
     std::cerr << "ERROR: error in file header format" << std::endl;
-    throw;
+    throw std::out_of_range("invalid dimensions");
   }
 
   fXDIM = 0;
@@ -437,7 +437,7 @@ void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Ro
         // Check we did not hit an EOF
         if (fi.eof()) {
           std::cerr << "ERROR: bad input file" << std::endl;
-          throw;
+          throw std::ifstream::failure("error reading file.  Check format");
         }
 
         // Read data
@@ -459,7 +459,7 @@ void TField3D_Grid::ReadFile (std::string const& InFileName, TVector3D const& Ro
         // Check the stream did not hit an EOF
         if (S.fail()) {
           std::cerr << "ERRROR: input stream bad" << std::endl;
-          throw;
+          throw std::ifstream::failure("error reading file.  Check format");
         }
 
         // Push data to storage
@@ -510,14 +510,14 @@ void TField3D_Grid::ReadFile_OSCARS1D (std::string const& InFileName, std::strin
   std::ifstream fi(InFileName);
   if (!fi) {
     std::cerr << "ERROR: cannot open file" << std::endl;
-    throw;
+    throw std::ifstream::failure("cannot open file for reading");
   }
 
   // And this is for which order they come in
   std::vector<int> Order(4, -1);
 
   // Make it a stream and set it to the format string minus the OSCARS1D
-  std::string const FormatString(InFormat.begin() + 9, InFormat.end());
+  std::string const FormatString(InFormat.begin() + 8, InFormat.end());
   std::istringstream s;
   s.str(FormatString);
 
@@ -707,7 +707,7 @@ void TField3D_Grid::ReadFile_OSCARS1D (std::string const& InFileName, std::strin
     fDIMX = kDIMX_Z;
   } else {
     std::cerr << "ERROR: error in file header format" << std::endl;
-    throw;
+    throw std::out_of_range("invalid dimensions");
   }
 
   fXDIM = 0;
@@ -813,7 +813,7 @@ void TField3D_Grid::ReadFile_SRW (std::string const& InFileName, TVector3D const
   std::ifstream fi(InFileName);
   if (!fi) {
     std::cerr << "ERROR: cannot open file" << std::endl;
-    throw;
+    throw std::ifstream::failure("cannot open file for reading SRW format");
   }
 
   // For reading lines of file
@@ -866,7 +866,7 @@ void TField3D_Grid::ReadFile_SRW (std::string const& InFileName, TVector3D const
   // Check Number of points is > 0 for all
   if (NX < 1 || NY < 1 || NY < 1) {
     std::cerr << "ERROR: invalid npoints" << std::endl;
-    throw;
+    throw std::out_of_range("invalid dimensions");
   }
 
   // Save position data to object variables
@@ -903,7 +903,7 @@ void TField3D_Grid::ReadFile_SRW (std::string const& InFileName, TVector3D const
     fDIMX = kDIMX_Z;
   } else {
     std::cerr << "ERROR: error in file header format" << std::endl;
-    throw;
+    throw std::out_of_range("invalid dimensions");
   }
 
   fXDIM = 0;
@@ -943,7 +943,7 @@ void TField3D_Grid::ReadFile_SRW (std::string const& InFileName, TVector3D const
         // Check the stream did not hit an EOF
         if (S.fail() || fi.fail()) {
           std::cerr << "ERRROR: input stream bad" << std::endl;
-          throw;
+          throw std::ifstream::failure("input file stream failure");
         }
 
         // Push data to storage
@@ -979,7 +979,7 @@ void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D c
   std::ifstream fi(InFileName);
   if (!fi) {
     std::cerr << "ERROR: cannot open file" << std::endl;
-    throw;
+    throw std::ifstream::failure("cannot open file");
   }
 
   // For reading lines of file
@@ -1000,14 +1000,14 @@ void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D c
   fZStep /= 1000.;
 
   if (S.bad()) {
-    throw;
+    throw std::ifstream::failure("file stream failure");
   }
 
 
   // Check Number of points is > 0 for all
   if (fNX < 1 || fNY < 1 || fNY < 1) {
     std::cerr << "ERROR: invalid npoints" << std::endl;
-    throw;
+    throw std::out_of_range("invalid number of points in at least one dimension");
   }
 
   // Save position data to object variables
@@ -1038,7 +1038,7 @@ void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D c
     fDIMX = kDIMX_Z;
   } else {
     std::cerr << "ERROR: error in file header format" << std::endl;
-    throw;
+    throw std::out_of_range("invalid dimensions");
   }
 
   fXDIM = 0;
@@ -1071,7 +1071,7 @@ void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D c
         // Check we did not hit an EOF
         if (fi.eof()) {
           std::cerr << "ERROR: bad input file" << std::endl;
-          throw;
+          throw std::ifstream::failure("file stream failure");
         }
 
         // Read data
@@ -1083,7 +1083,7 @@ void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D c
         // Check the stream did not hit an EOF
         if (S.fail()) {
           std::cerr << "ERRROR: input stream bad" << std::endl;
-          throw;
+          throw std::ifstream::failure("file stream failure");
         }
 
         // Push data to storage
