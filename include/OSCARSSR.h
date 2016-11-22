@@ -1,5 +1,5 @@
-#ifndef GUARD_OSCARS_h
-#define GUARD_OSCARS_h
+#ifndef GUARD_OSCARSSR_h
+#define GUARD_OSCARSSR_h
 ////////////////////////////////////////////////////////////////////
 //
 // Dean Andrew Hidas <dhidas@bnl.gov>
@@ -11,15 +11,15 @@
 //
 ////////////////////////////////////////////////////////////////////
 
-#define OSCARS_VMAJOR 1
-#define OSCARS_VMINOR 31
-#define OSCARS_REVISION 3
+#define OSCARSSR_VMAJOR 1
+#define OSCARSSR_VMINOR 31
+#define OSCARSSR_REVISION 5
 
-#include "TOSCARS.h"
+#include "TOSCARSSR.h"
 
 #include <string>
 
-#include "OSCARS_Cuda.h"
+#include "OSCARSSR_Cuda.h"
 #include "TFieldContainer.h"
 #include "TParticleBeamContainer.h"
 #include "TSurfacePoints.h"
@@ -28,19 +28,20 @@
 #include "TRandomA.h"
 
 
-class OSCARS
+class OSCARSSR
 {
   // This class is meant to be the main interface to the simulation,
   // also, from all extensions
 
   public:
-    OSCARS ();
-    ~OSCARS ();
+    OSCARSSR ();
+    ~OSCARSSR ();
 
     static std::string GetVersionString ();
 
     // Functions related to the magnetic field
     void AddMagneticField (std::string const, std::string const, TVector3D const& R = TVector3D(0, 0, 0), TVector3D const& D = TVector3D(0, 0, 0), std::vector<double> const& S = std::vector<double>());
+    void AddMagneticFieldInterpolated (std::vector<std::pair<double, std::string> > const&, std::string const, double const, TVector3D const& R = TVector3D(0, 0, 0), TVector3D const& D = TVector3D(0, 0, 0), std::vector<double> const& S = std::vector<double>());
     void AddMagneticField (TField*);
     void ClearMagneticFields ();
 
@@ -185,7 +186,7 @@ class OSCARS
     bool fUseGPUGlobal;
 
     // Function pointer for which function to use in the RK4 propogation
-    void (OSCARS::*fDerivativesFunction)(double, double*, double*, TParticleA const&);
+    void (OSCARSSR::*fDerivativesFunction)(double, double*, double*, TParticleA const&);
 
 };
 

@@ -1,31 +1,27 @@
-from distutils.core import setup, Extension
 import os
+from distutils.core import setup, Extension
+#from setuptools import setup, Extension
 
 os.environ["CC"] = "g++"
 os.environ["CXX"] = "g++"
 
-moduleOSCARS = Extension('OSCARS',
+moduleOSCARSSR = Extension('oscars.sr',
                       include_dirs = ['include'],
-                      sources = ['src/OSCARS.cc',
-                                 'src/OSCARS_Python.cc',
+                      sources = ['src/OSCARSSR.cc',
+                                 'src/OSCARSSR_Python.cc',
                                  'src/T3DScalarContainer.cc',
                                  'src/TField3D_Grid.cc',
                                  'src/TField3D_Gaussian.cc',
                                  'src/TFieldContainer.cc',
-                                 'src/TField3D_1D.cc',
-                                 'src/TField3D_1DRegularized.cc',
                                  'src/TField3D_IdealUndulator.cc',
                                  'src/TField3D_UniformBox.cc',
-                                 'src/TBFieldIdeal1D.cc',
                                  'src/TFieldPythonFunction.cc',
-                                 'src/TBFieldSquareWave.cc',
                                  'src/TParticleA.cc',
                                  'src/TParticleBeam.cc',
                                  'src/TParticleBeamContainer.cc',
                                  'src/TParticleTrajectoryPoints.cc',
                                  'src/TRandomA.cc',
                                  'src/TSpectrumContainer.cc',
-                                 'src/TSurfaceElement_Rectangle.cc',
                                  'src/TSurfaceOfPoints.cc',
                                  'src/TSurfacePoint.cc',
                                  'src/TSurfacePoints_3D.cc',
@@ -41,11 +37,17 @@ moduleOSCARS = Extension('OSCARS',
 
 
 setup(
-  version="1.0",
-  description = 'This is an example of how to create a new type in a python extension',
+  name="oscars",
+  version="1.31.05",
+  description = 'Open Source Code for Advanced Radiation Simulation',
   author = 'Dean Andrew Hidas',
   author_email = 'dhidas@bnl.gov',
   url = 'http://oscars.bnl.gov/',
-  long_description = '''This creates a new python type using python-C extensions.''',
-  ext_modules = [moduleOSCARS]
+  license = 'see http://oscars.bnl.gov/',
+  long_description = '''The OSCARS SR Package.''',
+  ext_modules = [moduleOSCARSSR],
+  data_files=[('oscars', ['LICENSE.txt', 'COPYRIGHT.txt'])],
+  package_data = {'' : ['LICENSE.txt']},
+  package_dir = {'oscars': 'python'},
+  py_modules = ['oscars.plots_mpl', 'oscars.plots3d_mpl', 'oscars.parametric_surfaces']
 )

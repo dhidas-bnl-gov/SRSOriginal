@@ -1,17 +1,17 @@
-#ifndef GUARD_TOSCARS_h
-#define GUARD_TOSCARS_h
+#ifndef GUARD_TOSCARSSR_h
+#define GUARD_TOSCARSSR_h
 ////////////////////////////////////////////////////////////////////
 //
 // Dean Andrew Hidas <dhidas@bnl.gov>
 //
 // Created on: Wed May 18 20:34:55 EDT 2016
 //
-// Namespace constants for OSCARS (denoted TOSCARS)
+// Namespace constants for OSCARS (denoted TOSCARSSR)
 //
 ////////////////////////////////////////////////////////////////////
 
 
-namespace TOSCARS {
+namespace TOSCARSSR {
 
    /* ************************* */
    /* * Fundamental constants * */

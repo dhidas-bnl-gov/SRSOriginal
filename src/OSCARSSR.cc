@@ -6,7 +6,7 @@
 //
 ////////////////////////////////////////////////////////////////////
 
-#include "OSCARS.h"
+#include "OSCARSSR.h"
 
 #include <cmath>
 #include <complex>
@@ -16,8 +16,6 @@
 #include <algorithm>
 
 #include "TVector3DC.h"
-//#include "TField1D_1DRegularized.h"
-#include "TField3D_1DRegularized.h"
 #include "TField3D_Grid.h"
 #include "TSpectrumContainer.h"
 #include "TSurfacePoints_Rectangle.h"
@@ -30,7 +28,7 @@ extern TRandomA* gRandomA;
 
 
 
-OSCARS::OSCARS ()
+OSCARSSR::OSCARSSR ()
 {
   // Default constructor
   //fParticle.SetParticleType("");
@@ -49,7 +47,7 @@ OSCARS::OSCARS ()
 
 
 
-OSCARS::~OSCARS ()
+OSCARSSR::~OSCARSSR ()
 {
   // Destructor
 }
@@ -57,17 +55,17 @@ OSCARS::~OSCARS ()
 
 
 
-std::string OSCARS::GetVersionString ()
+std::string OSCARSSR::GetVersionString ()
 {
   char ver[200];
-  sprintf(ver, "%i.%02i.%02i", OSCARS_VMAJOR, OSCARS_VMINOR, OSCARS_REVISION);
+  sprintf(ver, "%i.%02i.%02i", OSCARSSR_VMAJOR, OSCARSSR_VMINOR, OSCARSSR_REVISION);
   return std::string(ver);
 }
 
 
 
 
-void OSCARS::AddMagneticField (std::string const FileName, std::string const Format, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling)
+void OSCARSSR::AddMagneticField (std::string const FileName, std::string const Format, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Add a magnetic field from a file to the field container
 
@@ -93,8 +91,32 @@ void OSCARS::AddMagneticField (std::string const FileName, std::string const For
 
 
 
+void OSCARSSR::AddMagneticFieldInterpolated (std::vector<std::pair<double, std::string> > const& Mapping, std::string const Format, double const Parameter, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling)
+{
+  // Add a magnetic field from a file to the field container
 
-void OSCARS::AddMagneticField (TField* Field)
+  // Format string all upper-case (just in case you like to type L.C.).
+  std::string FormatUpperCase = Format;
+  std::transform(FormatUpperCase.begin(), FormatUpperCase.end(), FormatUpperCase.begin(), ::toupper);
+
+  if (FormatUpperCase == "OSCARS" || FormatUpperCase == "SRW" || FormatUpperCase == "SPECTRA") {
+    this->fBFieldContainer.AddField( new TField3D_Grid(Mapping, Format, Parameter, Rotations, Translation, Scaling) );
+  } else if (FormatUpperCase.size() > 8 && std::string(FormatUpperCase.begin(), FormatUpperCase.begin() + 8) == std::string("OSCARSSR")) {
+    this->fBFieldContainer.AddField( new TField3D_Grid(Mapping, Format, Parameter, Rotations, Translation, Scaling) );
+  } else {
+    throw std::invalid_argument("Incorrect format in format string");
+  }
+
+  // Set the derivs function accordingly
+  this->SetDerivativesFunction();
+
+  return;
+}
+
+
+
+
+void OSCARSSR::AddMagneticField (TField* Field)
 {
   // Add a magnetic field from a file to the field container
 
@@ -109,7 +131,7 @@ void OSCARS::AddMagneticField (TField* Field)
 
 
 
-void OSCARS::ClearMagneticFields ()
+void OSCARSSR::ClearMagneticFields ()
 {
   // Add a magnetic field from a file to the field container
 
@@ -124,7 +146,7 @@ void OSCARS::ClearMagneticFields ()
 
 
 
-double OSCARS::GetBx (double const X, double const Y, double const Z) const
+double OSCARSSR::GetBx (double const X, double const Y, double const Z) const
 {
   // Return summed Bx from container
   return this->fBFieldContainer.GetFx(X, Y, Z);
@@ -134,7 +156,7 @@ double OSCARS::GetBx (double const X, double const Y, double const Z) const
 
 
 
-double OSCARS::GetBy (double const X, double const Y, double const Z) const
+double OSCARSSR::GetBy (double const X, double const Y, double const Z) const
 {
   // Return summed By from container
   return this->fBFieldContainer.GetFy(X, Y, Z);
@@ -144,7 +166,7 @@ double OSCARS::GetBy (double const X, double const Y, double const Z) const
 
 
 
-double OSCARS::GetBz (double const X, double const Y, double const Z) const
+double OSCARSSR::GetBz (double const X, double const Y, double const Z) const
 {
   // Return summed Bx from container
   return this->fBFieldContainer.GetFz(X, Y, Z);
@@ -153,7 +175,7 @@ double OSCARS::GetBz (double const X, double const Y, double const Z) const
 
 
 
-TVector3D OSCARS::GetB (double const X, double const Y, double const Z) const
+TVector3D OSCARSSR::GetB (double const X, double const Y, double const Z) const
 {
   // Return summed Bx from container
   return this->fBFieldContainer.GetF(X, Y, Z);
@@ -162,7 +184,7 @@ TVector3D OSCARS::GetB (double const X, double const Y, double const Z) const
 
 
 
-TVector3D OSCARS::GetB (TVector3D const& X) const
+TVector3D OSCARSSR::GetB (TVector3D const& X) const
 {
   // Return summed Bx from container
   return this->fBFieldContainer.GetF(X);
@@ -177,7 +199,7 @@ TVector3D OSCARS::GetB (TVector3D const& X) const
 
 
 
-void OSCARS::AddElectricField (std::string const FileName, std::string const Format, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling)
+void OSCARSSR::AddElectricField (std::string const FileName, std::string const Format, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling)
 {
   // Add a electric field from a file to the field container
   this->fEFieldContainer.AddField( new TField3D_Grid(FileName, Format, Rotations, Translation) );
@@ -189,7 +211,7 @@ void OSCARS::AddElectricField (std::string const FileName, std::string const For
 }
 
 
-void OSCARS::AddElectricField (TField* F)
+void OSCARSSR::AddElectricField (TField* F)
 {
   // Add a electric field from a file to the field container
   this->fEFieldContainer.AddField(F);
@@ -202,7 +224,7 @@ void OSCARS::AddElectricField (TField* F)
 
 
 
-void OSCARS::ClearElectricFields ()
+void OSCARSSR::ClearElectricFields ()
 {
   this->fEFieldContainer.Clear();
 
@@ -215,7 +237,7 @@ void OSCARS::ClearElectricFields ()
 
 
 
-void OSCARS::WriteField (std::string const& BorE, std::string const& OutFileName, std::string const& OutFormat, TVector2D const& XLim, int const NX, TVector2D const& YLim, int const NY, TVector2D const& ZLim, int const NZ, std::string const& Comment)
+void OSCARSSR::WriteField (std::string const& BorE, std::string const& OutFileName, std::string const& OutFormat, TVector2D const& XLim, int const NX, TVector2D const& YLim, int const NY, TVector2D const& ZLim, int const NZ, std::string const& Comment)
 {
   if (BorE == "B") {
     fBFieldContainer.WriteToFile(OutFileName, OutFormat, XLim, NX, YLim, NY, ZLim, NZ, Comment);
@@ -232,7 +254,7 @@ void OSCARS::WriteField (std::string const& BorE, std::string const& OutFileName
 
 
 
-double OSCARS::GetEx (double const X, double const Y, double const Z) const
+double OSCARSSR::GetEx (double const X, double const Y, double const Z) const
 {
   // Return summed Ex from container
   return this->fEFieldContainer.GetFx(X, Y, Z);
@@ -242,7 +264,7 @@ double OSCARS::GetEx (double const X, double const Y, double const Z) const
 
 
 
-double OSCARS::GetEy (double const X, double const Y, double const Z) const
+double OSCARSSR::GetEy (double const X, double const Y, double const Z) const
 {
   // Return summed Ey from container
   return this->fEFieldContainer.GetFy(X, Y, Z);
@@ -252,7 +274,7 @@ double OSCARS::GetEy (double const X, double const Y, double const Z) const
 
 
 
-double OSCARS::GetEz (double const X, double const Y, double const Z) const
+double OSCARSSR::GetEz (double const X, double const Y, double const Z) const
 {
   // Return summed Ez from container
   return this->fEFieldContainer.GetFz(X, Y, Z);
@@ -261,7 +283,7 @@ double OSCARS::GetEz (double const X, double const Y, double const Z) const
 
 
 
-TVector3D OSCARS::GetE (double const X, double const Y, double const Z) const
+TVector3D OSCARSSR::GetE (double const X, double const Y, double const Z) const
 {
   // Return summed E from container
   return this->fEFieldContainer.GetF(X, Y, Z);
@@ -270,7 +292,7 @@ TVector3D OSCARS::GetE (double const X, double const Y, double const Z) const
 
 
 
-TVector3D OSCARS::GetE (TVector3D const& X) const
+TVector3D OSCARSSR::GetE (TVector3D const& X) const
 {
   // Return summed E from container
   return this->fEFieldContainer.GetF(X);
@@ -299,7 +321,7 @@ TVector3D OSCARS::GetE (TVector3D const& X) const
 
 
 
-void OSCARS::AddParticleBeam (std::string const& Type, std::string const& Name, TVector3D const& X0, TVector3D const& V0, double const Energy_GeV, double const T0, double const Current, double const Weight, double const Charge, double const Mass)
+void OSCARSSR::AddParticleBeam (std::string const& Type, std::string const& Name, TVector3D const& X0, TVector3D const& V0, double const Energy_GeV, double const T0, double const Current, double const Weight, double const Charge, double const Mass)
 {
   // Add a particle beam
   // Type        - The name of the particle type that you want to use
@@ -320,7 +342,7 @@ void OSCARS::AddParticleBeam (std::string const& Type, std::string const& Name, 
 
 
 
-TParticleBeam& OSCARS::GetParticleBeam (std::string const& Name)
+TParticleBeam& OSCARSSR::GetParticleBeam (std::string const& Name)
 {
   // Return a reference to the particle beam by a given name
   return fParticleBeamContainer.GetParticleBeam(Name);
@@ -329,7 +351,7 @@ TParticleBeam& OSCARS::GetParticleBeam (std::string const& Name)
 
 
 
-size_t OSCARS::GetNParticleBeams () const
+size_t OSCARSSR::GetNParticleBeams () const
 {
   // Return the number of particle beams defined
   return fParticleBeamContainer.GetNParticleBeams();
@@ -338,7 +360,7 @@ size_t OSCARS::GetNParticleBeams () const
 
 
 
-TParticleA OSCARS::GetNewParticle ()
+TParticleA OSCARSSR::GetNewParticle ()
 {
   // Get a new particle.  Randomly sampled according to input beam parameters and beam weights
   return fParticleBeamContainer.GetNewParticle();
@@ -347,7 +369,7 @@ TParticleA OSCARS::GetNewParticle ()
 
 
 
-TParticleA const& OSCARS::GetCurrentParticle () const
+TParticleA const& OSCARSSR::GetCurrentParticle () const
 {
   // Get a new particle.  Randomly sampled according to input beam parameters and beam weights
   return fParticle;
@@ -356,10 +378,10 @@ TParticleA const& OSCARS::GetCurrentParticle () const
 
 
 
-void OSCARS::SetNewParticle ()
+void OSCARSSR::SetNewParticle ()
 {
   // Get a new particle.  Randomly sampled according to input beam parameters and beam weights.
-  // Set this new particle as *the* particle in OSCARS fParticle
+  // Set this new particle as *the* particle in OSCARSSR fParticle
   fParticle = fParticleBeamContainer.GetNewParticle();
 
   return;
@@ -368,10 +390,10 @@ void OSCARS::SetNewParticle ()
 
 
 
-void OSCARS::SetNewParticle (std::string const& BeamName, std::string const& IdealOrRandom)
+void OSCARSSR::SetNewParticle (std::string const& BeamName, std::string const& IdealOrRandom)
 {
   // Get a new particle.  Randomly sampled according to input beam parameters and beam weights.
-  // Set this new particle as *the* particle in OSCARS fParticle
+  // Set this new particle as *the* particle in OSCARSSR fParticle
 
   if (BeamName == "") {
     fParticle = fParticleBeamContainer.GetRandomBeam().GetNewParticle(IdealOrRandom);
@@ -385,7 +407,7 @@ void OSCARS::SetNewParticle (std::string const& BeamName, std::string const& Ide
 
 
 
-void OSCARS::ClearParticleBeams ()
+void OSCARSSR::ClearParticleBeams ()
 {
   // Clear the contents of the particle beam container
   fParticleBeamContainer.Clear();
@@ -396,7 +418,7 @@ void OSCARS::ClearParticleBeams ()
 
 
 
-void OSCARS::SetNPointsTrajectory (size_t const N)
+void OSCARSSR::SetNPointsTrajectory (size_t const N)
 {
   // Set this number of points for any trajectory calculations
   fNPointsTrajectory = N;
@@ -406,7 +428,7 @@ void OSCARS::SetNPointsTrajectory (size_t const N)
 
 
 
-void OSCARS::SetNPointsPerMeter (size_t const N)
+void OSCARSSR::SetNPointsPerMeter (size_t const N)
 {
   // Set this number of points for any trajectory calculations
   fNPointsPerMeter = N;
@@ -423,7 +445,7 @@ void OSCARS::SetNPointsPerMeter (size_t const N)
 
 
 
-void OSCARS::SetCTStartStop (double const Start, double const Stop)
+void OSCARSSR::SetCTStartStop (double const Start, double const Stop)
 {
   // Set the start and stop time in units of m (where v = c)
 
@@ -438,7 +460,7 @@ void OSCARS::SetCTStartStop (double const Start, double const Stop)
 
 
 
-size_t OSCARS::GetNPointsTrajectory () const
+size_t OSCARSSR::GetNPointsTrajectory () const
 {
   // Return the number of points being used for trajectory calculations
   return fNPointsTrajectory;
@@ -447,7 +469,7 @@ size_t OSCARS::GetNPointsTrajectory () const
 
 
 
-double OSCARS::GetCTStart () const
+double OSCARSSR::GetCTStart () const
 {
   // Return the start time in units of m (where v = c)
   return fCTStart;
@@ -456,7 +478,7 @@ double OSCARS::GetCTStart () const
 
 
 
-double OSCARS::GetCTStop () const
+double OSCARSSR::GetCTStop () const
 {
   // Return the stop time in units of m (where v = c)
   return fCTStop;
@@ -465,7 +487,7 @@ double OSCARS::GetCTStop () const
 
 
 
-void OSCARS::SetUseGPUGlobal (int const in)
+void OSCARSSR::SetUseGPUGlobal (int const in)
 {
   fUseGPUGlobal = in;
   return;
@@ -474,10 +496,10 @@ void OSCARS::SetUseGPUGlobal (int const in)
 
 
 
-int OSCARS::CheckGPU () const
+int OSCARSSR::CheckGPU () const
 {
   #ifdef CUDA
-    return OSCARS_Cuda_GetDeviceCount();
+    return OSCARSSR_Cuda_GetDeviceCount();
   #endif
   return -1;
 }
@@ -485,7 +507,7 @@ int OSCARS::CheckGPU () const
 
 
 
-void OSCARS::SetNThreadsGlobal (int const N)
+void OSCARSSR::SetNThreadsGlobal (int const N)
 {
   fNThreadsGlobal = N;
   return;
@@ -494,7 +516,7 @@ void OSCARS::SetNThreadsGlobal (int const N)
 
 
 
-void OSCARS::SetSeed (int const Seed) const
+void OSCARSSR::SetSeed (int const Seed) const
 {
   gRandomA->SetSeed(Seed);
   return;
@@ -503,7 +525,7 @@ void OSCARS::SetSeed (int const Seed) const
 
 
 
-double OSCARS::GetRandomNormal () const
+double OSCARSSR::GetRandomNormal () const
 {
   return gRandomA->Normal();
 }
@@ -511,7 +533,7 @@ double OSCARS::GetRandomNormal () const
 
 
 
-double OSCARS::GetRandomUniform () const
+double OSCARSSR::GetRandomUniform () const
 {
   return gRandomA->Uniform();
 }
@@ -519,7 +541,7 @@ double OSCARS::GetRandomUniform () const
 
 
 
-void OSCARS::CalculateTrajectory ()
+void OSCARSSR::CalculateTrajectory ()
 {
   // Function to calculate the particle trajectory of the member particle fParticle
 
@@ -537,7 +559,7 @@ void OSCARS::CalculateTrajectory ()
 
 
 
-void OSCARS::CalculateTrajectory (TParticleA& P)
+void OSCARSSR::CalculateTrajectory (TParticleA& P)
 {
   // Function to calculate the particle trajectory given initial conditions.
   // This function uses the internal Trajectory member to store results
@@ -567,13 +589,13 @@ void OSCARS::CalculateTrajectory (TParticleA& P)
 
 
   // Calculate the total DeltaT in seconds
-  double const DeltaT = ((this->GetCTStop() - this->GetCTStart()) / TOSCARS::C() / (fNPointsTrajectory - 1));
+  double const DeltaT = ((this->GetCTStop() - this->GetCTStart()) / TOSCARSSR::C() / (fNPointsTrajectory - 1));
 
 
   // The number of points in the forward and backward direction
   // UPDATE: Check the details of these numbers
-  size_t NPointsForward  = 1 + (this->GetCTStop() - P.GetT0()) / TOSCARS::C() / DeltaT;
-  size_t NPointsBackward = (P.GetT0() - this->GetCTStart()) / TOSCARS::C() / DeltaT;
+  size_t NPointsForward  = 1 + (this->GetCTStop() - P.GetT0()) / TOSCARSSR::C() / DeltaT;
+  size_t NPointsBackward = (P.GetT0() - this->GetCTStart()) / TOSCARSSR::C() / DeltaT;
 
 
   // Number of dimensions of the array to be sent for RK calculation
@@ -586,11 +608,11 @@ void OSCARS::CalculateTrajectory (TParticleA& P)
 
   // Initial conditions for the forward propogation
   x[0] = P.GetX0().GetX();
-  x[1] = P.GetB0().GetX() * TOSCARS::C();
+  x[1] = P.GetB0().GetX() * TOSCARSSR::C();
   x[2] = P.GetX0().GetY();
-  x[3] = P.GetB0().GetY() * TOSCARS::C();
+  x[3] = P.GetB0().GetY() * TOSCARSSR::C();
   x[4] = P.GetX0().GetZ();
-  x[5] = P.GetB0().GetZ() * TOSCARS::C();
+  x[5] = P.GetB0().GetZ() * TOSCARSSR::C();
 
 
   // Grap the particle trajectory object
@@ -607,7 +629,7 @@ void OSCARS::CalculateTrajectory (TParticleA& P)
 
 
     // Add this point to the trajectory
-    ParticleTrajectory.AddPoint(x[0], x[2], x[4], x[1] / TOSCARS::C(), x[3] / TOSCARS::C(), x[5] / TOSCARS::C(), dxdt[1] / TOSCARS::C(), dxdt[3] / TOSCARS::C(), dxdt[5] / TOSCARS::C());
+    ParticleTrajectory.AddPoint(x[0], x[2], x[4], x[1] / TOSCARSSR::C(), x[3] / TOSCARSSR::C(), x[5] / TOSCARSSR::C(), dxdt[1] / TOSCARSSR::C(), dxdt[3] / TOSCARSSR::C(), dxdt[5] / TOSCARSSR::C());
 
     // Propogate
     (this->*fDerivativesFunction)(t, x, dxdt, P);
@@ -620,11 +642,11 @@ void OSCARS::CalculateTrajectory (TParticleA& P)
 
   // Set initial conditions for propogating backwards
   x[0] =  P.GetX0().GetX();
-  x[1] =  P.GetB0().GetX() * TOSCARS::C();
+  x[1] =  P.GetB0().GetX() * TOSCARSSR::C();
   x[2] =  P.GetX0().GetY();
-  x[3] =  P.GetB0().GetY() * TOSCARS::C();
+  x[3] =  P.GetB0().GetY() * TOSCARSSR::C();
   x[4] =  P.GetX0().GetZ();
-  x[5] =  P.GetB0().GetZ() * TOSCARS::C();
+  x[5] =  P.GetB0().GetZ() * TOSCARSSR::C();
 
   // Reverse time
   double const DeltaTReversed = -DeltaT;
@@ -641,7 +663,7 @@ void OSCARS::CalculateTrajectory (TParticleA& P)
     RK4(x, dxdt, N, t, DeltaTReversed, x, P);
 
     // Add the point to the trajectory
-    ParticleTrajectory.AddPoint(x[0], x[2], x[4], x[1] / TOSCARS::C(), x[3] / TOSCARS::C(), x[5] / TOSCARS::C(), dxdt[1] / TOSCARS::C(), dxdt[3] / TOSCARS::C(), dxdt[5] / TOSCARS::C());
+    ParticleTrajectory.AddPoint(x[0], x[2], x[4], x[1] / TOSCARSSR::C(), x[3] / TOSCARSSR::C(), x[5] / TOSCARSSR::C(), dxdt[1] / TOSCARSSR::C(), dxdt[3] / TOSCARSSR::C(), dxdt[5] / TOSCARSSR::C());
   }
 
   // Re-Reverse the trajectory to be in the proper time order
@@ -653,7 +675,7 @@ void OSCARS::CalculateTrajectory (TParticleA& P)
 
 
 
-TParticleTrajectoryPoints const& OSCARS::GetTrajectory ()
+TParticleTrajectoryPoints const& OSCARSSR::GetTrajectory ()
 {
   // Get the trajectory for *the* current particle in fParticle
 
@@ -665,16 +687,16 @@ TParticleTrajectoryPoints const& OSCARS::GetTrajectory ()
 
 
 
-void OSCARS::SetDerivativesFunction ()
+void OSCARSSR::SetDerivativesFunction ()
 {
   // Set the derivatives function for RK4 depending on what fields exist
 
   if (fBFieldContainer.GetNFields() == 0 && fEFieldContainer.GetNFields() > 0) {
-    fDerivativesFunction = &OSCARS::DerivativesE;
+    fDerivativesFunction = &OSCARSSR::DerivativesE;
   } else if (fBFieldContainer.GetNFields() > 0 && fEFieldContainer.GetNFields() == 0) {
-    fDerivativesFunction = &OSCARS::DerivativesB;
+    fDerivativesFunction = &OSCARSSR::DerivativesB;
   } else {
-    fDerivativesFunction = &OSCARS::DerivativesEB;
+    fDerivativesFunction = &OSCARSSR::DerivativesEB;
   }
 
   return;
@@ -688,7 +710,7 @@ void OSCARS::SetDerivativesFunction ()
 
 
 
-void OSCARS::DerivativesE (double t, double x[], double dxdt[], TParticleA const& P)
+void OSCARSSR::DerivativesE (double t, double x[], double dxdt[], TParticleA const& P)
 {
   // This is a second order differential equation.  It does not account for the loss in energy due to
   // radiation.  Although 't' is not used it would be easy to implement a time dependent field
@@ -716,7 +738,7 @@ void OSCARS::DerivativesE (double t, double x[], double dxdt[], TParticleA const
 
 
 
-void OSCARS::DerivativesB (double t, double x[], double dxdt[], TParticleA const& P)
+void OSCARSSR::DerivativesB (double t, double x[], double dxdt[], TParticleA const& P)
 {
   // This is a second order differential equation.  It does not account for the loss in energy due to
   // radiation.  Although 't' is not used it would be easy to implement a time dependent field
@@ -744,7 +766,7 @@ void OSCARS::DerivativesB (double t, double x[], double dxdt[], TParticleA const
 
 
 
-void OSCARS::DerivativesEB (double t, double x[], double dxdt[], TParticleA const& P)
+void OSCARSSR::DerivativesEB (double t, double x[], double dxdt[], TParticleA const& P)
 {
   // This is a second order differential equation.  It does not account for the loss in energy due to
   // radiation.  Although 't' is not used it would be easy to implement a time dependent field
@@ -773,7 +795,7 @@ void OSCARS::DerivativesEB (double t, double x[], double dxdt[], TParticleA cons
 
 
 
-void OSCARS::Derivatives (double t, double x[], double dxdt[], TParticleA const& P)
+void OSCARSSR::Derivatives (double t, double x[], double dxdt[], TParticleA const& P)
 {
   // This is a second order differential equation.  It does not account for the loss in energy due to
   // radiation.  Although 't' is not used it would be easy to implement a time dependent field
@@ -801,7 +823,7 @@ void OSCARS::Derivatives (double t, double x[], double dxdt[], TParticleA const&
 
 
 
-void OSCARS::RK4 (double y[], double dydx[], int n, double x, double h, double yout[], TParticleA const& P)
+void OSCARSSR::RK4 (double y[], double dydx[], int n, double x, double h, double yout[], TParticleA const& P)
 {
   // Runge-Kutta 4th order method propogation
   // UPDATE: syntax
@@ -855,7 +877,7 @@ void OSCARS::RK4 (double y[], double dydx[], int n, double x, double h, double y
 
 
 
-void OSCARS::CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight, std::string const OutFileName)
+void OSCARSSR::CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight, std::string const OutFileName)
 {
   // Check that particle has been set yet.  If fType is "" it has not been set yet
   if (Particle.GetType() == "") {
@@ -870,7 +892,7 @@ void OSCARS::CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& Observ
   this->CalculateTrajectory(Particle);
 
   #ifdef CUDA
-  return OSCARS_Cuda_CalculateSpectrumGPU (Particle, ObservationPoint, Spectrum, Weight);
+  return OSCARSSR_Cuda_CalculateSpectrumGPU (Particle, ObservationPoint, Spectrum, Weight);
   #else
   throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
   #endif
@@ -885,7 +907,7 @@ void OSCARS::CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& Observ
 
 
 
-void OSCARS::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
+void OSCARSSR::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
 {
   // Check that particle has been set yet.  If fType is "" it has not been set yet
   if (fParticle.GetType() == "") {
@@ -903,7 +925,7 @@ void OSCARS::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumCont
 
 
 
-void OSCARS::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, int const NParticles, int const NThreads, int const GPU)
+void OSCARSSR::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, int const NParticles, int const NThreads, int const GPU)
 {
   // Check that particle has been set yet.  If fType is "" it has not been set yet
   if (fParticle.GetType() == "") {
@@ -959,7 +981,7 @@ void OSCARS::CalculateSpectrum (TVector3D const& ObservationPoint, TSpectrumCont
 
 
 
-void OSCARS::CalculateSpectrumPoint (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, int const i, double const Weight)
+void OSCARSSR::CalculateSpectrumPoint (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, int const i, double const Weight)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -992,10 +1014,10 @@ void OSCARS::CalculateSpectrumPoint (TParticleA& Particle, TVector3D const& Obse
 
 
   // Constant C0 for calculation
-  double const C0 = Particle.GetQ() / (TOSCARS::FourPi() * TOSCARS::C() * TOSCARS::Epsilon0() * TOSCARS::Sqrt2Pi());
+  double const C0 = Particle.GetQ() / (TOSCARSSR::FourPi() * TOSCARSSR::C() * TOSCARSSR::Epsilon0() * TOSCARSSR::Sqrt2Pi());
 
   // Constant for flux calculation at the end
-  double const C2 = TOSCARS::FourPi() * Particle.GetCurrent() / (TOSCARS::H() * fabs(Particle.GetQ()) * TOSCARS::Mu0() * TOSCARS::C()) * 1e-6 * 0.001;
+  double const C2 = TOSCARSSR::FourPi() * Particle.GetCurrent() / (TOSCARSSR::H() * fabs(Particle.GetQ()) * TOSCARSSR::Mu0() * TOSCARSSR::C()) * 1e-6 * 0.001;
 
   // Imaginary "i" and complxe 1+0i
   std::complex<double> const I(0, 1);
@@ -1005,7 +1027,7 @@ void OSCARS::CalculateSpectrumPoint (TParticleA& Particle, TVector3D const& Obse
   double const Omega = Spectrum.GetAngularFrequency(i);
 
   // Constant for field calculation
-  std::complex<double> ICoverOmega = I * TOSCARS::C() / Omega;
+  std::complex<double> ICoverOmega = I * TOSCARSSR::C() / Omega;
 
   // Constant for calculation
   std::complex<double> const C1(0, C0 * Omega);
@@ -1032,7 +1054,7 @@ void OSCARS::CalculateSpectrumPoint (TParticleA& Particle, TVector3D const& Obse
     double const D = R.Mag();
 
     // Exponent for fourier transformed field
-    std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARS::C()));
+    std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARSSR::C()));
 
     // Sum in fourier transformed field (integral)
     SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
@@ -1053,7 +1075,7 @@ void OSCARS::CalculateSpectrumPoint (TParticleA& Particle, TVector3D const& Obse
 
 
 
-void OSCARS::CalculateSpectrumThreads (TParticleA& Particle, TVector3D const& Obs, TSpectrumContainer& Spectrum, int const NThreads, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculateSpectrumThreads (TParticleA& Particle, TVector3D const& Obs, TSpectrumContainer& Spectrum, int const NThreads, double const Weight, std::string const& OutFileName)
 {
   // Calculates spectrum for the given particle and observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1089,7 +1111,7 @@ void OSCARS::CalculateSpectrumThreads (TParticleA& Particle, TVector3D const& Ob
 
   // Start threads and keep in vector
   for (size_t io = 0; io != NFirst; ++io) {
-    Threads.push_back(std::thread(&OSCARS::CalculateSpectrumPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), io, Weight));
+    Threads.push_back(std::thread(&OSCARSSR::CalculateSpectrumPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), io, Weight));
   }
 
   // Look for threads that end in order, once joined replace with a new thread if we're not yet at the end
@@ -1097,7 +1119,7 @@ void OSCARS::CalculateSpectrumThreads (TParticleA& Particle, TVector3D const& Ob
     size_t const it = io % NFirst;
     Threads[it].join();
     if (io < NPoints) {
-      Threads[it] = std::thread(&OSCARS::CalculateSpectrumPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), (int) io, Weight);
+      Threads[it] = std::thread(&OSCARSSR::CalculateSpectrumPoint, this, std::ref(Particle), std::ref(Obs), std::ref(Spectrum), (int) io, Weight);
     }
   }
 
@@ -1124,7 +1146,7 @@ void OSCARS::CalculateSpectrumThreads (TParticleA& Particle, TVector3D const& Ob
 
 
 
-void OSCARS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
+void OSCARSSR::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1161,10 +1183,10 @@ void OSCARS::CalculateSpectrum (TParticleA& Particle, TVector3D const& Observati
   size_t const NEPoints = Spectrum.GetNPoints();
 
   // Constant C0 for calculation
-  double const C0 = Particle.GetQ() / (TOSCARS::FourPi() * TOSCARS::C() * TOSCARS::Epsilon0() * TOSCARS::Sqrt2Pi());
+  double const C0 = Particle.GetQ() / (TOSCARSSR::FourPi() * TOSCARSSR::C() * TOSCARSSR::Epsilon0() * TOSCARSSR::Sqrt2Pi());
 
   // Constant for flux calculation at the end
-  double const C2 = TOSCARS::FourPi() * Particle.GetCurrent() / (TOSCARS::H() * fabs(Particle.GetQ()) * TOSCARS::Mu0() * TOSCARS::C()) * 1e-6 * 0.001;
+  double const C2 = TOSCARSSR::FourPi() * Particle.GetCurrent() / (TOSCARSSR::H() * fabs(Particle.GetQ()) * TOSCARSSR::Mu0() * TOSCARSSR::C()) * 1e-6 * 0.001;
 
   // Imaginary "i" and complxe 1+0i
   std::complex<double> const I(0, 1);
@@ -1178,7 +1200,7 @@ void OSCARS::CalculateSpectrum (TParticleA& Particle, TVector3D const& Observati
     double const Omega = Spectrum.GetAngularFrequency(i);
 
     // Constant for field calculation
-    std::complex<double> ICoverOmega = I * TOSCARS::C() / Omega;
+    std::complex<double> ICoverOmega = I * TOSCARSSR::C() / Omega;
 
     // Constant for calculation
     std::complex<double> const C1(0, C0 * Omega);
@@ -1205,7 +1227,7 @@ void OSCARS::CalculateSpectrum (TParticleA& Particle, TVector3D const& Observati
       double const D = R.Mag();
 
       // Exponent for fourier transformed field
-      std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARS::C()));
+      std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARSSR::C()));
 
       // Sum in fourier transformed field (integral)
       SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
@@ -1226,7 +1248,7 @@ void OSCARS::CalculateSpectrum (TParticleA& Particle, TVector3D const& Observati
 
 
 
-void OSCARS::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, double const EStart, double const EStop, size_t const N, std::string const& OutFilename)
+void OSCARSSR::CalculateSpectrum (TParticleA& Particle, TVector3D const& ObservationPoint, double const EStart, double const EStop, size_t const N, std::string const& OutFilename)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1245,7 +1267,7 @@ void OSCARS::CalculateSpectrum (TParticleA& Particle, TVector3D const& Observati
 
 
 
-void OSCARS::CalculateSpectrum (TVector3D const& ObservationPoint, double const EStart, double const EStop, size_t const N)
+void OSCARSSR::CalculateSpectrum (TVector3D const& ObservationPoint, double const EStart, double const EStop, size_t const N)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1272,7 +1294,7 @@ void OSCARS::CalculateSpectrum (TVector3D const& ObservationPoint, double const 
 
 
 
-void OSCARS::CalculateSpectrum (TVector3D const& ObservationPoint, std::vector<double> const& V)
+void OSCARSSR::CalculateSpectrum (TVector3D const& ObservationPoint, std::vector<double> const& V)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1301,7 +1323,7 @@ void OSCARS::CalculateSpectrum (TVector3D const& ObservationPoint, std::vector<d
 
 
 
-void OSCARS::AddToSpectrum (TSpectrumContainer const& S, double const Weight)
+void OSCARSSR::AddToSpectrum (TSpectrumContainer const& S, double const Weight)
 {
   // Check if spectrum exists yet or not.  In not, create it
   if (fSpectrum.GetNPoints() == 0) {
@@ -1325,7 +1347,7 @@ void OSCARS::AddToSpectrum (TSpectrumContainer const& S, double const Weight)
 
 
 
-void OSCARS::AddToFlux (T3DScalarContainer const& F, double const Weight)
+void OSCARSSR::AddToFlux (T3DScalarContainer const& F, double const Weight)
 {
   // Check if spectrum exists yet or not.  In not, create it
   if (fFlux.GetNPoints() == 0) {
@@ -1349,7 +1371,7 @@ void OSCARS::AddToFlux (T3DScalarContainer const& F, double const Weight)
 
 
 
-void OSCARS::AddToPowerDensity (T3DScalarContainer const& P, double const Weight)
+void OSCARSSR::AddToPowerDensity (T3DScalarContainer const& P, double const Weight)
 {
   // Check if spectrum exists yet or not.  In not, create it
   if (fPowerDensity.GetNPoints() == 0) {
@@ -1373,7 +1395,7 @@ void OSCARS::AddToPowerDensity (T3DScalarContainer const& P, double const Weight
 
 
 
-TSpectrumContainer const& OSCARS::GetSpectrum () const
+TSpectrumContainer const& OSCARSSR::GetSpectrum () const
 {
   return fSpectrum;
 }
@@ -1381,7 +1403,7 @@ TSpectrumContainer const& OSCARS::GetSpectrum () const
 
 
 
-void OSCARS::ClearSpectrum ()
+void OSCARSSR::ClearSpectrum ()
 {
   // Clear the contents of the particle beam container
   fSpectrum.Clear();
@@ -1392,7 +1414,7 @@ void OSCARS::ClearSpectrum ()
 
 
 
-T3DScalarContainer const& OSCARS::GetFlux () const
+T3DScalarContainer const& OSCARSSR::GetFlux () const
 {
   return fFlux;
 }
@@ -1400,7 +1422,7 @@ T3DScalarContainer const& OSCARS::GetFlux () const
 
 
 
-void OSCARS::ClearFlux ()
+void OSCARSSR::ClearFlux ()
 {
   // Clear the contents
   fFlux.Clear();
@@ -1411,7 +1433,7 @@ void OSCARS::ClearFlux ()
 
 
 
-T3DScalarContainer const& OSCARS::GetPowerDensity () const
+T3DScalarContainer const& OSCARSSR::GetPowerDensity () const
 {
   return fPowerDensity;
 }
@@ -1419,7 +1441,7 @@ T3DScalarContainer const& OSCARS::GetPowerDensity () const
 
 
 
-void OSCARS::ClearPowerDensity ()
+void OSCARSSR::ClearPowerDensity ()
 {
   // Clear the contents
   fPowerDensity.Clear();
@@ -1430,7 +1452,7 @@ void OSCARS::ClearPowerDensity ()
 
 
 
-void OSCARS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   T3DScalarContainer PowerDensityContainer;
   this->CalculatePowerDensity(Particle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
@@ -1447,7 +1469,7 @@ void OSCARS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& 
 
 
 
-void OSCARS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1533,7 +1555,7 @@ void OSCARS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& 
     }
 
     // Undulators, Wigglers and their applications, p42
-    Sum *= fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TOSCARS::Pi2() * TOSCARS::Epsilon0() * TOSCARS::C()) * DeltaT;
+    Sum *= fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TOSCARSSR::Pi2() * TOSCARSSR::Epsilon0() * TOSCARSSR::C()) * DeltaT;
 
     Sum /= 1e6; // m^2 to mm^2
 
@@ -1573,7 +1595,7 @@ void OSCARS::CalculatePowerDensity (TParticleA& Particle, TSurfacePoints const& 
 
 
 
-void OSCARS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, int const NParticles, std::string const& OutFileName, int const NThreads, int const GPU)
+void OSCARSSR::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, int const NParticles, std::string const& OutFileName, int const NThreads, int const GPU)
 {
   // Calculates the power density
   // in units of [W / mm^2]
@@ -1656,7 +1678,7 @@ void OSCARS::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarCont
 
 
 
-void OSCARS::CalculatePowerDensityPoint (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, size_t const io, int const Dimension, bool const Directional, double const Weight)
+void OSCARSSR::CalculatePowerDensityPoint (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, size_t const io, int const Dimension, bool const Directional, double const Weight)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1724,7 +1746,7 @@ void OSCARS::CalculatePowerDensityPoint (TParticleA& Particle, TSurfacePoints co
 
   }
     // Undulators, Wigglers and their applications, p42
-    Sum *= fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TOSCARS::Pi2() * TOSCARS::Epsilon0() * TOSCARS::C()) * DeltaT;
+    Sum *= fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TOSCARSSR::Pi2() * TOSCARSSR::Epsilon0() * TOSCARSSR::C()) * DeltaT;
 
     Sum /= 1e6; // m^2 to mm^2
 
@@ -1756,7 +1778,7 @@ void OSCARS::CalculatePowerDensityPoint (TParticleA& Particle, TSurfacePoints co
 
 
 
-void OSCARS::CalculatePowerDensityThreads (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const NThreads, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculatePowerDensityThreads (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const NThreads, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1801,7 +1823,7 @@ void OSCARS::CalculatePowerDensityThreads (TParticleA& Particle, TSurfacePoints 
 
   // Start threads and keep in vector
   for (size_t io = 0; io != NFirst; ++io) {
-    Threads.push_back(std::thread(&OSCARS::CalculatePowerDensityPoint, this, std::ref(Particle), std::ref(Surface), std::ref(PowerDensityContainer), (int) io, Dimension, Directional, Weight));
+    Threads.push_back(std::thread(&OSCARSSR::CalculatePowerDensityPoint, this, std::ref(Particle), std::ref(Surface), std::ref(PowerDensityContainer), (int) io, Dimension, Directional, Weight));
   }
 
   // Look for threads that end in order, once joined replace with a new thread if we're not yet at the end
@@ -1809,7 +1831,7 @@ void OSCARS::CalculatePowerDensityThreads (TParticleA& Particle, TSurfacePoints 
     size_t const it = io % NFirst;
     Threads[it].join();
     if (io < NPoints) {
-      Threads[it] = std::thread(&OSCARS::CalculatePowerDensityPoint, this, std::ref(Particle), std::ref(Surface), std::ref(PowerDensityContainer), (int) io, Dimension, Directional, Weight);
+      Threads[it] = std::thread(&OSCARSSR::CalculatePowerDensityPoint, this, std::ref(Particle), std::ref(Surface), std::ref(PowerDensityContainer), (int) io, Dimension, Directional, Weight);
     }
   }
 
@@ -1828,7 +1850,7 @@ void OSCARS::CalculatePowerDensityThreads (TParticleA& Particle, TSurfacePoints 
 
 
 
-void OSCARS::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   // If you compile for Cuda use the GPU in this function, else throw
 
@@ -1845,7 +1867,7 @@ void OSCARS::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints cons
   this->CalculateTrajectory(Particle);
 
   #ifdef CUDA
-  return OSCARS_Cuda_CalculatePowerDensityGPU (Particle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
+  return OSCARSSR_Cuda_CalculatePowerDensityGPU (Particle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
   #else
   throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
   #endif
@@ -1857,7 +1879,7 @@ void OSCARS::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints cons
 
 
 
-void OSCARS::CalculatePowerDensityGPU (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculatePowerDensityGPU (TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1882,7 +1904,7 @@ void OSCARS::CalculatePowerDensityGPU (TSurfacePoints const& Surface, T3DScalarC
 
 
 
-double OSCARS::CalculateTotalPower ()
+double OSCARSSR::CalculateTotalPower ()
 {
   // UPDATE: commet
 
@@ -1902,7 +1924,7 @@ double OSCARS::CalculateTotalPower ()
 
 
 
-double OSCARS::CalculateTotalPower (TParticleA& Particle)
+double OSCARSSR::CalculateTotalPower (TParticleA& Particle)
 {
   // Calculate total power out
 
@@ -1937,7 +1959,7 @@ double OSCARS::CalculateTotalPower (TParticleA& Particle)
   }
 
   // Undulators, Wigglers and their applications, p42
-  TotalPower *= fabs(Particle.GetQ() * Particle.GetCurrent()) * pow(Particle.GetGamma(), 6) / (6 * TOSCARS::Pi() * TOSCARS::Epsilon0() * TOSCARS::C());
+  TotalPower *= fabs(Particle.GetQ() * Particle.GetCurrent()) * pow(Particle.GetGamma(), 6) / (6 * TOSCARSSR::Pi() * TOSCARSSR::Epsilon0() * TOSCARSSR::C());
 
 
   return TotalPower;
@@ -1952,7 +1974,7 @@ double OSCARS::CalculateTotalPower (TParticleA& Particle)
 
 
 
-void OSCARS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight)
+void OSCARSSR::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -1988,10 +2010,10 @@ void OSCARS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface
   size_t const NSPoints = Surface.GetNPoints();
 
   // Constant C0 for calculation
-  double const C0 = Particle.GetQ() / (TOSCARS::FourPi() * TOSCARS::C() * TOSCARS::Epsilon0() * TOSCARS::Sqrt2Pi());
+  double const C0 = Particle.GetQ() / (TOSCARSSR::FourPi() * TOSCARSSR::C() * TOSCARSSR::Epsilon0() * TOSCARSSR::Sqrt2Pi());
 
   // Constant for flux calculation at the end
-  double const C2 = TOSCARS::FourPi() * Particle.GetCurrent() / (TOSCARS::H() * fabs(Particle.GetQ()) * TOSCARS::Mu0() * TOSCARS::C()) * 1e-6 * 0.001;
+  double const C2 = TOSCARSSR::FourPi() * Particle.GetCurrent() / (TOSCARSSR::H() * fabs(Particle.GetQ()) * TOSCARSSR::Mu0() * TOSCARSSR::C()) * 1e-6 * 0.001;
 
   // Imaginary "i" and complxe 1+0i
   std::complex<double> const I(0, 1);
@@ -1999,10 +2021,10 @@ void OSCARS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface
 
 
   // Angular frequency
-  double const Omega = TOSCARS::EvToAngularFrequency(Energy_eV);;
+  double const Omega = TOSCARSSR::EvToAngularFrequency(Energy_eV);;
 
   // Constant for field calculation
-  std::complex<double> ICoverOmega = I * TOSCARS::C() / Omega;
+  std::complex<double> ICoverOmega = I * TOSCARSSR::C() / Omega;
 
   // Constant for calculation
   std::complex<double> const C1(0, C0 * Omega);
@@ -2035,7 +2057,7 @@ void OSCARS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface
       double const D = R.Mag();
 
       // Exponent for fourier transformed field
-      std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARS::C()));
+      std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARSSR::C()));
 
       // Sum in fourier transformed field (integral)
       SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
@@ -2067,7 +2089,7 @@ void OSCARS::CalculateFlux2 (TParticleA& Particle, TSurfacePoints const& Surface
 
 
 
-void OSCARS::CalculateFluxPoint (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, size_t const i, int const Dimension, double const Weight)
+void OSCARSSR::CalculateFluxPoint (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, size_t const i, int const Dimension, double const Weight)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -2097,10 +2119,10 @@ void OSCARS::CalculateFluxPoint (TParticleA& Particle, TSurfacePoints const& Sur
   }
 
   // Constant C0 for calculation
-  double const C0 = Particle.GetQ() / (TOSCARS::FourPi() * TOSCARS::C() * TOSCARS::Epsilon0() * TOSCARS::Sqrt2Pi());
+  double const C0 = Particle.GetQ() / (TOSCARSSR::FourPi() * TOSCARSSR::C() * TOSCARSSR::Epsilon0() * TOSCARSSR::Sqrt2Pi());
 
   // Constant for flux calculation at the end
-  double const C2 = TOSCARS::FourPi() * Particle.GetCurrent() / (TOSCARS::H() * fabs(Particle.GetQ()) * TOSCARS::Mu0() * TOSCARS::C()) * 1e-6 * 0.001;
+  double const C2 = TOSCARSSR::FourPi() * Particle.GetCurrent() / (TOSCARSSR::H() * fabs(Particle.GetQ()) * TOSCARSSR::Mu0() * TOSCARSSR::C()) * 1e-6 * 0.001;
 
   // Imaginary "i" and complxe 1+0i
   std::complex<double> const I(0, 1);
@@ -2108,10 +2130,10 @@ void OSCARS::CalculateFluxPoint (TParticleA& Particle, TSurfacePoints const& Sur
 
 
   // Angular frequency
-  double const Omega = TOSCARS::EvToAngularFrequency(Energy_eV);;
+  double const Omega = TOSCARSSR::EvToAngularFrequency(Energy_eV);;
 
   // Constant for field calculation
-  std::complex<double> ICoverOmega = I * TOSCARS::C() / Omega;
+  std::complex<double> ICoverOmega = I * TOSCARSSR::C() / Omega;
 
   // Constant for calculation
   std::complex<double> const C1(0, C0 * Omega);
@@ -2141,7 +2163,7 @@ void OSCARS::CalculateFluxPoint (TParticleA& Particle, TSurfacePoints const& Sur
     double const D = R.Mag();
 
     // Exponent for fourier transformed field
-    std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARS::C()));
+    std::complex<double> Exponent(0, Omega * (DeltaT * iT + D / TOSCARSSR::C()));
 
     // Sum in fourier transformed field (integral)
     SumE += (TVector3DC(B) - (N * ( One + (ICoverOmega / (D))))) / D * std::exp(Exponent);
@@ -2172,7 +2194,7 @@ void OSCARS::CalculateFluxPoint (TParticleA& Particle, TSurfacePoints const& Sur
 
 
 
-void OSCARS::CalculateFlux1 (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
+void OSCARSSR::CalculateFlux1 (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -2207,17 +2229,17 @@ void OSCARS::CalculateFlux1 (TParticleA& Particle, TSurfacePoints const& Surface
   double const DeltaT = T.GetDeltaT();
 
   // Constand C0
-  double const C0 = Particle.GetQ() / (4 * TOSCARS::Pi() * TOSCARS::C() * TOSCARS::Epsilon0() * TOSCARS::Sqrt2Pi());
+  double const C0 = Particle.GetQ() / (4 * TOSCARSSR::Pi() * TOSCARSSR::C() * TOSCARSSR::Epsilon0() * TOSCARSSR::Sqrt2Pi());
 
 
   // Constant for flux calculation at the end
-  double const C2 = TOSCARS::FourPi() * Particle.GetCurrent() / (TOSCARS::H() * fabs(Particle.GetQ()) * TOSCARS::Mu0() * TOSCARS::C()) * 1e-6 * 0.001;
+  double const C2 = TOSCARSSR::FourPi() * Particle.GetCurrent() / (TOSCARSSR::H() * fabs(Particle.GetQ()) * TOSCARSSR::Mu0() * TOSCARSSR::C()) * 1e-6 * 0.001;
 
   // Complex number i
   std::complex<double> const I(0, 1);
 
   // UPDATE: use common function
-  double const Omega = Energy_eV * TOSCARS::TwoPi() / 4.1357e-15;
+  double const Omega = Energy_eV * TOSCARSSR::TwoPi() / 4.1357e-15;
 
   // Constant C1 (complex)
   //std::complex<double> const C1(0, C0 * Omega);
@@ -2255,7 +2277,7 @@ void OSCARS::CalculateFlux1 (TParticleA& Particle, TSurfacePoints const& Surface
       double const D = R.Mag();
 
       // Exponent in transformed field
-      std::complex<double> Exponent(0, -Omega * (DeltaT * iT + D / TOSCARS::C()));
+      std::complex<double> Exponent(0, -Omega * (DeltaT * iT + D / TOSCARSSR::C()));
 
       // UPDATE: with better field avoiding A
       // TVector3DC const ThisEw = ( N.Cross( (N - B).Cross(AoverC) ) ) / ( D * pow(1 - N.Dot(B), 2) ) * std::exp(Exponent) * DeltaT; // FF only
@@ -2311,7 +2333,7 @@ void OSCARS::CalculateFlux1 (TParticleA& Particle, TSurfacePoints const& Surface
 
 
 
-void OSCARS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   // Final stop for entry to calculation
 
@@ -2344,7 +2366,7 @@ void OSCARS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface,
 
 
 
-void OSCARS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, int const Dimension, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   T3DScalarContainer FluxContainer;
 
@@ -2356,7 +2378,7 @@ void OSCARS::CalculateFlux (TParticleA& Particle, TSurfacePoints const& Surface,
 
 
 
-void OSCARS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   // Check that particle has been set yet.  If fType is "" it has not been set yet
   if (fParticle.GetType() == "") {
@@ -2381,7 +2403,7 @@ void OSCARS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_e
 
 
 
-void OSCARS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const NParticles, int const NThreads, int const GPU, int const Dimension, std::string const& OutFileName)
+void OSCARSSR::CalculateFlux (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const NParticles, int const NThreads, int const GPU, int const Dimension, std::string const& OutFileName)
 {
   // UPDATE: inputs
 
@@ -2460,7 +2482,7 @@ void OSCARS::CalculateFlux (TSurfacePoints const& Surface, double const Energy_e
 
 
 
-void OSCARS::CalculateFluxThreads (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const NThreads, int const Dimension, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculateFluxThreads (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const NThreads, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -2507,7 +2529,7 @@ void OSCARS::CalculateFluxThreads (TParticleA& Particle, TSurfacePoints const& S
 
   // Start threads and keep in vector
   for (size_t io = 0; io != NFirst; ++io) {
-    Threads.push_back(std::thread(&OSCARS::CalculateFluxPoint, this, std::ref(Particle), std::ref(Surface), Energy_eV, std::ref(FluxContainer), (int) io, Dimension, Weight));
+    Threads.push_back(std::thread(&OSCARSSR::CalculateFluxPoint, this, std::ref(Particle), std::ref(Surface), Energy_eV, std::ref(FluxContainer), (int) io, Dimension, Weight));
   }
 
   // Look for threads that end in order, once joined replace with a new thread if we're not yet at the end
@@ -2515,7 +2537,7 @@ void OSCARS::CalculateFluxThreads (TParticleA& Particle, TSurfacePoints const& S
     size_t const it = io % NFirst;
     Threads[it].join();
     if (io < NPoints) {
-      Threads[it] = std::thread(&OSCARS::CalculateFluxPoint, this, std::ref(Particle), std::ref(Surface), Energy_eV, std::ref(FluxContainer), (int) io, Dimension, Weight);
+      Threads[it] = std::thread(&OSCARSSR::CalculateFluxPoint, this, std::ref(Particle), std::ref(Surface), Energy_eV, std::ref(FluxContainer), (int) io, Dimension, Weight);
     }
   }
 
@@ -2529,7 +2551,7 @@ void OSCARS::CalculateFluxThreads (TParticleA& Particle, TSurfacePoints const& S
 
 
 
-void OSCARS::CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   // If you compile for Cuda use the GPU in this function, else throw
 
@@ -2547,7 +2569,7 @@ void OSCARS::CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surfa
   this->CalculateTrajectory(Particle);
 
   #ifdef CUDA
-  return OSCARS_Cuda_CalculateFluxGPU(Particle, Surface, Energy_eV, FluxContainer, Dimension, Weight, OutFileName);
+  return OSCARSSR_Cuda_CalculateFluxGPU(Particle, Surface, Energy_eV, FluxContainer, Dimension, Weight, OutFileName);
   #else
   throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
   #endif
@@ -2559,7 +2581,7 @@ void OSCARS::CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surfa
 
 
 
-void OSCARS::CalculateFluxGPU (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
+void OSCARSSR::CalculateFluxGPU (TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   // Calculates the single particle spectrum at a given observation point
   // in units of [photons / second / 0.001% BW / mm^2]
@@ -2586,7 +2608,7 @@ void OSCARS::CalculateFluxGPU (TSurfacePoints const& Surface, double const Energ
 
 
 
-void OSCARS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer& XYZT)
+void OSCARSSR::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer& XYZT)
 {
   // Check that particle has been set yet.  If fType is "" it has not been set yet
   if (fParticle.GetType() == "") {
@@ -2605,7 +2627,7 @@ void OSCARS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DSca
 
 
 
-void OSCARS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer& XYZT,  TParticleA& Particle)
+void OSCARSSR::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DScalarContainer& XYZT,  TParticleA& Particle)
 {
   // Check that particle has been set yet.  If fType is "" it has not been set yet
   if (Particle.GetType() == "") {
@@ -2621,7 +2643,7 @@ void OSCARS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DSca
 
   double const DeltaT = T.GetDeltaT();
 
-  double const C0 = Particle.GetQ() / (TOSCARS::FourPi() * TOSCARS::Epsilon0());
+  double const C0 = Particle.GetQ() / (TOSCARSSR::FourPi() * TOSCARSSR::Epsilon0());
   // Loop over trajectory points
   for (size_t iT = 0; iT != NTPoints; ++iT) {
 
@@ -2639,10 +2661,10 @@ void OSCARS::CalculateElectricFieldTimeDomain (TVector3D const& Observer, T3DSca
 
     double    const      Mult = C0 * pow(1.0 / (1.0 - N.Dot(B)), 3);
     TVector3D const NearField = ((1.0 - B.Mag2() ) * (N - B)) / R.Mag2();
-    TVector3D const  FarField = (1.0 / TOSCARS::C()) * (N.Cross(  (N - B).Cross(AoverC))  ) / R.Mag();
+    TVector3D const  FarField = (1.0 / TOSCARSSR::C()) * (N.Cross(  (N - B).Cross(AoverC))  ) / R.Mag();
 
     TVector3D const EField = Mult * (NearField + FarField);
-    double    const Time = iT * DeltaT + D / TOSCARS::C();
+    double    const Time = iT * DeltaT + D / TOSCARSSR::C();
 
     XYZT.AddPoint(EField, Time);
   }

@@ -20,7 +20,7 @@ TField3D_IdealUndulator::TField3D_IdealUndulator ()
 
 
 
-TField3D_IdealUndulator::TField3D_IdealUndulator (TVector3D const& Field, TVector3D const& Period, int const NPeriods, TVector3D const& Center, double const Phase)
+TField3D_IdealUndulator::TField3D_IdealUndulator (TVector3D const& Field, TVector3D const& Period, int const NPeriods, TVector3D const& Center, double const Phase, double const Taper)
 {
   // Typical constructor.  This will generate a magnetic field in the direction specified by Field
   // varying as the sine depending on the period, number of periods and phase, centered at a given location.
@@ -33,7 +33,7 @@ TField3D_IdealUndulator::TField3D_IdealUndulator (TVector3D const& Field, TVecto
   // Center - Where in space the center of this field will be
   // Phase - A phase offset for the sine function given in [rad]
 
-  this->Init(Field, Period, NPeriods, Center, Phase);
+  this->Init(Field, Period, NPeriods, Center, Phase, Taper);
 }
 
 
@@ -47,7 +47,7 @@ TField3D_IdealUndulator::~TField3D_IdealUndulator ()
 
 
 
-void TField3D_IdealUndulator::Init (TVector3D const& Field, TVector3D const& Period, int const NPeriods, TVector3D const& Center, double const Phase)
+void TField3D_IdealUndulator::Init (TVector3D const& Field, TVector3D const& Period, int const NPeriods, TVector3D const& Center, double const Phase, double const Taper)
 {
   // Initialization function.  This will generate a magnetic field in the direction specified by Field
   // varying as the sine depending on the period, number of periods and phase, centered at a given location.
@@ -65,6 +65,7 @@ void TField3D_IdealUndulator::Init (TVector3D const& Field, TVector3D const& Per
   fNPeriods = NPeriods;
   fCenter   = Center;
   fPhase    = Phase;
+  fTaper    = Taper;
 
   fPeriodLength = fPeriod.Mag();
   fPeriodUnitVector = fPeriod.UnitVector();
@@ -110,6 +111,9 @@ TVector3D TField3D_IdealUndulator::GetF (TVector3D const& X) const
   // How far are you from the "center" in the correct direction
   double const D = (X - fCenter).Dot( fPeriodUnitVector );
 
+  // How much taper correction do we make?
+  double const TaperCorrection = 1 + D * fTaper;
+
   // Phase shift in length
   double const PhaseShift = fPhase * fPeriod.Mag() / TSRS::TwoPi ();
 
@@ -125,13 +129,13 @@ TVector3D TField3D_IdealUndulator::GetF (TVector3D const& X) const
   if (D < -fUndulatorLength / 2. + PhaseShift + fPeriodLength || D > fUndulatorLength / 2. + PhaseShift - fPeriodLength) {
     if (D < -fUndulatorLength / 2. + PhaseShift + fPeriodLength / 2. || D > fUndulatorLength / 2. + PhaseShift - fPeriodLength / 2.) {
 
-      return 0.25 * fField * sin(TSRS::TwoPi() * (D - PhaseShift) / fPeriodLength);
+      return 0.25 * fField * sin(TSRS::TwoPi() * (D - PhaseShift) / fPeriodLength) * TaperCorrection;
     } 
 
-    return 0.75 * fField * sin(TSRS::TwoPi() * (D - PhaseShift) / fPeriodLength);
+    return 0.75 * fField * sin(TSRS::TwoPi() * (D - PhaseShift) / fPeriodLength) * TaperCorrection;
   } 
 
-  return fField * sin(TSRS::TwoPi() * (D - PhaseShift) / fPeriodLength);
+  return fField * sin(TSRS::TwoPi() * (D - PhaseShift) / fPeriodLength) * TaperCorrection;
 }
 
 

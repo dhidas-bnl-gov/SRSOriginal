@@ -18,7 +18,7 @@ class TField3D_IdealUndulator : public TField
 {
   public:
     TField3D_IdealUndulator ();
-    TField3D_IdealUndulator (TVector3D const&, TVector3D const&, int const, TVector3D const& Center = TVector3D(0, 0, 0), double const Phase = 0);
+    TField3D_IdealUndulator (TVector3D const&, TVector3D const&, int const, TVector3D const& Center = TVector3D(0, 0, 0), double const Phase = 0, double const Taper = 0);
     ~TField3D_IdealUndulator ();
 
     double    GetFx (double const, double const, double const) const;
@@ -27,7 +27,7 @@ class TField3D_IdealUndulator : public TField
     TVector3D GetF  (double const, double const, double const) const;
     TVector3D GetF  (TVector3D const&) const;
 
-    void Init (TVector3D const&, TVector3D const&, int const, TVector3D const& Center = TVector3D(0, 0, 0), double const Phase = 0);
+    void Init (TVector3D const&, TVector3D const&, int const, TVector3D const& Center = TVector3D(0, 0, 0), double const Phase = 0, double const Taper = 0);
 
 
 
@@ -39,6 +39,7 @@ class TField3D_IdealUndulator : public TField
     int       fNPeriods;
     TVector3D fCenter;
     double    fPhase;
+    double    fTaper;
 
     double fUndulatorLength;
 

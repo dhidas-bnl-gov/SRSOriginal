@@ -7,8 +7,8 @@ PYPATH = /System/Library/Frameworks/Python.framework/Versions/$(PYVERSION)
 
 WSTPDIR = /Applications/Mathematica.app/Contents/SystemFiles/Links/WSTP/DeveloperKit/MacOSX-x86-64/CompilerAdditions/
 
-CFLAGS = -DCUDA -Wall -pedantic -O3 -pthread -std=c++11 -fPIC -Wno-write-strings
-CUDACFLAGS = -DCUDA -std=c++11
+CFLAGS = -DCUDA -Wall -pedantic -O3 -pthread -std=c++14 -fPIC -Wno-write-strings
+CUDACFLAGS = -DCUDA
 LIBS = -Llib -L$(PYPATH)/lib/python$(PYVERSION) -lpython -L$(WSTPDIR) -lWSTPi4 -stdlib=libstdc++ -framework Foundation -lc++ -L/usr/local/cuda/lib -lcuda -lcudart_static
 INCLUDE = -Iinclude -I$(PYPATH)/include/python$(PYVERSION) -I$(WSTPDIR)
 
@@ -20,7 +20,7 @@ EXEOBJS  = $(patsubst exe/%.cc,lib/%.o,$(wildcard exe/*.cc))
 WSTPOBJS  = $(patsubst wstp/%.tm,lib/%_tm.o,$(wildcard wstp/*.tm))
 WSTPCCS  = $(patsubst wstp/%.tm,wstp/%_tm.cc,$(wildcard wstp/*.tm))
 
-SOLIB =  lib/OSCARS.so
+SOLIB = lib/sr.so
 
 
 WSPREP = $(WSTPDIR)/wsprep
@@ -35,7 +35,7 @@ mma: bin/SRS_MMA
 wstp/%_tm.cc : wstp/%.tm
 	$(WSPREP) $< -o $@
 
-lib/OSCARS.so : $(OBJS) $(CUDAOBJS) $(WSTPCCS) $(WSTPOBJS)
+lib/sr.so : $(OBJS) $(CUDAOBJS) $(WSTPCCS) $(WSTPOBJS)
 	$(LD) -shared $(LIBS) $(WSTPOBJS) $(OBJS) $(CUDAOBJS) -o $@
 
 lib/%.o : src/%.cc

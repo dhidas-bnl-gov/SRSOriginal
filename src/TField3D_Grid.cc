@@ -46,8 +46,37 @@ TField3D_Grid::TField3D_Grid (std::string const& InFileName, std::string const& 
 
 
 
+TField3D_Grid::TField3D_Grid (std::vector<std::pair<double, std::string> > Mapping, std::string const& FileFormat, double const Parameter, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling, char const CommentChar)
+{
+  // This one is for interpolated fields from a mapping vector and parameter value.
+  // It is meant for interpolating between different undulator gaps, but it is generalized
+  // to interpolate any fields
+
+  // I will accept lower-case
+  std::string format = FileFormat;
+  std::transform(format.begin(), format.end(), format.begin(), ::toupper);
+
+  // Which file format are you looking at?
+  if (format == "OSCARS") {
+    this->InterpolateFromFiles(Mapping, Parameter, Rotations, Translation, Scaling);
+  } else if (std::string(format.begin(), format.begin() + 8) == "OSCARS1D") {
+    //this->ReadFile_OSCARS1D(InFileName, FileFormat, Rotations, Translation, Scaling, CommentChar);
+  } else if (format == "SPECTRA") {
+    //this->ReadFile_SPECTRA(InFileName, Rotations, Translation, CommentChar);
+  } else if (format == "SRW") {
+    //this->ReadFile_SRW(InFileName, Rotations, Translation, CommentChar);
+  } else {
+    std::cerr << "TField3D_Grid::TField3D_Grid format error format: " << FileFormat << std::endl;
+    throw std::invalid_argument("incorrect format given");
+  }
+}
+
+
+
+
 TField3D_Grid::~TField3D_Grid ()
 {
+  // Destruction is my goal
 }
 
 
@@ -142,7 +171,6 @@ TVector3D TField3D_Grid::GetF (TVector3D const& XIN) const
         size_t const i011 = GetIndex(nx + 0, ny + 1, nz + 1);
         size_t const i111 = GetIndex(nx + 1, ny + 1, nz + 1);
         TVector3D const v11 = fData[i011] + dx * (fData[i111] - fData[i011]) / fXStep;
-
 
         // Step in Y to find 2 points
         TVector3D const v0 = v00 + dy * (v10 - v00) / fYStep;
@@ -1107,9 +1135,325 @@ void TField3D_Grid::ReadFile_SPECTRA (std::string const& InFileName, TVector3D c
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+void TField3D_Grid::InterpolateFromFiles (std::vector<std::pair<double, std::string> > const& Mapping, double const Parameter, TVector3D const& Rotations, TVector3D const& Translation, std::vector<double> const& Scaling, char const CommentChar)
+{
+  // Get interpolated field based on input files
+
+  // First sort the input mapping vector
+  std::vector<std::pair<double, std::string> > MyMapping = Mapping;
+  std::sort(MyMapping.begin(), MyMapping.end(), this->CompareMappingElements);
+
+  // Open all files and push files and parameters to vectors
+  std::vector<std::ifstream*> InFiles;
+  std::vector<double>  Parameters;
+  for (std::vector<std::pair<double, std::string> >::iterator it = MyMapping.begin(); it != MyMapping.end(); ++it) {
+    Parameters.push_back(it->first);
+    InFiles.push_back(new std::ifstream(it->second));
+
+    if (!InFiles.back()->is_open()) {
+      std::cerr << "ERROR: cannot open file" << std::endl;
+      //throw std::ifstream::failure("cannot open file for reading");
+    }
+  }
+
+  // For reading lines of file
+  std::istringstream S;
+  std::string L;
+
+  // Header values
+  std::vector<double> HeaderValues;
+  for (size_t ih = 0; ih != 10; ++ih) {
+    std::getline(*(InFiles[0]), L);
+    HeaderValues.push_back(GetHeaderValue(L));
+
+    for (size_t i = 1; i < InFiles.size(); ++i) {
+      std::getline(*(InFiles[i]), L);
+      if (HeaderValues[ih] != GetHeaderValue(L)) {
+        throw;
+      }
+    }
+  }
+
+
+  // Initial X
+  double const XStartIN = HeaderValues[1];
+
+  // Step X
+  double const XStepIN = HeaderValues[2];
+
+  // Number of points X
+  int const NX = (int) HeaderValues[3];
+
+
+  // Initial Y
+  double const YStartIN = HeaderValues[4];
+
+  // Step Y
+  double const YStepIN = HeaderValues[5];
+
+  // Number of points Y
+  int const NY = (int) HeaderValues[6];
+
+
+  // Initial Z
+  double const ZStartIN = HeaderValues[7];
+
+  // Step Z
+  double const ZStepIN = HeaderValues[8];
+
+  // Number of points Z
+  int const NZ = (int) HeaderValues[9];
+
+
+
+  // If we're doing any scaling, scale spatial dimensions and fields.  Start with stepsize change
+  double const XStep = Scaling.size() > 0 ? XStepIN * Scaling[0] : XStepIN;
+  double const YStep = Scaling.size() > 1 ? YStepIN * Scaling[1] : YStepIN;
+  double const ZStep = Scaling.size() > 2 ? ZStepIN * Scaling[2] : ZStepIN;
+
+  // Get field scaling if it exists
+  double const FxScaling = Scaling.size() > 3 ? Scaling[3] : 1;
+  double const FyScaling = Scaling.size() > 4 ? Scaling[4] : 1;
+  double const FzScaling = Scaling.size() > 5 ? Scaling[5] : 1;
+
+  // Calculate new start point
+  double const MiddleX = XStartIN + XStepIN * (NX - 1) / 2.;
+  double const XStart  = MiddleX - XStep * (NX - 1) / 2.;
+  double const MiddleY = YStartIN + YStepIN * (NY - 1) / 2.;
+  double const YStart  = MiddleY - YStep * (NY -1) / 2.;
+  double const MiddleZ = ZStartIN + ZStepIN * (NZ - 1) / 2.;
+  double const ZStart  = MiddleZ - ZStep * (NZ - 1) / 2.;
+
+
+  // Check Number of points is > 0 for all
+  if (NX < 1 || NY < 1 || NY < 1) {
+    std::cerr << "ERROR: invalid npoints" << std::endl;
+    throw std::out_of_range("invalid number of points in at least one dimension");
+  }
+
+  // Save position data to object variables
+  fNX = NX;
+  fNY = NY;
+  fNZ = NZ;
+  fXStart = XStart;
+  fYStart = YStart;
+  fZStart = ZStart;
+  fXStep  = XStep;
+  fYStep  = YStep;
+  fZStep  = ZStep;
+  fXStop  = fXStart + (fNX - 1) * fXStep;
+  fYStop  = fYStart + (fNY - 1) * fYStep;
+  fZStop  = fZStart + (fNZ - 1) * fZStep;
+
+  fHasX = NX > 1 ? true : false;
+  fHasY = NY > 1 ? true : false;
+  fHasZ = NZ > 1 ? true : false;
+
+  if (fHasX && fHasY && fHasZ) {
+    fDIMX = kDIMX_XYZ;
+  } else if (fHasX && fHasY) {
+    fDIMX = kDIMX_XY;
+  } else if (fHasX && fHasZ) {
+    fDIMX = kDIMX_XZ;
+  } else if (fHasY && fHasZ) {
+    fDIMX = kDIMX_YZ;
+  } else if (fHasX) {
+    fDIMX = kDIMX_X;
+  } else if (fHasY) {
+    fDIMX = kDIMX_Y;
+  } else if (fHasZ) {
+    fDIMX = kDIMX_Z;
+  } else {
+    std::cerr << "ERROR: error in file header format" << std::endl;
+    throw std::out_of_range("invalid dimensions");
+  }
+
+  fXDIM = 0;
+  if (fHasX) {
+    ++fXDIM;
+  }
+  if (fHasY) {
+    ++fXDIM;
+  }
+  if (fHasZ) {
+    ++fXDIM;
+  }
+
+  // Reserve correct number of points in vector (slightly faster)
+  fData.reserve(fNX * fNY * fNZ);
+
+
+
+
+  // Temp variables for field
+  double fx;
+  double fy;
+  double fz;
+
+  // Fields at each parameter value
+  std::vector<TVector3D> F(InFiles.size());
+
+  // Loop over all points
+  for (int ix = 0; ix != NX; ++ix) {
+    for (int iy = 0; iy != NY; ++iy) {
+      for (int iz = 0; iz != NZ; ++iz) {
+
+        // Loop over all files
+        for (size_t ifile = 0; ifile != InFiles.size(); ++ifile) {
+          // Grab a line from input file
+          std::getline(*(InFiles[ifile]), L);
+
+          // Check we did not hit an EOF
+          if (InFiles[ifile]->eof()) {
+            std::cerr << "ERROR: bad input file" << std::endl;
+            throw std::ifstream::failure("error reading file.  Check format");
+          }
+
+          // Read data
+          S.clear();
+          S.str(L);
+          S >> fx >> fy >> fz;
+
+          // Scale values?
+          if (FxScaling != 1) {
+            fx *= FxScaling;
+          }
+          if (FyScaling != 1) {
+            fy *= FyScaling;
+          }
+          if (FzScaling != 1) {
+            fz *= FzScaling;
+          }
+
+          // Check the stream did not hit an EOF
+          if (S.fail()) {
+            std::cerr << "ERRROR: input stream bad" << std::endl;
+            throw std::ifstream::failure("error reading file.  Check format");
+          }
+
+          F[ifile].SetXYZ(fx, fy, fz);
+        }
+
+        // Interpolate and push data to memory
+        TVector3D FInterpolated = this->InterpolateFields(Parameters, F, Parameter);
+        FInterpolated.RotateSelfXYZ(Rotations);
+        fData.push_back(FInterpolated);
+
+      }
+    }
+  }
+
+
+  // Close all files
+  for (std::vector<std::ifstream*>::iterator it = InFiles.begin(); it != InFiles.end(); ++it) {
+    (*it)->close();
+    delete *it;
+  }
+  InFiles.clear();
+
+  // Store Rotations and Translation
+  fRotated = Rotations;
+  fTranslation = Translation;
+
+  return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+TVector3D TField3D_Grid::InterpolateFields (std::vector<double> const& Parameters, std::vector<TVector3D> const& Fields, double const Parameter)
+{
+  // Interpolate to find field at given Parameter value
+
+  // Check size of parameters vector.  Must be at least 2
+  if (Parameters.size() < 2) {
+    throw;
+  }
+
+  // Before and After index of Parameter
+  int    Before;
+  int    After;
+  bool   HasAfter = false;
+
+  // For each desired point find the bin before and after the desired Z position
+  for (size_t i = 0; i != Parameters.size(); ++i) {
+    double const V = Parameters[i];
+
+    // If outside of the range throw for now
+    if (i == 0 && Parameter < V) {
+      throw;
+    }
+
+    if (V < Parameter) {
+      Before= i;
+      
+    } else if (V >= Parameter) {
+      HasAfter = true;
+      After = i;
+      break;
+    }
+  }
+
+  // Make sure that an after point was found, otherwise outside of range
+  if (!HasAfter) {
+    throw;
+  }
+
+  // How far in and slope
+  double const Difference = Parameter - Parameters[Before];
+  TVector3D const Slope = (Fields[After] - Fields[Before]) / (Parameters[After] - Parameters[Before]);
+
+  return Fields[Before] + Slope * Difference;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 bool TField3D_Grid::CompareField1D (std::array<double, 4> const& A, std::array<double, 4> const& B)
 {
   // This function is used for sorting the field in 'position' cood.  It is a comparison function
   return A[0] < B[0];
+}
+
+bool TField3D_Grid::CompareMappingElements (std::pair<double, std::string> const& A, std::pair<double, std::string> const& B)
+{
+  // This function is used for sorting the field in 'position' cood.  It is a comparison function
+  return A.first < B.first;
 }
 

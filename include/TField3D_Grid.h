@@ -20,6 +20,7 @@ class TField3D_Grid : public TField
   public:
     TField3D_Grid ();
     TField3D_Grid (std::string const&, std::string const& FileFormat = "OSCARS", TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), std::vector<double> const& Scaling = std::vector<double>(), char const CommentChar = '#');
+    TField3D_Grid (std::vector<std::pair<double, std::string> > Mapping, std::string const& FileFormat, double const Parameter, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), std::vector<double> const& Scaling = std::vector<double>(), char const CommentChar = '#');
     ~TField3D_Grid ();
 
     double GetFx (double const, double const, double const) const;
@@ -37,7 +38,13 @@ class TField3D_Grid : public TField
     void ReadFile_OSCARS1D  (std::string const&, std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), std::vector<double> const& Scaling = std::vector<double>(), char const CommentChar = '#');
     void ReadFile_SRW       (std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
     void ReadFile_SPECTRA   (std::string const&, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), char const CommentChar = '#');
+
+    void InterpolateFromFiles (std::vector<std::pair<double, std::string> > const&, double const, TVector3D const& Rotations = TVector3D(0, 0, 0), TVector3D const& Translation = TVector3D(0, 0, 0), std::vector<double> const& Scaling = std::vector<double>(), char const CommentChar = '#');
+
+    TVector3D InterpolateFields (std::vector<double> const&, std::vector<TVector3D> const&, double const);
+
     static bool CompareField1D (std::array<double, 4> const&, std::array<double, 4> const&);
+    static bool CompareMappingElements (std::pair<double, std::string> const&, std::pair<double, std::string> const&);
 
     enum TField3D_Grid_DIMX {
       kDIMX_X,

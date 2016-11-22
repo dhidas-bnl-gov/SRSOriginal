@@ -8,16 +8,15 @@
 
 #include <cuComplex.h>
 
-#include "OSCARS_Cuda.h"
+#include "OSCARSSR_Cuda.h"
 
-#include "OSCARS.h"
+#include "OSCARSSR.h"
 
 #include <cmath>
 #include <fstream>
 #include <sstream>
 
 #include "TVector3DC.h"
-#include "TField3D_1DRegularized.h"
 #include "TSpectrumContainer.h"
 
 
@@ -28,7 +27,7 @@
 
 
 
-extern "C" int OSCARS_Cuda_GetDeviceCount ()
+extern "C" int OSCARSSR_Cuda_GetDeviceCount ()
 {
   int ngpu = 0;
   cudaGetDeviceCount(&ngpu);
@@ -87,7 +86,7 @@ __host__ __device__ static __inline__ cuDoubleComplex cuCexp(cuDoubleComplex x)
 
 
 
-__global__ void OSCARS_Cuda_FluxGPU4 (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
+__global__ void OSCARSSR_Cuda_FluxGPU4 (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
 {
   // Check that this is within the number of spectrum points requested
   int is = threadIdx.x + blockIdx.x * blockDim.x;
@@ -326,7 +325,7 @@ __global__ void OSCARS_Cuda_FluxGPU4 (double *x, double *y, double *z, double *b
 
 
 
-__global__ void OSCARS_Cuda_FluxGPU3 (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
+__global__ void OSCARSSR_Cuda_FluxGPU3 (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
 {
   // Check that this is within the number of spectrum points requested
   int is = threadIdx.x + blockIdx.x * blockDim.x;
@@ -456,7 +455,7 @@ __global__ void OSCARS_Cuda_FluxGPU3 (double *x, double *y, double *z, double *b
 
 
 
-__global__ void OSCARS_Cuda_FluxGPU2 (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
+__global__ void OSCARSSR_Cuda_FluxGPU2 (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
 {
   // Check that this is within the number of spectrum points requested
   int is = threadIdx.x + blockIdx.x * blockDim.x;
@@ -600,7 +599,7 @@ __global__ void OSCARS_Cuda_FluxGPU2 (double *x, double *y, double *z, double *b
 
 
 
-__global__ void OSCARS_Cuda_FluxGPU (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
+__global__ void OSCARSSR_Cuda_FluxGPU (double *x, double *y, double *z, double *bx, double *by, double *bz, double *sx, double *sy, double *sz, double *dt, int *nt, int *ns, double *C0, double *C2, double *C, double *Omega, double *flux)
 {
   // Check that this is within the number of spectrum points requested
   int is = threadIdx.x + blockIdx.x * blockDim.x;
@@ -694,7 +693,7 @@ __global__ void OSCARS_Cuda_FluxGPU (double *x, double *y, double *z, double *bx
 
 
 
-extern "C" void OSCARS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
+extern "C" void OSCARSSR_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Surface, double const Energy_eV, T3DScalarContainer& FluxContainer, int const Dimension, double const Weight, std::string const& OutFileName)
 {
   // Do the setup for and call the GPU calculation of flux.  Your limitation here is only GPU memory.
 
@@ -729,8 +728,8 @@ extern "C" void OSCARS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoin
   double *sz     = new double[NSPoints];
 
   // Constants
-  double const C = TOSCARS::C();
-  double const Omega = TOSCARS::EvToAngularFrequency(Energy_eV);
+  double const C = TOSCARSSR::C();
+  double const Omega = TOSCARSSR::EvToAngularFrequency(Energy_eV);
 
   // Flux
   double *flux = new double[NSPoints];
@@ -808,10 +807,10 @@ extern "C" void OSCARS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoin
 
 
   // Constant C0 for calculation
-  double const C0 = Particle.GetQ() / (TOSCARS::FourPi() * TOSCARS::C() * TOSCARS::Epsilon0() * TOSCARS::Sqrt2Pi());
+  double const C0 = Particle.GetQ() / (TOSCARSSR::FourPi() * TOSCARSSR::C() * TOSCARSSR::Epsilon0() * TOSCARSSR::Sqrt2Pi());
 
   // Constant for flux calculation at the end
-  double const C2 = TOSCARS::FourPi() * Particle.GetCurrent() / (TOSCARS::H() * fabs(Particle.GetQ()) * TOSCARS::Mu0() * TOSCARS::C()) * 1e-6 * 0.001;
+  double const C2 = TOSCARSSR::FourPi() * Particle.GetCurrent() / (TOSCARSSR::H() * fabs(Particle.GetQ()) * TOSCARSSR::Mu0() * TOSCARSSR::C()) * 1e-6 * 0.001;
 
   // Constants to send in to GPU
   double *d_C0, *d_C2, *d_Omega, *d_C;
@@ -831,7 +830,7 @@ extern "C" void OSCARS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoin
 
   // Send computation to gpu
   int const NBlocks = NSPoints / NTHREADS_PER_BLOCK + 1;
-  OSCARS_Cuda_FluxGPU4<<<NBlocks, NTHREADS_PER_BLOCK>>>(d_x, d_y, d_z, d_bx, d_by, d_bz, d_sx, d_sy, d_sz, d_dt, d_nt, d_ns, d_C0, d_C2, d_C, d_Omega, d_flux);
+  OSCARSSR_Cuda_FluxGPU4<<<NBlocks, NTHREADS_PER_BLOCK>>>(d_x, d_y, d_z, d_bx, d_by, d_bz, d_sx, d_sy, d_sz, d_dt, d_nt, d_ns, d_C0, d_C2, d_C, d_Omega, d_flux);
 
   // Copy result back from GPU
   cudaMemcpy(flux, d_flux, size_s, cudaMemcpyDeviceToHost);
@@ -931,7 +930,7 @@ extern "C" void OSCARS_Cuda_CalculateFluxGPU (TParticleA& Particle, TSurfacePoin
 
 
 
-__global__ void OSCARS_Cuda_SpectrumGPU (double *x, double *y, double *z, double *bx, double *by, double *bz, double *ox, double *oy, double *oz, double *dt, int *nt, int *ns, double *C0, double *C2, double *EvToOmega, double *C, double *se, double *sf)
+__global__ void OSCARSSR_Cuda_SpectrumGPU (double *x, double *y, double *z, double *bx, double *by, double *bz, double *ox, double *oy, double *oz, double *dt, int *nt, int *ns, double *C0, double *C2, double *EvToOmega, double *C, double *se, double *sf)
 {
   // Check that this is within the number of spectrum points requested
   int is = threadIdx.x + blockIdx.x * blockDim.x;
@@ -1013,7 +1012,7 @@ __global__ void OSCARS_Cuda_SpectrumGPU (double *x, double *y, double *z, double
 
 
 
-extern "C" void OSCARS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
+extern "C" void OSCARSSR_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& ObservationPoint, TSpectrumContainer& Spectrum, double const Weight)
 {
 
   int ngpu = 0;
@@ -1046,8 +1045,8 @@ extern "C" void OSCARS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3
   double oz = ObservationPoint.GetZ();
 
   // Constants
-  double const C = TOSCARS::C();
-  double const EvToOmega = TOSCARS::EvToAngularFrequency(1);
+  double const C = TOSCARSSR::C();
+  double const EvToOmega = TOSCARSSR::EvToAngularFrequency(1);
 
   // Spectrum energy and flux
   double *se     = new double[NSPoints];
@@ -1125,10 +1124,10 @@ extern "C" void OSCARS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3
 
 
   // Constant C0 for calculation
-  double const C0 = Particle.GetQ() / (TOSCARS::FourPi() * TOSCARS::C() * TOSCARS::Epsilon0() * TOSCARS::Sqrt2Pi());
+  double const C0 = Particle.GetQ() / (TOSCARSSR::FourPi() * TOSCARSSR::C() * TOSCARSSR::Epsilon0() * TOSCARSSR::Sqrt2Pi());
 
   // Constant for flux calculation at the end
-  double const C2 = TOSCARS::FourPi() * Particle.GetCurrent() / (TOSCARS::H() * fabs(Particle.GetQ()) * TOSCARS::Mu0() * TOSCARS::C()) * 1e-6 * 0.001;
+  double const C2 = TOSCARSSR::FourPi() * Particle.GetCurrent() / (TOSCARSSR::H() * fabs(Particle.GetQ()) * TOSCARSSR::Mu0() * TOSCARSSR::C()) * 1e-6 * 0.001;
 
   // Constants to send in to GPU
   double *d_C0, *d_C2, *d_EvToOmega, *d_C;
@@ -1148,7 +1147,7 @@ extern "C" void OSCARS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3
 
   // Send computation to gpu
   int const NBlocks = NSPoints / NTHREADS_PER_BLOCK + 1;
-  OSCARS_Cuda_SpectrumGPU<<<NBlocks, NTHREADS_PER_BLOCK>>>(d_x, d_y, d_z, d_bx, d_by, d_bz, d_ox, d_oy, d_oz, d_dt, d_nt, d_ns, d_C0, d_C2, d_EvToOmega, d_C, d_se, d_sf);
+  OSCARSSR_Cuda_SpectrumGPU<<<NBlocks, NTHREADS_PER_BLOCK>>>(d_x, d_y, d_z, d_bx, d_by, d_bz, d_ox, d_oy, d_oz, d_dt, d_nt, d_ns, d_C0, d_C2, d_EvToOmega, d_C, d_se, d_sf);
 
   // Copy result back from GPU
   cudaMemcpy(sf, d_sf, size_s, cudaMemcpyDeviceToHost);
@@ -1221,7 +1220,7 @@ extern "C" void OSCARS_Cuda_CalculateSpectrumGPU (TParticleA& Particle, TVector3
 
 
 
-__global__ void OSCARS_Cuda_PowerDensityGPU (double *x, double *y, double *z, double *bx, double *by, double *bz, double *aocx, double *aocy, double *aocz, double *sx, double *sy, double *sz, double *snx, double *sny, double *snz, double *dt, int *nt, int *ns, double *power_density)
+__global__ void OSCARSSR_Cuda_PowerDensityGPU (double *x, double *y, double *z, double *bx, double *by, double *bz, double *aocx, double *aocy, double *aocz, double *sx, double *sy, double *sz, double *snx, double *sny, double *snz, double *dt, int *nt, int *ns, double *power_density)
 {
   // Get surface id from block and thread number
   int is = threadIdx.x + blockIdx.x * blockDim.x;
@@ -1340,7 +1339,7 @@ __global__ void OSCARS_Cuda_PowerDensityGPU (double *x, double *y, double *z, do
 
 
 
-extern "C" void OSCARS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
+extern "C" void OSCARSSR_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints const& Surface, T3DScalarContainer& PowerDensityContainer, int const Dimension, bool const Directional, double const Weight, std::string const& OutFileName)
 {
 
   int ngpu = 0;
@@ -1477,7 +1476,7 @@ extern "C" void OSCARS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSur
 
   // Send computation to gpu
   int const NBlocks = NSPoints / NTHREADS_PER_BLOCK + 1;
-  OSCARS_Cuda_PowerDensityGPU<<<NBlocks, NTHREADS_PER_BLOCK>>>(d_x, d_y, d_z, d_bx, d_by, d_bz, d_aocx, d_aocy, d_aocz, d_sx, d_sy, d_sz, d_snx, d_sny, d_snz, d_dt, d_nt, d_ns, d_power_density);
+  OSCARSSR_Cuda_PowerDensityGPU<<<NBlocks, NTHREADS_PER_BLOCK>>>(d_x, d_y, d_z, d_bx, d_by, d_bz, d_aocx, d_aocy, d_aocz, d_sx, d_sy, d_sz, d_snx, d_sny, d_snz, d_dt, d_nt, d_ns, d_power_density);
 
   // Copy result back from GPU
   cudaMemcpy(power_density, d_power_density, size_s, cudaMemcpyDeviceToHost);
@@ -1486,7 +1485,7 @@ extern "C" void OSCARS_Cuda_CalculatePowerDensityGPU (TParticleA& Particle, TSur
 
   // Add result to power density container
   for (size_t i = 0; i < NSPoints; ++i) {
-    PowerDensityContainer.AddToPoint(i, power_density[i] * fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TOSCARS::Pi2() * TOSCARS::Epsilon0() * TOSCARS::C()) / 1e6 * Weight);
+    PowerDensityContainer.AddToPoint(i, power_density[i] * fabs(Particle.GetQ() * Particle.GetCurrent()) / (16 * TOSCARSSR::Pi2() * TOSCARSSR::Epsilon0() * TOSCARSSR::C()) / 1e6 * Weight);
   }
 
 
