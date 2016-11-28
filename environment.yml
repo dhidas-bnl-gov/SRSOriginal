@@ -4,3 +4,5 @@ dependencies:
   - matplotlib
   - jupyter
   - gcc
+  - pip:
+    - git+https://github.com/dhidas-bnl-gov/OSCARS#egg=1.31.01
