@@ -100,13 +100,13 @@ TVector3D TField3D_Gaussian::GetF (TVector3D const& X) const
 
   double Fraction = 1;
   if (fSigma.GetX() > 0) {
-    Fraction *= exp(-pow((RX.GetX() - fCenter.GetX()) / fSigma.GetX(), 2) / 2.);
+    Fraction *= exp(-pow((RX.GetX()) / fSigma.GetX(), 2) / 2.);
   }
   if (fSigma.GetY() > 0) {
-    Fraction *= exp(-pow((RX.GetY() - fCenter.GetY()) / fSigma.GetY(), 2) / 2.);
+    Fraction *= exp(-pow((RX.GetY()) / fSigma.GetY(), 2) / 2.);
   }
   if (fSigma.GetZ() > 0) {
-    Fraction *= exp(-pow((RX.GetZ() - fCenter.GetZ()) / fSigma.GetZ(), 2) / 2.);
+    Fraction *= exp(-pow((RX.GetZ()) / fSigma.GetZ(), 2) / 2.);
   }
 
   return Fraction * fField;

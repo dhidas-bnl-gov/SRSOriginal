@@ -7,7 +7,7 @@ from oscars.plots_mpl import *
 # Create a new OSCARS object
 osr = oscars.sr.sr()
 
-# Clear any existing fields (just good habit) and add an undulator field
+# Clear any existing fields (just good habit in notebook style) and add an undulator field
 osr.clear_bfields()
 osr.add_bfield_undulator(bfield=[0, 1, 0], period=[0, 0, 0.049], nperiods=21)
 
@@ -27,7 +27,6 @@ osr.set_particle_beam(type='electron',
 # Set the start and stop times for the calculation
 osr.set_ctstartstop(0, 2)
 
-
 # Run the particle trajectory calculation
 trajectory = osr.calculate_trajectory()
 
@@ -35,4 +34,10 @@ trajectory = osr.calculate_trajectory()
 plot_trajectory_position(trajectory)
 plot_trajectory_velocity(trajectory)
 
+# Calculate spectrum
+spectrum = osr.calculate_spectrum(obs=[0, 0, 30], energy_range_eV=[100, 2000], npoints=500)
+plot_spectrum(spectrum)
 
+# Calculate spectrum zoom
+spectrum = osr.calculate_spectrum(obs=[0, 0, 30], energy_range_eV=[100, 200], npoints=200)
+plot_spectrum(spectrum)

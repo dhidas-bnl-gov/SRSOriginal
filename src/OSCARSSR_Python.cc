@@ -144,7 +144,7 @@ static PyObject* OSCARSSR_TVector3DAsList (TVector3D const& V)
 
 
 
-
+const char* asdasd = "blah blah";
 static PyObject* OSCARSSR_Pi (OSCARSSRObject* self, PyObject* arg)
 {
   // Return the internal OSCARSSR number constant pi
@@ -2313,6 +2313,11 @@ static PyObject* OSCARSSR_CalculateSpectrum (OSCARSSRObject* self, PyObject* arg
   TSpectrumContainer SpectrumContainer;
 
   if (VPoints_eV.size() == 0) {
+    // Check NPoints parameter
+    if (NPoints < 1) {
+      PyErr_SetString(PyExc_ValueError, "'npoints' must be > 0");
+      return NULL;
+    }
     SpectrumContainer.Init(NPoints, EStart, EStop);
   } else {
     SpectrumContainer.Init(VPoints_eV);
@@ -2325,6 +2330,9 @@ static PyObject* OSCARSSR_CalculateSpectrum (OSCARSSRObject* self, PyObject* arg
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
   } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::invalid_argument e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
   }
@@ -2481,6 +2489,11 @@ static PyObject* OSCARSSR_CalculatePowerDensity (OSCARSSRObject* self, PyObject*
       X.RotateSelfXYZ(Rotations);
       N.RotateSelfXYZ(Rotations);
 
+      // Invert the normal?
+      if (NormalDirection == -1) {
+        N *= -1;
+      }
+
       // Translate point, normal does not get translated
       X += Translation;
 
@@ -2532,6 +2545,9 @@ static PyObject* OSCARSSR_CalculatePowerDensity (OSCARSSRObject* self, PyObject*
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
   } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::invalid_argument e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
   }
@@ -2760,6 +2776,9 @@ static PyObject* OSCARSSR_CalculatePowerDensityRectangle (OSCARSSRObject* self, 
   } catch (std::out_of_range e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
+  } catch (std::invalid_argument e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
   }
 
 
@@ -2946,6 +2965,9 @@ static PyObject* OSCARSSR_CalculateFlux (OSCARSSRObject* self, PyObject* args, P
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
   } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::invalid_argument e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
   }
@@ -3178,6 +3200,9 @@ static PyObject* OSCARSSR_CalculateFluxRectangle (OSCARSSRObject* self, PyObject
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
   } catch (std::out_of_range e) {
+    PyErr_SetString(PyExc_ValueError, e.what());
+    return NULL;
+  } catch (std::invalid_argument e) {
     PyErr_SetString(PyExc_ValueError, e.what());
     return NULL;
   }
@@ -3646,7 +3671,7 @@ static PyMethodDef OSCARSSR_methods[] = {
   // We must tell python about the function we allow access as well as give them nice
   // python names, and tell python the method of input parameters.
 
-  {"pi",                                (PyCFunction) OSCARSSR_Pi,                              METH_NOARGS,                  "do you want some pi?"},
+  {"pi",                                (PyCFunction) OSCARSSR_Pi,                              METH_NOARGS,                  asdasd},
   {"qe",                                (PyCFunction) OSCARSSR_Qe,                              METH_NOARGS,                  "elementary charge in [C]"},
   {"me",                                (PyCFunction) OSCARSSR_Me,                              METH_NOARGS,                  "electron mass in [kg]"},
   {"rand",                              (PyCFunction) OSCARSSR_Random,                          METH_NOARGS,                  "uniformally distributed random number [0, 1)"},

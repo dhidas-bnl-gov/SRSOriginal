@@ -892,6 +892,11 @@ void OSCARSSR::CalculateSpectrumGPU (TParticleA& Particle, TVector3D const& Obse
   this->CalculateTrajectory(Particle);
 
   #ifdef CUDA
+  // Check that the GPU exists
+  if (this->CheckGPU() < 1) {
+    throw std::invalid_argument("You are requesting the GPU, but none were found");
+  }
+
   return OSCARSSR_Cuda_CalculateSpectrumGPU (Particle, ObservationPoint, Spectrum, Weight);
   #else
   throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
@@ -1867,6 +1872,11 @@ void OSCARSSR::CalculatePowerDensityGPU (TParticleA& Particle, TSurfacePoints co
   this->CalculateTrajectory(Particle);
 
   #ifdef CUDA
+  // Check that the GPU exists
+  if (this->CheckGPU() < 1) {
+    throw std::invalid_argument("You are requesting the GPU, but none were found");
+  }
+
   return OSCARSSR_Cuda_CalculatePowerDensityGPU (Particle, Surface, PowerDensityContainer, Dimension, Directional, Weight, OutFileName);
   #else
   throw std::invalid_argument("GPU functionality not compiled into this binary distribution");
@@ -2569,6 +2579,11 @@ void OSCARSSR::CalculateFluxGPU (TParticleA& Particle, TSurfacePoints const& Sur
   this->CalculateTrajectory(Particle);
 
   #ifdef CUDA
+  // Check that the GPU exists
+  if (this->CheckGPU() < 1) {
+    throw std::invalid_argument("You are requesting the GPU, but none were found");
+  }
+
   return OSCARSSR_Cuda_CalculateFluxGPU(Particle, Surface, Energy_eV, FluxContainer, Dimension, Weight, OutFileName);
   #else
   throw std::invalid_argument("GPU functionality not compiled into this binary distribution");

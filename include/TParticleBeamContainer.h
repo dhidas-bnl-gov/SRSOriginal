@@ -40,7 +40,7 @@ class TParticleBeamContainer
     std::vector<double>        fParticleBeamWeightSums;
     std::vector<TParticleBeam> fParticleBeams;
 
-    // UPDATE: Use a reference instead of copy
+    // A map between string and beam index
     std::map<std::string, size_t> fParticleBeamMap;
 
 };

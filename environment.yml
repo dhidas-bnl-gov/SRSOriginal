@@ -1,0 +1,6 @@
+name: oscars
+dependencies:
+  - python=3.5*
+  - matplotlib
+  - jupyter
+  - gcc
