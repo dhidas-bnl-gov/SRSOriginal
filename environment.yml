@@ -5,5 +5,3 @@ dependencies:
   - jupyter
   - gcc
   - mpi4py
-  - pip:
-    - git+https://github.com/dhidas-bnl-gov/OSCARS#egg=1.31.01
