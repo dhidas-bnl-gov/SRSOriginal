@@ -2417,6 +2417,12 @@ void OSCARSSR::CalculateFlux (TSurfacePoints const& Surface, double const Energy
 {
   // UPDATE: inputs
 
+  int const NThreadsToUse = NThreads < 1 ? fNThreadsGlobal : NThreads;
+  if (NThreadsToUse <= 0) {
+    std::cerr << "NThreads or NThreadsGlobal must be >= 1" << std::endl;
+    throw;
+  }
+
   // Check that particle has been set yet.  If fType is "" it has not been set yet
   if (fParticle.GetType() == "") {
     try {
@@ -2445,14 +2451,10 @@ void OSCARSSR::CalculateFlux (TSurfacePoints const& Surface, double const Energy
   // GPU will outrank NThreads...
   if (NParticles == 0) {
     if (GPU == 0) {
-      if (NThreads == 1) {
+      if (NThreadsToUse == 1) {
         this->CalculateFlux(fParticle, Surface, Energy_eV, FluxContainer, Dimension, 1, BlankOutFileName);
       } else {
-        if (NThreads == 0) {
-          this->CalculateFluxThreads(fParticle, Surface, Energy_eV, FluxContainer, fNThreadsGlobal, Dimension, 1, BlankOutFileName);
-        } else {
-          this->CalculateFluxThreads(fParticle, Surface, Energy_eV, FluxContainer, NThreads, Dimension, 1, BlankOutFileName);
-        }
+        this->CalculateFluxThreads(fParticle, Surface, Energy_eV, FluxContainer, NThreadsToUse, Dimension, 1, BlankOutFileName);
       }
     } else if (GPU == 1) {
       this->CalculateFluxGPU(fParticle, Surface, Energy_eV, FluxContainer, Dimension, 1, BlankOutFileName);
@@ -2462,14 +2464,10 @@ void OSCARSSR::CalculateFlux (TSurfacePoints const& Surface, double const Energy
     for (int i = 0; i != NParticles; ++i) {
       this->SetNewParticle();
       if (GPU == 0) {
-        if (NThreads == 1) {
+        if (NThreadsToUse == 1) {
           this->CalculateFlux(fParticle, Surface, Energy_eV, FluxContainer, Dimension, Weight, BlankOutFileName);
         } else {
-          if (NThreads == 0) {
-            this->CalculateFluxThreads(fParticle, Surface, Energy_eV, FluxContainer, fNThreadsGlobal, Dimension, Weight, BlankOutFileName);
-          } else {
-            this->CalculateFluxThreads(fParticle, Surface, Energy_eV, FluxContainer, NThreads, Dimension, Weight, BlankOutFileName);
-          }
+          this->CalculateFluxThreads(fParticle, Surface, Energy_eV, FluxContainer, NThreadsToUse, Dimension, Weight, BlankOutFileName);
         }
       } else if (GPU == 1) {
         this->CalculateFluxGPU(fParticle, Surface, Energy_eV, FluxContainer, Dimension, Weight, BlankOutFileName);
