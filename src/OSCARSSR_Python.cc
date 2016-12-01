@@ -3427,7 +3427,7 @@ static PyObject* OSCARSSR_AddToPowerDensity (OSCARSSRObject* self, PyObject* arg
   double Weight = 1;
 
 
-  static char *kwlist[] = {"flux", "weight", NULL};
+  static char *kwlist[] = {"power_density", "weight", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(args, keywds, "O|d", kwlist,
                                                         &List_PowerDensity,

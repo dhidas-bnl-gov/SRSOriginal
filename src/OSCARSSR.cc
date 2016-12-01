@@ -1607,6 +1607,15 @@ void OSCARSSR::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarCo
   //
   // UPDATE: inputs
 
+  // How many threads to use.
+  int const NThreadsToUse = NThreads < 1 ? fNThreadsGlobal : NThreads;
+  if (NThreadsToUse <= 0) {
+    std::cerr << "NThreads or NThreadsGlobal must be >= 1" << std::endl;
+    throw;
+  }
+
+
+
   // Check that particle has been set yet.  If fType is "" it has not been set yet
   if (fParticle.GetType() == "") {
     try {
@@ -1635,14 +1644,10 @@ void OSCARSSR::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarCo
   // GPU will outrank NThreads...
   if (NParticles == 0) {
     if (GPU == 0) {
-      if (NThreads == 1) {
+      if (NThreadsToUse == 1) {
         this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional, 1, BlankOutFileName);
       } else {
-        if (NThreads == 0) {
-          this->CalculatePowerDensityThreads(fParticle, Surface, PowerDensityContainer, fNThreadsGlobal, Dimension, Directional, 1, BlankOutFileName);
-        } else {
-          this->CalculatePowerDensityThreads(fParticle, Surface, PowerDensityContainer, NThreads, Dimension, Directional, 1, BlankOutFileName);
-        }
+        this->CalculatePowerDensityThreads(fParticle, Surface, PowerDensityContainer, NThreadsToUse, Dimension, Directional, 1, BlankOutFileName);
       }
     } else if (GPU == 1) {
       this->CalculatePowerDensityGPU(fParticle, Surface, PowerDensityContainer, Dimension, Directional, 1, BlankOutFileName);
@@ -1652,14 +1657,10 @@ void OSCARSSR::CalculatePowerDensity (TSurfacePoints const& Surface, T3DScalarCo
     for (int i = 0; i != NParticles; ++i) {
       this->SetNewParticle();
       if (GPU == 0) {
-        if (NThreads == 1) {
+        if (NThreadsToUse == 1) {
           this->CalculatePowerDensity(fParticle, Surface, PowerDensityContainer, Dimension, Directional, Weight, BlankOutFileName);
         } else {
-          if (NThreads == 0) {
-            this->CalculatePowerDensityThreads(fParticle, Surface, PowerDensityContainer, fNThreadsGlobal, Dimension, Directional, Weight, BlankOutFileName);
-          } else {
-            this->CalculatePowerDensityThreads(fParticle, Surface, PowerDensityContainer,  NThreads, Dimension, Directional, Weight, BlankOutFileName);
-          }
+          this->CalculatePowerDensityThreads(fParticle, Surface, PowerDensityContainer,  NThreadsToUse, Dimension, Directional, Weight, BlankOutFileName);
         }
       } else if (GPU == 1) {
         this->CalculatePowerDensityGPU(fParticle, Surface, PowerDensityContainer, Dimension, Directional, Weight, BlankOutFileName);
@@ -1716,6 +1717,7 @@ void OSCARSSR::CalculatePowerDensityPoint (TParticleA& Particle, TSurfacePoints 
 
   TVector3D const Obs = Surface.GetPoint(io).GetPoint();
   TVector3D const Normal = Surface.GetPoint(io).GetNormal();
+
 
     // For summing power contributions
     double Sum = 0;
@@ -2417,6 +2419,7 @@ void OSCARSSR::CalculateFlux (TSurfacePoints const& Surface, double const Energy
 {
   // UPDATE: inputs
 
+  // How many threads to use.
   int const NThreadsToUse = NThreads < 1 ? fNThreadsGlobal : NThreads;
   if (NThreadsToUse <= 0) {
     std::cerr << "NThreads or NThreadsGlobal must be >= 1" << std::endl;

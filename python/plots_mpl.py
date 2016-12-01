@@ -190,6 +190,7 @@ def plot_power_density(V, title='Power Density [$W / mm^2$]', xlabel='X1 Axis [$
 
     if ret:
         return plt
+
     return
 
 

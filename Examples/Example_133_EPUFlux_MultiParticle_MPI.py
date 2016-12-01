@@ -1,5 +1,5 @@
 # How to run this code:
-#   mpiexec -n 5 python Example_133_EPUFlux_MultiParticle_MPI.py
+#   mpirun -n 5 python Example_133_EPUFlux_MultiParticle_MPI.py
 
 
 # In this example MPI is used to calculate the flux in a multi-particle
@@ -64,7 +64,7 @@ rectangle_center = [0, 0, 30]
 width = [0.01, 0.01]
 
 # Number of points in flux
-npoints = [11, 11]
+npoints = [51, 51]
 
 # Energy we are interested in
 energy_eV = 154
